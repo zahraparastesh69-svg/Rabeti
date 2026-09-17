@@ -1,57 +1,42 @@
-<?php
-// ============================================================
-// main.php — قالب اصلی (طراحی دقیق بر اساس پروتوتایپ رابطی)
-// ============================================================
-
-$pageTitle = $pageTitle ?? 'تولیدی جوراب رابطی — تولید و فروش عمده جوراب';
-$pageDescription = $pageDescription ?? 'کارگاه تولیدی جوراب رابطی: تولید و فروش عمده جوراب مردانه، زنانه، بچگانه و ورزشی با قیمت پلکانی.';
-?>
 <!DOCTYPE html>
 <html lang="fa" dir="rtl">
 
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
-
-    <title><?= htmlspecialchars($pageTitle, ENT_QUOTES, 'UTF-8') ?></title>
-    <meta name="description" content="<?= htmlspecialchars($pageDescription, ENT_QUOTES, 'UTF-8') ?>">
-    <meta name="theme-color" content="#00656B">
-
-    <link rel="icon" type="image/svg+xml" href="/favicon.svg">
-
-    <!-- فونت وزیر متن -->
-    <link rel="preconnect" href="https://cdn.jsdelivr.net" crossorigin>
+    <title><?= $pageTitle ?? 'جوراب‌لند — بازار عمده جوراب' ?></title>
+    <script src="https://cdn.tailwindcss.com"></script>
     <link href="https://cdn.jsdelivr.net/gh/rastikerdar/vazirmatn@v33.003/Vazirmatn-font-face.css" rel="stylesheet">
 
-    <!-- Tailwind CSS -->
-    <script src="https://cdn.tailwindcss.com"></script>
-
     <script>
+        // 🎨 Design Tokens — نسخه ۲ (قفل‌شده)
         tailwind.config = {
             theme: {
                 extend: {
                     colors: {
                         brand: {
-                            DEFAULT: '#00656B', // رنگ فیروزه‌ای تیره دقیق هدر و دکمه‌ها
-                            hover: '#004f54',
-                            light: '#E6F2F2',
-                            soft: '#F4F9F9'
+                            DEFAULT: '#00656B', // فیروزه‌ای اصلی
+                            hover: '#004F54', // هاور دکمه‌ها
+                            light: '#E6F2F2', // بج و زمینه ملایم
                         },
                         accent: {
-                            orange: '#F59E0B',
-                            teal: '#0D9494'
+                            orange: '#F59E0B', // تاکید نارنجی
                         },
                         ink: {
-                            900: '#1E293B',
-                            700: '#334155',
-                            500: '#64748B',
-                            400: '#94A3B8',
-                            200: '#E2E8F0',
-                            100: '#F1F5F9'
-                        }
+                            900: '#1E293B', // تیترها
+                            700: '#334155', // متن پررنگ
+                            500: '#64748B', // توضیحات
+                            400: '#94A3B8', // غیرفعال
+                            200: '#E2E8F0', // بردرها
+                            100: '#F1F5F9', // زمینه خنثی
+                        },
                     },
                     fontFamily: {
                         vazir: ['Vazirmatn', 'Tahoma', 'sans-serif']
+                    },
+                    boxShadow: {
+                        card: '0 1px 3px rgba(30,41,59,.06), 0 8px 24px -8px rgba(0,101,107,.12)',
+                        'card-hover': '0 4px 8px rgba(30,41,59,.08), 0 16px 40px -8px rgba(0,101,107,.25)',
                     }
                 }
             }
@@ -61,129 +46,131 @@ $pageDescription = $pageDescription ?? 'کارگاه تولیدی جوراب ر�
     <style>
         body {
             font-family: 'Vazirmatn', Tahoma, sans-serif;
-            background-color: #FFFFFF;
-            color: #1E293B;
-            -webkit-font-smoothing: antialiased;
         }
 
-        /* اسکرول‌بار مخفی برای استوری‌ها در موبایل */
-        .no-scrollbar::-webkit-scrollbar {
-            display: none;
+        /* 🧊 کارت با بلندشدن نرم */
+        .card-lift {
+            transition: transform .3s cubic-bezier(.2, .8, .3, 1), box-shadow .3s;
         }
-        .no-scrollbar {
-            -ms-overflow-style: none;
-            scrollbar-width: none;
+
+        .card-lift:hover {
+            transform: translateY(-6px);
+            box-shadow: 0 4px 8px rgba(30, 41, 59, .08),
+                0 16px 40px -8px rgba(0, 101, 107, .25);
+        }
+
+        /* 📱 فاصله پایین برای نوار موبایل */
+        @media (max-width: 767px) {
+            body {
+                padding-bottom: 72px;
+            }
         }
     </style>
-
-    <?= $extraHead ?? '' ?>
 </head>
 
-<body class="min-h-screen flex flex-col bg-white">
+<body class="bg-ink-100 text-ink-900 min-h-screen">
 
-    <!-- ▂▂▂ Header دقیق بر اساس عکس ۱ ▂▂▂ -->
-    <header class="sticky top-0 z-50 bg-white border-b border-gray-100 shadow-sm">
-        <div class="max-w-[1400px] mx-auto px-4 lg:px-8 h-20 flex items-center justify-between gap-4">
+    <!-- ▂▂▂ Header ▂▂▂ -->
+    <header class="bg-white/90 backdrop-blur border-b border-ink-200 sticky top-0 z-50">
+        <div class="max-w-7xl mx-auto px-4 h-16 flex items-center justify-between gap-3">
 
-            <!-- سمت راست: لوگو و منو -->
-            <div class="flex items-center gap-8">
-                <!-- لوگو -->
-                <a href="/" class="flex items-center gap-2.5 shrink-0">
-                    <div class="w-10 h-10 rounded-xl bg-brand flex items-center justify-center text-white shadow-sm">
-                        <!-- آیکون کارگاه/ساختمان لوگو -->
-                        <svg class="w-6 h-6" fill="currentColor" viewBox="0 0 24 24">
-                            <path d="M12 3L2 9v12h20V9L12 3zm0 2.2L19 9.3v9.7H5V9.3L12 5.2zM7 11h2v6H7v-6zm4 0h2v6h-2v-6zm4 0h2v6h-2v-6z"/>
-                        </svg>
-                    </div>
-                    <span class="font-black text-xl text-ink-900 tracking-tight">
-                        تولیدی جوراب <span class="text-brand">رابطی</span>
-                    </span>
-                </a>
+            <!-- لوگو -->
+            <a href="/" class="font-black text-xl shrink-0 text-brand">
+                جوراب‌<span class="text-ink-900">لند</span>
+            </a>
 
-                <!-- منو دسکتاپ -->
-                <nav class="hidden xl:flex items-center gap-6 text-[13.5px] font-bold text-ink-700">
-                    <a href="/" class="text-brand font-black hover:text-brand transition">صفحه نخست</a>
-                    <a href="/products" class="hover:text-brand transition">محصولات</a>
-                    <a href="/gifts" class="hover:text-brand transition">کادویی</a>
-                    <a href="/custom-order" class="hover:text-brand transition">سفارش تولید اختصاصی</a>
-                    <a href="/tracking" class="hover:text-brand transition">پیگیری سفارش</a>
-                    <a href="/contact" class="hover:text-brand transition">ارتباط با ما</a>
-                </nav>
-            </div>
+            <!-- منو (دسکتاپ) -->
+            <nav class="hidden md:flex items-center gap-7 text-sm font-medium text-ink-700">
+                <a href="/" class="hover:text-brand transition">خانه</a>
+                <a href="/products" class="hover:text-brand transition">محصولات</a>
+                <a href="/custom-order" class="hover:text-brand transition">سفارش اختصاصی</a>
+                <a href="/about" class="hover:text-brand transition">درباره ما</a>
+            </nav>
 
-            <!-- سمت چپ: سرچ‌بار، سبد خرید، ورود و ثبت‌نام -->
-            <div class="flex items-center gap-3">
-                <!-- سرچ‌بار کپسولی -->
-                <div class="hidden md:flex items-center relative w-64 lg:w-72">
-                    <input type="text"
-                           placeholder="جستجوی محصولات..."
-                           class="w-full bg-ink-100/70 text-xs text-ink-900 placeholder:text-ink-400 rounded-full py-2.5 pr-4 pl-9 border border-transparent focus:border-brand/30 focus:bg-white focus:outline-none transition">
-                    <svg class="w-4 h-4 text-ink-400 absolute left-3 pointer-events-none" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
-                        <path stroke-linecap="round" stroke-linejoin="round" d="M21 21l-5.197-5.197m0 0A7.5 7.5 0 105.196 5.196a7.5 7.5 0 0010.607 10.607z" />
-                    </svg>
-                </div>
-
-                <!-- سبد خرید -->
-                <a href="/cart" class="w-10 h-10 rounded-xl border border-ink-200 flex items-center justify-center text-ink-700 hover:text-brand hover:border-brand transition shrink-0" title="سبد خرید">
-                    <svg class="w-5 h-5" fill="none" stroke="currentColor" stroke-width="1.8" viewBox="0 0 24 24">
+            <!-- سمت چپ -->
+            <div class="flex items-center gap-2">
+                <a href="/cart" class="relative p-2.5 hover:bg-ink-100 rounded-xl transition" title="سبد خرید">
+                    <svg class="w-6 h-6 text-ink-700" fill="none" stroke="currentColor" stroke-width="1.8" viewBox="0 0 24 24">
                         <path stroke-linecap="round" stroke-linejoin="round" d="M2.25 3h1.4l1.6 12.3a2 2 0 002 1.7h9.7a2 2 0 002-1.6l1.3-6.4H5.2M9 21a.75.75 0 100-1.5.75.75 0 000 1.5zm8 0a.75.75 0 100-1.5.75.75 0 000 1.5z" />
                     </svg>
+                    <span id="cart-badge" class="hidden absolute top-0 left-0 bg-accent-orange text-white text-[10px] font-bold w-5 h-5 rounded-full flex items-center justify-center">۰</span>
                 </a>
-
-                <!-- ورود (Outline) -->
-                <a href="/login" class="text-xs font-bold text-brand border border-brand/80 px-4 py-2.5 rounded-xl hover:bg-brand-light transition shrink-0">
+                <a href="/login" class="text-sm font-bold bg-brand hover:bg-brand-hover text-white px-4 md:px-5 py-2.5 rounded-xl transition active:scale-95">
                     ورود
-                </a>
-
-                <!-- ثبت‌نام (Solid Teal) -->
-                <a href="/register" class="text-xs font-bold text-white bg-brand hover:bg-brand-hover px-4 py-2.5 rounded-xl transition shadow-sm shrink-0">
-                    ثبت‌نام
                 </a>
             </div>
         </div>
     </header>
 
-    <!-- ▂▂▂ بدنه اصلی ▂▂▂ -->
-    <main class="flex-1 max-w-[1400px] w-full mx-auto px-4 lg:px-8 py-6">
+    <!-- ▂▂▂ محتوای صفحه ▂▂▂ -->
+    <main class="max-w-7xl mx-auto px-4 py-8">
         <?= $content ?? '' ?>
     </main>
 
-    <!-- ▂▂▂ Footer مینیمال و استاندارد ▂▂▂ -->
-    <footer class="bg-ink-100/60 border-t border-ink-200 mt-20">
-        <div class="max-w-[1400px] mx-auto px-4 lg:px-8 py-12 grid grid-cols-1 md:grid-cols-4 gap-8 text-sm">
-            <div class="space-y-3 md:col-span-2">
-                <div class="flex items-center gap-2">
-                    <div class="w-8 h-8 rounded-lg bg-brand flex items-center justify-center text-white font-bold text-sm">ر</div>
-                    <span class="font-extrabold text-base text-ink-900">تولیدی جوراب رابطی</span>
-                </div>
-                <p class="text-ink-500 text-xs leading-6 max-w-md">
-                    تولید و پخش مستقیم انواع جوراب پنبه‌ای، ورزشی و فانتزی با تخفیف‌های پلکانی برای فروشگاه‌ها، بنکداران و سازمان‌ها در سراسر ایران.
-                </p>
-            </div>
-
+    <!-- ▂▂▂ Footer (دسکتاپ) ▂▂▂ -->
+    <footer class="hidden md:block bg-ink-900 text-gray-300 mt-20">
+        <div class="max-w-7xl mx-auto px-4 py-12 grid md:grid-cols-3 gap-10 text-sm">
             <div>
-                <h4 class="font-bold text-ink-900 mb-3 text-xs">بخش‌های سایت</h4>
-                <ul class="space-y-2 text-xs text-ink-500">
-                    <li><a href="/products" class="hover:text-brand">فروشگاه و محصولات</a></li>
-                    <li><a href="/custom-order" class="hover:text-brand">سفارش با برند اختصاصی</a></li>
-                    <li><a href="/tracking" class="hover:text-brand">سامانه رهگیری سفارش</a></li>
+                <div class="font-black text-white text-lg mb-3">جوراب‌<span class="text-brand-light">لند</span></div>
+                <p class="leading-7 text-gray-400">بازار آنلاین عمده جوراب — سفارش مستقیم از تولیدکننده، بدون واسطه</p>
+            </div>
+            <div>
+                <div class="font-bold text-white mb-3">دسترسی سریع</div>
+                <ul class="space-y-2 text-gray-400">
+                    <li><a href="/products" class="hover:text-white transition">کاتالوگ محصولات</a></li>
+                    <li><a href="/register" class="hover:text-white transition">ثبت‌نام عمده‌فروشان</a></li>
+                    <li><a href="/custom-order" class="hover:text-white transition">سفارش تولید اختصاصی</a></li>
                 </ul>
             </div>
-
             <div>
-                <h4 class="font-bold text-ink-900 mb-3 text-xs">ارتباط با کارگاه</h4>
-                <ul class="space-y-2 text-xs text-ink-500">
-                    <li>تلفن: ۰۲۱-۱۲۳۴۵۶۷۸</li>
-                    <li>همراه فروش: ۰۹۱۲۷۲۶۴۵۶۰</li>
-                    <li>تهران، بازار بزرگ، بازارچه تولیدکنندگان</li>
+                <div class="font-bold text-white mb-3">تماس با ما</div>
+                <ul class="space-y-2 text-gray-400">
+                    <li dir="ltr" class="text-right">۰۲۱ - ۱۲۳۴۵۶۷۸</li>
+                    <li dir="ltr" class="text-right">۰۹۱۲ - ۱۲۳۴۵۶۷</li>
+                    <li>شنبه تا پنجشنبه — ۹ تا ۱۷</li>
                 </ul>
             </div>
         </div>
-
-        <div class="border-t border-ink-200 py-4 text-center text-[11px] text-ink-400">
-            © <?= date('Y') ?> کلیه حقوق برای کارگاه تولیدی جوراب رابطی محفوظ است.
+        <div class="border-t border-white/10 py-4 text-center text-xs text-gray-500">
+            © تمامی حقوق برای جوراب‌لند محفوظ است
         </div>
     </footer>
 
+    <!-- ▂▂▂ نوار پایین موبایل ▂▂▂ -->
+    <nav class="md:hidden bg-white/95 backdrop-blur border-t border-ink-200 fixed bottom-0 inset-x-0 z-50 h-[72px]"
+        style="padding-bottom: env(safe-area-inset-bottom)">
+        <div class="grid grid-cols-4 h-full text-center">
+
+            <a href="/" class="flex flex-col items-center justify-center gap-1 text-brand">
+                <svg class="w-6 h-6" fill="none" stroke="currentColor" stroke-width="1.8" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" d="M2.25 12l8.95-8.95a1.5 1.5 0 012.1 0L22.25 12M4.5 9.75v10.5h6v-6h3v6h6V9.75" />
+                </svg>
+                <span class="text-[10px] font-bold">خانه</span>
+            </a>
+
+            <a href="/products" class="flex flex-col items-center justify-center gap-1 text-ink-500 active:text-brand">
+                <svg class="w-6 h-6" fill="none" stroke="currentColor" stroke-width="1.8" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" d="M3.75 6A2.25 2.25 0 016 3.75h2.25A2.25 2.25 0 0110.5 6v2.25a2.25 2.25 0 01-2.25 2.25H6a2.25 2.25 0 01-2.25-2.25V6zM3.75 15.75A2.25 2.25 0 016 13.5h2.25a2.25 2.25 0 012.25 2.25V18a2.25 2.25 0 01-2.25 2.25H6A2.25 2.25 0 013.75 18v-2.25zM13.5 6a2.25 2.25 0 012.25-2.25H18A2.25 2.25 0 0120.25 6v2.25A2.25 2.25 0 0118 10.5h-2.25a2.25 2.25 0 01-2.25-2.25V6zM13.5 15.75a2.25 2.25 0 012.25-2.25H18a2.25 2.25 0 012.25 2.25V18A2.25 2.25 0 0118 20.25h-2.25A2.25 2.25 0 0113.5 18v-2.25z" />
+                </svg>
+                <span class="text-[10px] font-bold">محصولات</span>
+            </a>
+
+            <a href="/cart" class="flex flex-col items-center justify-center gap-1 text-ink-500 active:text-brand">
+                <svg class="w-6 h-6" fill="none" stroke="currentColor" stroke-width="1.8" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" d="M2.25 3h1.4l1.6 12.3a2 2 0 002 1.7h9.7a2 2 0 002-1.6l1.3-6.4H5.2M9 21a.75.75 0 100-1.5.75.75 0 000 1.5zm8 0a.75.75 0 100-1.5.75.75 0 000 1.5z" />
+                </svg>
+                <span class="text-[10px] font-bold">سبد</span>
+            </a>
+
+            <a href="/login" class="flex flex-col items-center justify-center gap-1 text-ink-500 active:text-brand">
+                <svg class="w-6 h-6" fill="none" stroke="currentColor" stroke-width="1.8" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" d="M15.75 6a3.75 3.75 0 11-7.5 0 3.75 3.75 0 017.5 0zM4.5 20.25a8.25 8.25 0 0115 0" />
+                </svg>
+                <span class="text-[10px] font-bold">حساب من</span>
+            </a>
+        </div>
+    </nav>
+
 </body>
+
 </html>

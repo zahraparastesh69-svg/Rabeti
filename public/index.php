@@ -1,255 +1,170 @@
 <?php
-$pageTitle = 'تولیدی جوراب رابطی — تولید و فروش عمده جوراب';
-$pageDescription = 'خرید عمده انواع جوراب مردانه، زنانه و بچگانه با قیمت تولیدکننده و تخفیف پلکانی.';
+$pageTitle = 'جوراب‌لند — بازار عمده جوراب';
 ob_start();
 ?>
 
-<!-- ▂▂▂ ۱. بنر اسلایدر اصلی (مطابق عکس ۱) ▂▂▂ -->
-<section class="relative w-full rounded-[24px] lg:rounded-[32px] overflow-hidden bg-gray-100 mb-8 border border-gray-150 shadow-sm">
-    <!-- عکس بنر -->
-    <div class="relative h-[220px] sm:h-[320px] lg:h-[400px] w-full">
-        <img src="/banner.jpg" 
-             alt="تولیدی جوراب رابطی" 
-             class="w-full h-full object-cover"
-             onerror="this.src='https://images.unsplash.com/photo-1586350977771-b3b0abd50c82?auto=format&fit=crop&w=1600&q=80'">
-        
-        <!-- لایه گرادیان ملایم -->
-        <div class="absolute inset-0 bg-gradient-to-t from-black/40 via-transparent to-transparent"></div>
+<!-- ▂▂▂ هیرو ▂▂▂ -->
+<section class="rounded-3xl overflow-hidden mb-12 bg-white border border-ink-200 shadow-card relative">
+    <!-- نوار رنگی بالای بنر -->
+    <div class="h-1.5 bg-gradient-to-l from-brand via-brand-hover to-accent-orange"></div>
 
-        <!-- دکمه ناوبری راست -->
-        <button class="absolute right-4 top-1/2 -translate-y-1/2 w-10 h-10 rounded-full bg-white/90 hover:bg-white text-ink-900 flex items-center justify-center shadow-md transition" aria-label="بعدی">
-            <svg class="w-5 h-5" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M8.25 4.5l7.5 7.5-7.5 7.5" /></svg>
-        </button>
+    <div class="p-8 md:p-14 grid md:grid-cols-2 gap-8 items-center">
+        <div class="text-center md:text-right">
+            <span class="inline-block text-xs font-bold text-brand bg-brand-light rounded-full px-4 py-1.5 mb-5">
+                ⚡ بازار آنلاین عمده جوراب
+            </span>
 
-        <!-- دکمه ناوبری چپ -->
-        <button class="absolute left-4 top-1/2 -translate-y-1/2 w-10 h-10 rounded-full bg-white/90 hover:bg-white text-ink-900 flex items-center justify-center shadow-md transition" aria-label="قبلی">
-            <svg class="w-5 h-5" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M15.75 19.5L8.25 12l7.5-7.5" /></svg>
-        </button>
+            <h1 class="text-3xl md:text-5xl font-black leading-[1.35] text-ink-900 mb-4">
+                خرید عمده جوراب
+                <span class="text-brand">بدون واسطه</span>
+                <br class="hidden md:block">
+                با قیمت تولیدکننده
+            </h1>
 
-        <!-- بج تیره گوشه پایین بنر: فروش های همواره تخفیف -->
-        <div class="absolute bottom-6 right-6 bg-black/60 backdrop-blur-md text-white text-xs md:text-sm font-bold px-4 py-2 rounded-xl">
-            فروش های همواره تخفیف
+            <p class="text-ink-500 text-base md:text-lg leading-8 max-w-lg mb-7 md:mx-0 mx-auto">
+                کاتالوگ کامل، قیمت ویژه اعضا، ثبت سفارش در چند ثانیه و ارسال به سراسر کشور —
+                مخصوص فروشگاه‌داران، پخش‌کنندگان و برندهای در حال رشد.
+            </p>
+
+            <div class="flex flex-wrap gap-3 justify-center md:justify-start">
+                <a href="/products"
+                    class="bg-brand hover:bg-brand-hover text-white font-black px-8 py-4 rounded-2xl shadow-lg shadow-brand/25 transition active:scale-95">
+                    مشاهده کاتالوگ ←
+                </a>
+                <a href="/register"
+                    class="bg-white border-2 border-ink-200 hover:border-brand text-ink-900 hover:text-brand font-bold px-8 py-4 rounded-2xl transition active:scale-95">
+                    ثبت‌نام عمده‌فروشی
+                </a>
+            </div>
         </div>
 
-        <!-- نقطه‌های اسلایدر (Pagination) -->
-        <div class="absolute bottom-4 left-1/2 -translate-x-1/2 flex items-center gap-1.5">
-            <span class="w-5 h-2 rounded-full bg-accent-orange"></span>
-            <span class="w-2 h-2 rounded-full bg-white/70"></span>
-            <span class="w-2 h-2 rounded-full bg-white/70"></span>
+        <!-- تصویر/موجوعیت هیرو -->
+        <div class="hidden md:flex items-center justify-center">
+            <div class="w-64 h-64 bg-gradient-to-b from-brand-light to-white rounded-full flex items-center justify-center text-[9rem] shadow-inner">
+                🧦
+            </div>
+        </div>
+    </div>
+
+    <!-- آمار -->
+    <div class="border-t border-ink-200 grid grid-cols-3 divide-x divide-x-reverse divide-ink-200 text-center">
+        <div class="py-5">
+            <div class="text-xl md:text-3xl font-black text-brand">+۱۲۰</div>
+            <div class="text-[11px] md:text-xs text-ink-500 mt-1">مدل محصول</div>
+        </div>
+        <div class="py-5">
+            <div class="text-xl md:text-3xl font-black text-brand">+۸۵۰</div>
+            <div class="text-[11px] md:text-xs text-ink-500 mt-1">فروشگاه فعال</div>
+        </div>
+        <div class="py-5">
+            <div class="text-xl md:text-3xl font-black text-brand">۲۴h</div>
+            <div class="text-[11px] md:text-xs text-ink-500 mt-1">ارسال سفارش</div>
         </div>
     </div>
 </section>
 
-<!-- ▂▂▂ ۲. دایره‌های دسته‌بندی استوری‌طور (مطابق عکس ۱) ▂▂▂ -->
-<section class="flex items-center justify-center gap-6 sm:gap-10 py-4 mb-12 overflow-x-auto no-scrollbar">
+<!-- ▂▂▂ دسته‌بندی‌ها ▂▂▂ -->
+<section class="mb-12">
+    <div class="flex items-center justify-between mb-5">
+        <h2 class="text-xl md:text-2xl font-black text-ink-900">دسته‌بندی‌ها</h2>
+        <a href="/products" class="text-sm text-brand font-bold hover:underline">مشاهده همه ←</a>
+    </div>
+    <div class="flex md:grid md:grid-cols-4 gap-3 overflow-x-auto md:overflow-visible pb-2 -mx-4 px-4 md:mx-0 md:px-0">
+        <?php
+        $categories = [
+            ['🧦', 'مردانه',  'bg-brand-light'],
+            ['🩱', 'زنانه',   'bg-pink-50'],
+            ['🧒', 'بچگانه',  'bg-sky-50'],
+            ['⚽', 'ورزشی',   'bg-amber-50'],
+        ];
+        foreach ($categories as [$icon, $name, $bg]):
+        ?>
+            <a href="/products"
+                class="card-lift shrink-0 w-32 md:w-auto bg-white border border-ink-200 rounded-2xl p-5 text-center shadow-card">
+                <div class="w-14 h-14 mx-auto mb-3 rounded-2xl <?= $bg ?> flex items-center justify-center text-3xl">
+                    <?= $icon ?>
+                </div>
+                <div class="font-bold text-sm text-ink-900"><?= $name ?></div>
+            </a>
+        <?php endforeach; ?>
+    </div>
+</section>
+
+<!-- ▂▂▂ پرفروش‌ها ▂▂▂ -->
+<section class="mb-12">
+    <div class="flex items-center justify-between mb-5">
+        <h2 class="text-xl md:text-2xl font-black text-ink-900">پرفروش‌های این هفته 🔥</h2>
+        <a href="/products" class="text-sm text-brand font-bold hover:underline">مشاهده همه ←</a>
+    </div>
+    <div class="grid grid-cols-2 md:grid-cols-4 gap-3 md:gap-5">
+        <?php
+        // 🔧 داده ساختگی — بعداً از Mock/دیتابیس
+        $products = [
+            ['جوراب نخی مردانه', 'S125', '۱۸۵,۰۰۰', '۴۸'],
+            ['جوراب اسپرت',      'S130', '۲۲۰,۰۰۰', '۳۲'],
+            ['جوراب ساق کوتاه',  'S142', '۱۶۵,۰۰۰', '۶۰'],
+            ['جوراب پشمی',       'S118', '۲۹۰,۰۰۰', '۲۴'],
+        ];
+        foreach ($products as $i => [$name, $code, $price, $moq]):
+            $isTop = ($i === 0); // اولین محصول = بج «پرفروش‌ترین» نارنجی
+        ?>
+            <a href="/products" class="card-lift bg-white border border-ink-200 rounded-2xl overflow-hidden shadow-card">
+                <div class="relative aspect-square bg-ink-100 flex items-center justify-center text-6xl">
+                    🧦
+                    <?php if ($isTop): ?>
+                        <span class="absolute top-3 right-3 bg-accent-orange text-white text-[10px] font-bold rounded-full px-3 py-1">
+                            پرفروش‌ترین
+                        </span>
+                    <?php endif; ?>
+                </div>
+                <div class="p-4">
+                    <div class="font-bold text-sm text-ink-900 mb-1"><?= $name ?></div>
+                    <div class="text-[10px] text-ink-400 mb-3">کد: <?= $code ?></div>
+                    <div class="flex items-end justify-between">
+                        <div>
+                            <div class="text-[10px] text-ink-400">عمده (جعبه)</div>
+                            <div class="font-black text-brand"><?= $price ?> <span class="text-[10px] font-normal text-ink-400">تومان</span></div>
+                        </div>
+                        <div class="text-[10px] bg-ink-100 rounded-lg px-2 py-1 text-ink-500">
+                            MOQ <?= $moq ?>
+                        </div>
+                    </div>
+                </div>
+            </a>
+        <?php endforeach; ?>
+    </div>
+</section>
+
+<!-- ▂▂▂ مزیت‌ها ▂▂▂ -->
+<section class="grid grid-cols-2 md:grid-cols-4 gap-3 md:gap-4 mb-12">
     <?php
-    $categories = [
-        ['title' => 'مردانه', 'img' => 'https://images.unsplash.com/photo-1582966772680-860e372bb558?auto=format&fit=crop&w=200&q=80'],
-        ['title' => 'زنانه', 'img' => 'https://images.unsplash.com/photo-1586350977771-b3b0abd50c82?auto=format&fit=crop&w=200&q=80'],
-        ['title' => 'بچگانه', 'img' => 'https://images.unsplash.com/photo-1543163521-1bf539c55dd2?auto=format&fit=crop&w=200&q=80'],
-        ['title' => 'ورزشی', 'img' => 'https://images.unsplash.com/photo-1608256246200-53e635b5b65f?auto=format&fit=crop&w=200&q=80'],
-        ['title' => 'فانتزی', 'img' => 'https://images.unsplash.com/photo-1582966773645-0d04d80a133f?auto=format&fit=crop&w=200&q=80'],
+    $features = [
+        ['🏭', 'قیمت تولیدکننده', 'بدون واسطه'],
+        ['📦', 'MOQ منصفانه', 'شروع از یک جعبه'],
+        ['🚚', 'ارسال سریع', 'سراسر کشور'],
+        ['🏷️', 'برند اختصاصی', 'لیبل و بسته‌بندی شما'],
     ];
-    foreach ($categories as $cat):
+    foreach ($features as [$icon, $title, $desc]):
     ?>
-        <a href="/products?cat=<?= urlencode($cat['title']) ?>" class="flex flex-col items-center gap-2 group shrink-0">
-            <div class="w-20 h-20 sm:w-24 sm:h-24 rounded-full p-1 border-2 border-brand/80 group-hover:border-brand group-hover:scale-105 transition duration-300 shadow-sm">
-                <img src="<?= $cat['img'] ?>" alt="<?= $cat['title'] ?>" class="w-full h-full rounded-full object-cover">
-            </div>
-            <span class="text-xs sm:text-sm font-bold text-ink-900 group-hover:text-brand transition">
-                <?= $cat['title'] ?>
-            </span>
-        </a>
+        <div class="bg-white border border-ink-200 rounded-2xl p-4 md:p-5 text-center shadow-card">
+            <div class="w-11 h-11 mx-auto mb-2 rounded-xl bg-brand-light flex items-center justify-center text-xl"><?= $icon ?></div>
+            <div class="font-bold text-sm text-ink-900"><?= $title ?></div>
+            <div class="text-[11px] text-ink-500 mt-1"><?= $desc ?></div>
+        </div>
     <?php endforeach; ?>
 </section>
 
-<!-- ▂▂▂ ۳. بخش مدل‌های تولیدی (مطابق عکس ۲) ▂▂▂ -->
-<section class="mb-16">
-    <!-- هدر بخش -->
-    <div class="flex items-end justify-between mb-6">
-        <div>
-            <h2 class="text-xl md:text-2xl font-black text-ink-900 mb-1">مدل‌های تولیدی</h2>
-            <p class="text-xs md:text-sm text-ink-500">هر مدل با چند طرح و رنگ — با تخفیف پلکانی تعدادی</p>
-        </div>
-        <a href="/products" class="text-xs md:text-sm font-bold text-brand hover:text-brand-hover transition flex items-center gap-1">
-            مشاهده همه محصولات
-            <span>←</span>
+<!-- ▂▂▂ CTA سفارش اختصاصی ▂▂▂ -->
+<section class="rounded-3xl overflow-hidden bg-brand relative mb-4">
+    <div class="absolute -top-16 -left-16 w-64 h-64 bg-white/10 rounded-full"></div>
+    <div class="absolute -bottom-20 -right-10 w-72 h-72 bg-black/10 rounded-full"></div>
+    <div class="relative p-8 md:p-14 text-center text-white">
+        <h2 class="text-2xl md:text-4xl font-black mb-3">برند خودتان را بسازید</h2>
+        <p class="text-brand-light mb-7">تولید جوراب با لوگو، لیبل و بسته‌بندی اختصاصی — از ۵۰۰ جفت</p>
+        <a href="/custom-order"
+            class="inline-block bg-accent-orange hover:brightness-105 text-white font-black px-8 py-4 rounded-2xl shadow-lg transition active:scale-95">
+            درخواست سفارش اختصاصی ←
         </a>
-    </div>
-
-    <!-- گرید کارت‌های محصول -->
-    <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-5">
-        
-        <!-- کارت ۱: معدل خرگوشی -->
-        <div class="bg-white rounded-2xl border border-ink-200/80 overflow-hidden hover:shadow-lg hover:border-brand/40 transition-all flex flex-col group">
-            <div class="relative w-full aspect-square bg-slate-100 overflow-hidden">
-                <img src="https://images.unsplash.com/photo-1582966772680-860e372bb558?auto=format&fit=crop&w=600&q=80" alt="معدل خرگوشی" class="w-full h-full object-cover group-hover:scale-105 transition duration-500">
-            </div>
-            <div class="p-4 flex-1 flex flex-col justify-between text-center">
-                <div>
-                    <h3 class="font-bold text-ink-900 text-sm mb-1 group-hover:text-brand transition">معدل خرگوشی</h3>
-                    <p class="text-[11px] text-ink-400">۰ طرح ۱۰ رنگ ۱۰ سایز</p>
-                </div>
-                <div class="mt-4 pt-3 border-t border-ink-100">
-                    <span class="text-sm font-black text-ink-700">۱,۲۰۰,۰۰۰ <span class="text-[10px] font-normal text-ink-400">تومان</span></span>
-                </div>
-            </div>
-        </div>
-
-        <!-- کارت ۲: جوراب مردانه کلاسیک (با بج تخفیف) -->
-        <div class="bg-white rounded-2xl border border-ink-200/80 overflow-hidden hover:shadow-lg hover:border-brand/40 transition-all flex flex-col group relative">
-            <div class="relative w-full aspect-square bg-slate-100 overflow-hidden">
-                <span class="absolute top-2.5 right-2.5 bg-brand-light text-brand text-[10px] font-extrabold px-2.5 py-1 rounded-md z-10">
-                    تخفیف تعدادی
-                </span>
-                <img src="https://images.unsplash.com/photo-1586350977771-b3b0abd50c82?auto=format&fit=crop&w=600&q=80" alt="جوراب مردانه کلاسیک" class="w-full h-full object-cover group-hover:scale-105 transition duration-500">
-            </div>
-            <div class="p-4 flex-1 flex flex-col justify-between text-center">
-                <div>
-                    <h3 class="font-bold text-ink-900 text-sm mb-1 group-hover:text-brand transition">جوراب مردانه کلاسیک</h3>
-                    <p class="text-[11px] text-ink-400">۰ طرح ۱۰ رنگ ۱۰ سایز</p>
-                </div>
-                <div class="mt-4 pt-3 border-t border-ink-100 space-y-0.5">
-                    <div class="text-xs font-bold text-brand">از ۹۵۰,۰۰۰ <span class="text-[10px] font-normal text-ink-400">تومان</span></div>
-                    <div class="text-[10px] text-ink-400 line-through">تک‌عدد ۱,۰۰۰,۰۰۰ تومان</div>
-                </div>
-            </div>
-        </div>
-
-        <!-- کارت ۳: بچه گانه - سیسمونی -->
-        <div class="bg-white rounded-2xl border border-ink-200/80 overflow-hidden hover:shadow-lg hover:border-brand/40 transition-all flex flex-col group">
-            <div class="relative w-full aspect-square bg-slate-100 overflow-hidden">
-                <img src="https://images.unsplash.com/photo-1543163521-1bf539c55dd2?auto=format&fit=crop&w=600&q=80" alt="بچه گانه - سیسمونی" class="w-full h-full object-cover group-hover:scale-105 transition duration-500">
-            </div>
-            <div class="p-4 flex-1 flex flex-col justify-between text-center">
-                <div>
-                    <h3 class="font-bold text-ink-900 text-sm mb-1 group-hover:text-brand transition">بچه گانه - سیسمونی</h3>
-                    <p class="text-[11px] text-ink-400">۰ طرح ۱۰ رنگ ۱۰ سایز</p>
-                </div>
-                <div class="mt-4 pt-3 border-t border-ink-100">
-                    <span class="text-sm font-black text-ink-700">۱۰۰,۰۰۰ <span class="text-[10px] font-normal text-ink-400">تومان</span></span>
-                </div>
-            </div>
-        </div>
-
-        <!-- کارت ۴: جوراب زنانه زمستانه (با بج تخفیف) -->
-        <div class="bg-white rounded-2xl border border-ink-200/80 overflow-hidden hover:shadow-lg hover:border-brand/40 transition-all flex flex-col group relative">
-            <div class="relative w-full aspect-square bg-slate-100 overflow-hidden">
-                <span class="absolute top-2.5 right-2.5 bg-brand-light text-brand text-[10px] font-extrabold px-2.5 py-1 rounded-md z-10">
-                    تخفیف تعدادی
-                </span>
-                <img src="https://images.unsplash.com/photo-1608256246200-53e635b5b65f?auto=format&fit=crop&w=600&q=80" alt="جوراب زنانه زمستانه" class="w-full h-full object-cover group-hover:scale-105 transition duration-500">
-            </div>
-            <div class="p-4 flex-1 flex flex-col justify-between text-center">
-                <div>
-                    <h3 class="font-bold text-ink-900 text-sm mb-1 group-hover:text-brand transition">جوراب زنانه زمستانه</h3>
-                    <p class="text-[11px] text-ink-400">۴ طرح ۲۰ رنگ ۲۰ سایز</p>
-                </div>
-                <div class="mt-4 pt-3 border-t border-ink-100 space-y-0.5">
-                    <div class="text-xs font-bold text-brand">از ۳۵,۰۰۰ <span class="text-[10px] font-normal text-ink-400">تومان</span></div>
-                    <div class="text-[10px] text-ink-400 line-through">تک‌عدد ۵۰,۰۰۰ تومان</div>
-                </div>
-            </div>
-        </div>
-
-    </div>
-</section>
-
-<!-- ▂▂▂ ۴. بخش پیگیری سفارش (دقیقاً مطابق عکس ۳ و ۴) ▂▂▂ -->
-<section class="mb-12 bg-white rounded-3xl p-6 lg:p-12 border border-ink-200/70 shadow-sm">
-    <div class="grid grid-cols-1 lg:grid-cols-12 gap-8 items-center">
-        
-        <!-- سمت چپ (کارت مراحل پیشرفت سفارش) -->
-        <div class="lg:col-span-6 order-2 lg:order-1">
-            <div class="bg-white rounded-2xl border border-ink-200 p-6 shadow-md max-w-md mx-auto">
-                <div class="flex items-center justify-between text-xs font-bold text-ink-500 mb-2">
-                    <span class="text-brand">در حال تولید</span>
-                    <span>نمونه وضعیت سفارش</span>
-                </div>
-                
-                <!-- پروگرس‌بار ۵۰ درصد -->
-                <div class="w-full bg-ink-100 h-1.5 rounded-full overflow-hidden mb-2">
-                    <div class="bg-brand h-full w-1/2 rounded-full"></div>
-                </div>
-                <div class="flex justify-between text-[10px] text-ink-400 mb-6">
-                    <span>۵۰٪ تکمیل شده</span>
-                    <span>مرحله ۳ از ۶</span>
-                </div>
-
-                <!-- لیست مراحل ۴ تایی -->
-                <div class="space-y-4">
-                    <!-- مرحله ۱: تکمیل شده -->
-                    <div class="flex items-center justify-between">
-                        <div class="text-right">
-                            <div class="text-xs font-bold text-ink-900">ثبت سفارش</div>
-                            <div class="text-[10px] text-ink-400">تکمیل شده</div>
-                        </div>
-                        <div class="w-7 h-7 rounded-full bg-brand text-white flex items-center justify-center text-xs">
-                            ✓
-                        </div>
-                    </div>
-
-                    <!-- مرحله ۲: تکمیل شده -->
-                    <div class="flex items-center justify-between">
-                        <div class="text-right">
-                            <div class="text-xs font-bold text-ink-900">آماده‌سازی</div>
-                            <div class="text-[10px] text-ink-400">تکمیل شده</div>
-                        </div>
-                        <div class="w-7 h-7 rounded-full bg-brand text-white flex items-center justify-center text-xs">
-                            ✓
-                        </div>
-                    </div>
-
-                    <!-- مرحله ۳: جاری (نارنجی) -->
-                    <div class="flex items-center justify-between">
-                        <div class="text-right">
-                            <div class="text-xs font-bold text-ink-900">تولید</div>
-                            <div class="text-[10px] text-accent-orange font-bold">مرحله فعلی</div>
-                        </div>
-                        <div class="w-7 h-7 rounded-full bg-accent-orange text-white flex items-center justify-center text-xs font-bold shadow-sm">
-                            ۳
-                        </div>
-                    </div>
-
-                    <!-- مرحله ۴: در انتظار -->
-                    <div class="flex items-center justify-between">
-                        <div class="text-right">
-                            <div class="text-xs font-bold text-ink-400">کنترل کیفیت</div>
-                            <div class="text-[10px] text-ink-400">در انتظار</div>
-                        </div>
-                        <div class="w-7 h-7 rounded-full bg-ink-100 text-ink-400 flex items-center justify-center text-xs font-bold">
-                            ۴
-                        </div>
-                    </div>
-                </div>
-            </div>
-        </div>
-
-        <!-- سمت راست (متن و فرم جستجوی سفارش) -->
-        <div class="lg:col-span-6 order-1 lg:order-2 text-right">
-            <span class="text-xs font-black text-brand tracking-wide mb-3 inline-block">پیگیری سفارش</span>
-            <h2 class="text-2xl md:text-4xl font-black text-ink-900 leading-snug mb-4">
-                همیشه بدانید<br>
-                <span class="text-ink-900">سفارشتان کجاست.</span>
-            </h2>
-            <p class="text-xs md:text-sm text-ink-500 leading-7 mb-8">
-                شماره سفارش خود را وارد کنید و وضعیت سفارش را از ثبت تا ارسال مشاهده کنید.
-            </p>
-
-            <!-- باکس اینپوت + دکمه -->
-            <form action="/tracking" method="GET" class="flex items-center gap-2 max-w-lg">
-                <input type="text"
-                       name="order_id"
-                       placeholder="مثلاً ORD-175000000000-123"
-                       class="flex-1 bg-white border border-ink-200 rounded-2xl px-4 py-3 text-xs md:text-sm text-ink-900 focus:outline-none focus:border-brand transition">
-                <button type="submit"
-                        class="bg-brand hover:bg-brand-hover text-white font-bold px-6 py-3 rounded-2xl text-xs md:text-sm flex items-center gap-2 transition shadow-sm shrink-0">
-                    <span>پیگیری</span>
-                    <span>←</span>
-                </button>
-            </form>
-        </div>
-
     </div>
 </section>
 
