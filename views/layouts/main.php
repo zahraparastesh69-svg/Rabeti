@@ -6,8 +6,8 @@
 //   اختیاری: $extraHead (CSS/JS اضافه صفحات خاص)
 // ============================================================
 
-$pageTitle = $pageTitle ?? 'تولیدی جوراب رابطی — تولید و فروش عمده جوراب';
-$pageDescription = $pageDescription ?? 'کارگاه تولیدی جوراب رابطی: تولید و فروش عمده جوراب مردانه، زنانه، بچگانه و ورزشی با قیمت پلکانی. سفارش تولید اختصاصی با برند شما.';
+ $pageTitle = $pageTitle ?? 'تولیدی جوراب رابطی — تولید و فروش عمده جوراب';
+ $pageDescription = $pageDescription ?? 'کارگاه تولیدی جوراب رابطی: تولید و فروش عمده جوراب مردانه، زنانه، بچگانه و ورزشی با قیمت پلکانی. سفارش تولید اختصاصی با برند شما.';
 ?>
 <!DOCTYPE html>
 <html lang="fa" dir="rtl">
@@ -38,13 +38,13 @@ $pageDescription = $pageDescription ?? 'کارگاه تولیدی جوراب ر�
             theme: {
                 extend: {
                     colors: {
-                        ink: '#0B1414', // پس‌زمینه دارک (سبز-تیره نه مشکی خالص)
-                        card: '#0F1B1B', // سطح کارت‌ها
-                        line: '#1C2B2B', // خطوط و بوردر
-                        brand: '#00656B', // فیروزه‌ای برند اصلی
+                        ink: '#0B1414',           // پس‌زمینه دارک (سبز-تیره نه مشکی خالص)
+                        card: '#0F1B1B',          // سطح کارت‌ها
+                        line: '#1C2B2B',          // خطوط و بوردر
+                        brand: '#00656B',         // فیروزه‌ای برند اصلی
                         'brand-strong': '#004D4D',
-                        'brand-tint': '#0F2525', // tint برای دارک (سبز خیلی تیره)
-                        teal: '#2DD4BF', // تاکید روشن (جای لایم — هم‌خانواده فیروزه‌ای)
+                        'brand-tint': '#0F2525',  // tint برای دارک (سبز خیلی تیره)
+                        teal: '#2DD4BF',          // تاکید روشن (جای لایم — هم‌خانواده فیروزه‌ای)
                     },
                     fontFamily: {
                         vazir: ['Vazirmatn', 'Tahoma', 'sans-serif']
@@ -100,7 +100,6 @@ $pageDescription = $pageDescription ?? 'کارگاه تولیدی جوراب ر�
 
         /* 🖨 چاپ — فقط محتوا */
         @media print {
-
             .glass,
             header,
             footer,
@@ -116,7 +115,6 @@ $pageDescription = $pageDescription ?? 'کارگاه تولیدی جوراب ر�
 
         /* ⚡ کاهش انیمیشن */
         @media (prefers-reduced-motion: reduce) {
-
             .card-3d,
             .card-3d:hover {
                 transition: none;
