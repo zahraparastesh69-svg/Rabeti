@@ -1,4 +1,14 @@
+<?php
+// ============================================================
+// Layout — جوراب‌لند (بازطراحی R-v2)
+//   موبایل-اول + دارک + سه‌بعدی + شیشه‌ای
+//   متغیرهای PHP: $pageTitle, $content
+//   اختیاری: $extraHead (برای CSS/JS اضافه صفحات خاص)
+// ============================================================
 
+$pageTitle = $pageTitle ?? 'جوراب‌لند — بازار عمده جوراب';
+$pageDescription = $pageDescription ?? 'بازار آنلاین عمده جوراب — سفارش مستقیم از تولیدکننده بدون واسطه. خرید عمده جوراب مردانه، زنانه، بچگانه با تخفیف پلکانی.';
+?>
 <!DOCTYPE html>
 <html lang="fa" dir="rtl">
 
@@ -6,957 +16,261 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
 
-    <title><?= $pageTitle ?? 'جوراب‌لند — بازار عمده جوراب' ?></title>
+    <title><?= htmlspecialchars($pageTitle, ENT_QUOTES, 'UTF-8') ?></title>
+    <meta name="description" content="<?= htmlspecialchars($pageDescription, ENT_QUOTES, 'UTF-8') ?>">
+    <meta name="theme-color" content="#0B0B14">
 
-    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="icon" type="image/svg+xml" href="/favicon.svg">
 
-    <link href="https://cdn.jsdelivr.net/gh/rastikerdar/vazirmatn@v33.003/Vazirmatn-font-face.css"
+    <!-- فونت وزیرمتن — preload + preconnect (سریع‌تر از CSS import) -->
+    <link rel="preconnect" href="https://cdn.jsdelivr.net" crossorigin>
+    <link rel="preload" as="style"
+        href="https://cdn.jsdelivr.net/gh/rastikerdar/vazirmatn@v33.003/Vazirmatn-font-face.css">
+    <link
+        href="https://cdn.jsdelivr.net/gh/rastikerdar/vazirmatn@v33.003/Vazirmatn-font-face.css"
         rel="stylesheet">
+
+    <!-- Tailwind — build محلی (نسخه production) -->
+    <!-- ⚠️ دستور build: npx tailwindcss -i ./src/input.css -o ./dist/tw.css --minify -->
+    <!-- و در production این را جای CDN بگذار: <link rel="stylesheet" href="/dist/tw.css"> -->
+    <script src="https://cdn.tailwindcss.com"></script>
 
     <script>
         tailwind.config = {
             theme: {
                 extend: {
                     colors: {
-                        brand: '#111111',
-                        accent: '#E8A83E',
-                        surface: '#FFFFFF',
-                        soft: '#F5F4F1',
-                        line: '#E8E6E1',
-                        muted: '#77736C'
+                        ink: '#0B0B14',
+                        card: '#14141F',
+                        line: '#232333',
+                        lime: '#CCFF00',
+                        grape: '#8B5CF6',
                     },
-
                     fontFamily: {
                         vazir: ['Vazirmatn', 'Tahoma', 'sans-serif']
                     },
-
-                    boxShadow: {
-                        soft: '0 10px 35px rgba(0,0,0,.07)',
-                        card: '0 14px 45px rgba(0,0,0,.08)',
-                        floating: '0 20px 60px rgba(0,0,0,.12)',
-                        inset: 'inset 0 1px 0 rgba(255,255,255,.8)'
-                    }
                 }
             }
         }
     </script>
 
     <style>
-
-        :root {
-            --bg: #f7f6f3;
-            --surface: #ffffff;
-            --text: #151515;
-            --muted: #77736c;
-            --line: #e7e4de;
-            --accent: #e8a83e;
-        }
-
-        * {
-            box-sizing: border-box;
-        }
-
-        html {
-            scroll-behavior: smooth;
-        }
-
         body {
-            margin: 0;
             font-family: 'Vazirmatn', Tahoma, sans-serif;
-            background: var(--bg);
-            color: var(--text);
+            -webkit-font-smoothing: antialiased;
         }
 
-        /* --------------------------------
-           نرم و مینیمال
-        -------------------------------- */
-
-        ::selection {
-            background: #111;
-            color: #fff;
+        /* ✨ افکت شیشه‌ای */
+        .glass {
+            background: rgba(20, 20, 31, .75);
+            backdrop-filter: blur(16px);
+            -webkit-backdrop-filter: blur(16px);
         }
 
-        a {
-            text-decoration: none;
-        }
-
-        /* --------------------------------
-           Header
-        -------------------------------- */
-
-        .site-header {
-            position: sticky;
-            top: 0;
-            z-index: 50;
-
-            background: rgba(247, 246, 243, .88);
-            backdrop-filter: blur(18px);
-            -webkit-backdrop-filter: blur(18px);
-
-            border-bottom: 1px solid rgba(0, 0, 0, .06);
-        }
-
-        .header-inner {
-            height: 76px;
-            display: flex;
-            align-items: center;
-            justify-content: space-between;
-        }
-
-        /* --------------------------------
-           Logo
-        -------------------------------- */
-
-        .logo {
-            display: inline-flex;
-            align-items: center;
-            gap: 8px;
-
-            color: #111;
-            font-size: 20px;
-            font-weight: 900;
-            letter-spacing: -.5px;
-        }
-
-        .logo-mark {
-            width: 34px;
-            height: 34px;
-
-            display: flex;
-            align-items: center;
-            justify-content: center;
-
-            border-radius: 11px;
-
-            background: #111;
-            color: #fff;
-
-            font-size: 14px;
-            font-weight: 900;
-
-            box-shadow:
-                0 5px 12px rgba(0,0,0,.16),
-                inset 0 1px 0 rgba(255,255,255,.15);
-        }
-
-        /* --------------------------------
-           Desktop Navigation
-        -------------------------------- */
-
-        .desktop-nav {
-            display: flex;
-            align-items: center;
-            gap: 34px;
-        }
-
-        .desktop-nav a {
-            position: relative;
-
-            color: #68645e;
-            font-size: 13px;
-            font-weight: 600;
-
-            transition:
-                color .2s ease,
-                transform .2s ease;
-        }
-
-        .desktop-nav a:hover {
-            color: #111;
-            transform: translateY(-1px);
-        }
-
-        .desktop-nav a::after {
-            content: '';
-
-            position: absolute;
-            bottom: -9px;
-            right: 0;
-
-            width: 0;
-            height: 2px;
-
-            background: #111;
-            border-radius: 10px;
-
-            transition: width .25s ease;
-        }
-
-        .desktop-nav a:hover::after {
-            width: 100%;
-        }
-
-        /* --------------------------------
-           Header Actions
-        -------------------------------- */
-
-        .header-actions {
-            display: flex;
-            align-items: center;
-            gap: 9px;
-        }
-
-        .icon-button {
-            width: 42px;
-            height: 42px;
-
-            display: flex;
-            align-items: center;
-            justify-content: center;
-
-            border-radius: 13px;
-
-            background: #fff;
-            color: #333;
-
-            border: 1px solid #e8e5df;
-
-            box-shadow:
-                0 3px 12px rgba(0,0,0,.04),
-                inset 0 1px 0 #fff;
-
-            transition:
-                transform .2s ease,
-                box-shadow .2s ease;
-        }
-
-        .icon-button:hover {
-            transform: translateY(-2px);
-            box-shadow: 0 8px 20px rgba(0,0,0,.08);
-        }
-
-        /* --------------------------------
-           Main
-        -------------------------------- */
-
-        .page-container {
-            max-width: 1280px;
-            margin: auto;
-            padding: 42px 20px 80px;
-        }
-
-        /* --------------------------------
-           3D Cards
-        -------------------------------- */
-
+        /* 🧊 افکت ۳بعدی کارت‌ها */
         .card-3d {
-            position: relative;
-
-            background: #fff;
-
-            border: 1px solid rgba(0,0,0,.055);
-            border-radius: 22px;
-
-            box-shadow:
-                0 8px 20px rgba(0,0,0,.045),
-                0 25px 55px rgba(0,0,0,.035),
-                inset 0 1px 0 rgba(255,255,255,.9);
-
             transition:
-                transform .28s cubic-bezier(.2,.8,.2,1),
-                box-shadow .28s ease;
+                transform .35s cubic-bezier(.2, .8, .3, 1),
+                box-shadow .35s;
+            transform-style: preserve-3d;
         }
 
         .card-3d:hover {
-            transform: translateY(-5px);
-
+            transform: translateY(-8px) rotateX(4deg);
             box-shadow:
-                0 15px 30px rgba(0,0,0,.07),
-                0 30px 70px rgba(0,0,0,.07),
-                inset 0 1px 0 rgba(255,255,255,1);
+                0 24px 48px -12px rgba(139, 92, 246, .35),
+                0 8px 16px -8px rgba(0, 0, 0, .6);
         }
 
-        /* --------------------------------
-           Product Card
-        -------------------------------- */
-
-        .product-card {
-            overflow: hidden;
+        /* 🌈 هاله‌های رنگی — قابل تنظیم با CSS variables */
+        .glow {
+            position: absolute;
+            border-radius: 9999px;
+            filter: blur(90px);
+            opacity: .35;
+            pointer-events: none;
         }
 
-        .product-image {
-            position: relative;
-
-            aspect-ratio: 1 / 1;
-
-            background:
-                linear-gradient(
-                    145deg,
-                    #f3f2ef,
-                    #ffffff
-                );
-
-            overflow: hidden;
-        }
-
-        .product-image img {
-            width: 100%;
-            height: 100%;
-
-            object-fit: cover;
-
-            transition:
-                transform .5s cubic-bezier(.2,.8,.2,1);
-        }
-
-        .product-card:hover .product-image img {
-            transform: scale(1.045);
-        }
-
-        /* --------------------------------
-           Buttons
-        -------------------------------- */
-
-        .btn-primary {
-            display: inline-flex;
-            align-items: center;
-            justify-content: center;
-
-            min-height: 46px;
-
-            padding: 0 20px;
-
-            border-radius: 13px;
-
-            background: #111;
-            color: #fff;
-
-            font-size: 13px;
-            font-weight: 700;
-
-            box-shadow:
-                0 5px 0 #000,
-                0 12px 22px rgba(0,0,0,.12);
-
-            transition:
-                transform .15s ease,
-                box-shadow .15s ease;
-        }
-
-        .btn-primary:hover {
-            transform: translateY(-2px);
-
-            box-shadow:
-                0 7px 0 #000,
-                0 16px 28px rgba(0,0,0,.14);
-        }
-
-        .btn-primary:active {
-            transform: translateY(3px);
-
-            box-shadow:
-                0 2px 0 #000,
-                0 5px 12px rgba(0,0,0,.1);
-        }
-
-        .btn-accent {
-            background: var(--accent);
-            color: #111;
-
-            box-shadow:
-                0 5px 0 #c48a2c,
-                0 12px 22px rgba(232,168,62,.18);
-        }
-
-        .btn-accent:hover {
-            box-shadow:
-                0 7px 0 #c48a2c,
-                0 16px 28px rgba(232,168,62,.22);
-        }
-
-        /* --------------------------------
-           Badge
-        -------------------------------- */
-
-        .badge {
-            display: inline-flex;
-            align-items: center;
-
-            padding: 6px 10px;
-
-            border-radius: 9px;
-
-            background: #f1f0ed;
-            color: #55514b;
-
-            font-size: 10px;
-            font-weight: 700;
-        }
-
-        .badge-accent {
-            background: #fff1d8;
-            color: #9a651b;
-        }
-
-        /* --------------------------------
-           Section titles
-        -------------------------------- */
-
-        .section-title {
-            font-size: clamp(22px, 3vw, 34px);
-            font-weight: 900;
-            letter-spacing: -.7px;
-            line-height: 1.4;
-        }
-
-        .section-description {
-            color: var(--muted);
-            font-size: 13px;
-            line-height: 2;
-        }
-
-        /* --------------------------------
-           Footer
-        -------------------------------- */
-
-        .site-footer {
-            background: #111;
-            color: #aaa;
-            margin-top: 80px;
-        }
-
-        .footer-title {
-            color: #fff;
-            font-size: 15px;
-            font-weight: 800;
-            margin-bottom: 15px;
-        }
-
-        .footer-link {
-            color: #999;
-            font-size: 12px;
-
-            transition: color .2s ease;
-        }
-
-        .footer-link:hover {
-            color: #fff;
-        }
-
-        /* --------------------------------
-           Mobile Bottom Navigation
-        -------------------------------- */
-
-        .mobile-nav {
-            background: rgba(255,255,255,.94);
-
-            backdrop-filter: blur(20px);
-            -webkit-backdrop-filter: blur(20px);
-
-            border-top: 1px solid rgba(0,0,0,.07);
-
-            box-shadow:
-                0 -8px 30px rgba(0,0,0,.06);
-        }
-
-        .mobile-nav a {
-            color: #888;
-            transition: color .2s ease;
-        }
-
-        .mobile-nav a.active {
-            color: #111;
-        }
-
-        .mobile-nav .nav-icon {
-            width: 38px;
-            height: 30px;
-
-            display: flex;
-            align-items: center;
-            justify-content: center;
-
-            border-radius: 11px;
-        }
-
-        .mobile-nav a.active .nav-icon {
-            background: #111;
-            color: #fff;
-        }
-
-        /* --------------------------------
-           Mobile
-        -------------------------------- */
-
+        /* 📱 فاصله پایین برای نوار موبایل */
         @media (max-width: 767px) {
+            body {
+                padding-bottom: 76px;
+            }
+        }
+
+        /* 🖨 چاپ — فقط محتوا */
+        @media print {
+
+            .glass,
+            header,
+            footer,
+            .glow {
+                display: none !important;
+            }
 
             body {
-                padding-bottom: 78px;
-            }
-
-            .header-inner {
-                height: 64px;
-            }
-
-            .desktop-nav {
-                display: none;
-            }
-
-            .page-container {
-                padding: 24px 14px 50px;
-            }
-
-            .logo {
-                font-size: 17px;
-            }
-
-            .logo-mark {
-                width: 31px;
-                height: 31px;
-                border-radius: 10px;
-            }
-
-            .header-actions {
-                gap: 6px;
-            }
-
-            .icon-button {
-                width: 38px;
-                height: 38px;
-                border-radius: 11px;
-            }
-
-            .btn-primary,
-            .btn-accent {
-                min-height: 44px;
-                border-radius: 12px;
-            }
-
-            .card-3d {
-                border-radius: 18px;
+                background: #fff !important;
+                color: #000 !important;
             }
         }
 
-        /* --------------------------------
-           Reduce motion
-        -------------------------------- */
-
+        /* ⚡ کاهش انیمیشن */
         @media (prefers-reduced-motion: reduce) {
 
-            *,
-            *::before,
-            *::after {
-                scroll-behavior: auto !important;
-                transition: none !important;
-                animation: none !important;
+            .card-3d,
+            .card-3d:hover {
+                transition: none;
+                transform: none !important;
             }
         }
-
     </style>
+
+    <?= $extraHead ?? '' ?>
 </head>
 
+<body class="bg-ink text-gray-100 min-h-screen relative overflow-x-hidden font-vazir">
 
-<body>
+    <!-- 🌈 هاله‌های پس‌زمینه -->
+    <div class="glow w-96 h-96 bg-grape -top-32 -right-32" aria-hidden="true"></div>
+    <div class="glow w-80 h-80 bg-lime opacity-10 top-1/2 -left-40" aria-hidden="true"></div>
 
-    <!-- =========================
-         HEADER
-    ========================== -->
+    <!-- ▂▂▂ Header ▂▂▂ -->
+    <header class="glass border-b border-line sticky top-0 z-50">
+        <div class="max-w-7xl mx-auto px-4 h-16 flex items-center justify-between gap-3">
 
-    <header class="site-header">
+            <!-- لوگو -->
+            <a href="/" class="font-black text-xl shrink-0 hover:opacity-90 transition">
+                جوراب‌<span class="text-lime">لند</span>
+            </a>
 
-        <div class="max-w-7xl mx-auto px-4">
+            <!-- منو (دسکتاپ) -->
+            <nav class="hidden md:flex items-center gap-7 text-sm font-medium text-gray-300" aria-label="منوی اصلی">
+                <a href="/" class="hover:text-lime transition">خانه</a>
+                <a href="/products" class="hover:text-lime transition">محصولات</a>
+                <a href="/custom-order" class="hover:text-lime transition">سفارش اختصاصی</a>
+                <a href="/about" class="hover:text-lime transition">درباره ما</a>
+            </nav>
 
-            <div class="header-inner">
+            <!-- سمت چپ -->
+            <div class="flex items-center gap-2">
+                <a href="/cart"
+                    class="relative p-2.5 hover:bg-white/5 rounded-xl transition"
+                    title="سبد خرید"
+                    aria-label="سبد خرید">
+                    <svg class="w-6 h-6" fill="none" stroke="currentColor" stroke-width="1.8" viewBox="0 0 24 24" aria-hidden="true">
+                        <path stroke-linecap="round" stroke-linejoin="round" d="M2.25 3h1.4l1.6 12.3a2 2 0 002 1.7h9.7a2 2 0 002-1.6l1.3-6.4H5.2M9 21a.75.75 0 100-1.5.75.75 0 000 1.5zm8 0a.75.75 0 100-1.5.75.75 0 000 1.5z" />
+                    </svg>
 
-                <!-- Logo -->
-
-                <a href="/" class="logo">
-
-                    <span class="logo-mark">
-                        ج
+                    <span id="cart-badge"
+                        class="hidden absolute top-0 left-0 bg-lime text-black text-[10px] font-bold w-5 h-5 rounded-full flex items-center justify-center">
+                        ۰
                     </span>
-
-                    <span>
-                        جوراب‌<strong>لند</strong>
-                    </span>
-
                 </a>
 
-
-                <!-- Desktop Navigation -->
-
-                <nav class="desktop-nav">
-
-                    <a href="/">خانه</a>
-
-                    <a href="/products">
-                        محصولات
-                    </a>
-
-                    <a href="/custom-order">
-                        تولید اختصاصی
-                    </a>
-
-                    <a href="/about">
-                        درباره ما
-                    </a>
-
-                </nav>
-
-
-                <!-- Actions -->
-
-                <div class="header-actions">
-
-                    <a
-                        href="/cart"
-                        class="icon-button relative"
-                        title="سبد خرید"
-                    >
-
-                        <svg
-                            class="w-5 h-5"
-                            fill="none"
-                            stroke="currentColor"
-                            stroke-width="1.7"
-                            viewBox="0 0 24 24"
-                        >
-
-                            <path
-                                stroke-linecap="round"
-                                stroke-linejoin="round"
-                                d="M2.25 3h1.4l1.6 12.3a2 2 0 002 1.7h9.7a2 2 0 002-1.6l1.3-6.4H5.2"
-                            />
-
-                            <path
-                                stroke-linecap="round"
-                                stroke-linejoin="round"
-                                d="M9 21a.75.75 0 100-1.5A.75.75 0 009 21zm8 0a.75.75 0 100-1.5.75.75 0 000 1.5z"
-                            />
-
-                        </svg>
-
-
-                        <span
-                            id="cart-badge"
-                            class="hidden absolute -top-1 -left-1 bg-black text-white text-[9px] font-bold w-5 h-5 rounded-full flex items-center justify-center"
-                        >
-                            ۰
-                        </span>
-
-                    </a>
-
-
-                    <a
-                        href="/login"
-                        class="btn-primary hidden sm:inline-flex"
-                    >
-                        ورود
-                    </a>
-
-                </div>
-
+                <a href="/login"
+                    class="text-sm font-bold bg-lime text-black px-4 md:px-5 py-2.5 rounded-xl
+                        hover:brightness-110 hover:-translate-y-0.5 active:translate-y-0.5
+                        shadow-[0_3px_0_rgba(163,230,53,.4),0_6px_14px_rgba(204,255,0,.15)]
+                        active:shadow-[0_1px_0_rgba(163,230,53,.4)] transition">
+                    ورود
+                </a>
             </div>
-
         </div>
-
     </header>
 
-
-    <!-- =========================
-         MAIN
-    ========================== -->
-
-    <main class="page-container">
-
+    <!-- ▂▂▂ محتوای صفحه ▂▂▂ -->
+    <main class="max-w-7xl mx-auto px-4 py-8 relative">
         <?= $content ?? '' ?>
-
     </main>
 
-
-    <!-- =========================
-         FOOTER
-    ========================== -->
-
-    <footer class="site-footer hidden md:block">
-
-        <div class="max-w-7xl mx-auto px-4 py-16">
-
-            <div class="grid md:grid-cols-3 gap-14">
-
-                <!-- Brand -->
-
-                <div>
-
-                    <div class="flex items-center gap-3 mb-5">
-
-                        <span class="logo-mark">
-                            ج
-                        </span>
-
-                        <div class="text-white font-black">
-                            جوراب‌لند
-                        </div>
-
-                    </div>
-
-                    <p class="text-sm leading-8 text-gray-500 max-w-sm">
-
-                        بازار آنلاین عمده جوراب؛
-                        سفارش مستقیم از تولیدکننده
-                        با امکان تولید اختصاصی.
-
-                    </p>
-
+    <!-- ▂▂▂ Footer (دسکتاپ) ▂▂▂ -->
+    <footer class="hidden md:block border-t border-line mt-20">
+        <div class="max-w-7xl mx-auto px-4 py-12 grid md:grid-cols-3 gap-10 text-sm text-gray-400">
+            <div>
+                <div class="font-black text-white text-lg mb-3">
+                    جوراب‌<span class="text-lime">لند</span>
                 </div>
 
-
-                <!-- Links -->
-
-                <div>
-
-                    <div class="footer-title">
-                        دسترسی سریع
-                    </div>
-
-                    <div class="space-y-3">
-
-                        <a
-                            href="/products"
-                            class="footer-link block"
-                        >
-                            کاتالوگ محصولات
-                        </a>
-
-                        <a
-                            href="/register"
-                            class="footer-link block"
-                        >
-                            ثبت‌نام عمده‌فروشان
-                        </a>
-
-                        <a
-                            href="/custom-order"
-                            class="footer-link block"
-                        >
-                            تولید اختصاصی
-                        </a>
-
-                    </div>
-
-                </div>
-
-
-                <!-- Contact -->
-
-                <div>
-
-                    <div class="footer-title">
-                        ارتباط با ما
-                    </div>
-
-                    <div class="space-y-3 text-xs">
-
-                        <div dir="ltr" class="text-right">
-                            ۰۲۱ - ۱۲۳۴۵۶۷۸
-                        </div>
-
-                        <div dir="ltr" class="text-right">
-                            ۰۹۱۲ - ۱۲۳۴۵۶۷
-                        </div>
-
-                        <div>
-                            شنبه تا پنجشنبه — ۹ تا ۱۷
-                        </div>
-
-                    </div>
-
-                </div>
-
+                <p class="leading-7">
+                    بازار آنلاین عمده جوراب — سفارش مستقیم از تولیدکننده، بدون واسطه
+                </p>
             </div>
 
-        </div>
+            <div>
+                <div class="font-bold text-white mb-3">دسترسی سریع</div>
 
-
-        <div class="border-t border-white/10">
-
-            <div
-                class="max-w-7xl mx-auto px-4 py-5 text-center text-xs text-gray-600"
-            >
-
-                © تمامی حقوق برای جوراب‌لند محفوظ است
-
+                <ul class="space-y-2">
+                    <li><a href="/products" class="hover:text-lime transition">کاتالوگ محصولات</a></li>
+                    <li><a href="/register" class="hover:text-lime transition">ثبت‌نام عمده‌فروشان</a></li>
+                    <li><a href="/custom-order" class="hover:text-lime transition">سفارش تولید اختصاصی</a></li>
+                </ul>
             </div>
 
+            <div>
+                <div class="font-bold text-white mb-3">تماس با ما</div>
+
+                <ul class="space-y-2">
+                    <li dir="ltr" class="text-right">۰۲۱ - ۱۲۳۴۵۶۷۸</li>
+                    <li dir="ltr" class="text-right">۰۹۱۲ - ۱۲۳۴۵۶۷</li>
+                    <li>شنبه تا پنجشنبه — ۹ تا ۱۷</li>
+                </ul>
+            </div>
         </div>
 
+        <div class="border-t border-line py-4 text-center text-xs text-gray-600">
+            © <?= date('Y') ?> تمامی حقوق برای جوراب‌لند محفوظ است
+        </div>
     </footer>
 
-
-    <!-- =========================
-         MOBILE NAV
-    ========================== -->
-
-    <nav
-        class="mobile-nav md:hidden fixed bottom-0 inset-x-0 z-50 h-[72px]"
+    <!-- ▂▂▂ نوار پایین موبایل (مثل اپلیکیشن) ▂▂▂ -->
+    <nav class="md:hidden glass border-t border-line fixed bottom-0 inset-x-0 z-50 h-[72px]"
         style="padding-bottom: env(safe-area-inset-bottom)"
-    >
+        aria-label="ناوبری موبایل">
+        <div class="grid grid-cols-4 h-full text-center">
 
-        <div class="grid grid-cols-4 h-full">
-
-            <!-- Home -->
-
-            <a
-                href="/"
-                class="active flex flex-col items-center justify-center gap-1"
-            >
-
-                <span class="nav-icon">
-
-                    <svg
-                        class="w-5 h-5"
-                        fill="none"
-                        stroke="currentColor"
-                        stroke-width="1.8"
-                        viewBox="0 0 24 24"
-                    >
-
-                        <path
-                            stroke-linecap="round"
-                            stroke-linejoin="round"
-                            d="M2.25 12l8.95-8.95a1.5 1.5 0 012.1 0L22.25 12"
-                        />
-
-                        <path
-                            stroke-linecap="round"
-                            stroke-linejoin="round"
-                            d="M4.5 10v10h6v-6h3v6h6V10"
-                        />
-
-                    </svg>
-
-                </span>
-
-                <span class="text-[9px] font-bold">
-                    خانه
-                </span>
-
+            <a href="/"
+                class="flex flex-col items-center justify-center gap-1 text-lime active:scale-95 transition">
+                <svg class="w-6 h-6" fill="none" stroke="currentColor" stroke-width="1.8" viewBox="0 0 24 24" aria-hidden="true">
+                    <path stroke-linecap="round" stroke-linejoin="round" d="M2.25 12l8.95-8.95a1.5 1.5 0 012.1 0L22.25 12M4.5 9.75v10.5h6v-6h3v6h6V9.75" />
+                </svg>
+                <span class="text-[10px] font-bold">خانه</span>
             </a>
 
-
-            <!-- Products -->
-
-            <a
-                href="/products"
-                class="flex flex-col items-center justify-center gap-1"
-            >
-
-                <span class="nav-icon">
-
-                    <svg
-                        class="w-5 h-5"
-                        fill="none"
-                        stroke="currentColor"
-                        stroke-width="1.8"
-                        viewBox="0 0 24 24"
-                    >
-
-                        <path
-                            stroke-linecap="round"
-                            stroke-linejoin="round"
-                            d="M4 5.5A2.5 2.5 0 016.5 3h11A2.5 2.5 0 0120 5.5v13a2.5 2.5 0 01-2.5 2.5h-11A2.5 2.5 0 014 18.5v-13z"
-                        />
-
-                        <path
-                            stroke-linecap="round"
-                            stroke-linejoin="round"
-                            d="M8 7h8M8 11h8M8 15h5"
-                        />
-
-                    </svg>
-
-                </span>
-
-                <span class="text-[9px] font-bold">
-                    محصولات
-                </span>
-
+            <a href="/products"
+                class="flex flex-col items-center justify-center gap-1 text-gray-400 active:text-lime transition">
+                <svg class="w-6 h-6" fill="none" stroke="currentColor" stroke-width="1.8" viewBox="0 0 24 24" aria-hidden="true">
+                    <path stroke-linecap="round" stroke-linejoin="round" d="M3.75 6A2.25 2.25 0 016 3.75h2.25A2.25 2.25 0 0110.5 6v2.25a2.25 2.25 0 01-2.25 2.25H6a2.25 2.25 0 01-2.25-2.25V6zM3.75 15.75A2.25 2.25 0 016 13.5h2.25a2.25 2.25 0 012.25 2.25V18a2.25 2.25 0 01-2.25 2.25H6A2.25 2.25 0 013.75 18v-2.25zM13.5 6a2.25 2.25 0 012.25-2.25H18A2.25 2.25 0 0120.25 6v2.25A2.25 2.25 0 0118 10.5h-2.25a2.25 2.25 0 01-2.25-2.25V6zM13.5 15.75a2.25 2.25 0 012.25-2.25H18a2.25 2.25 0 012.25 2.25V18A2.25 2.25 0 0118 20.25h-2.25A2.25 2.25 0 0113.5 18v-2.25z" />
+                </svg>
+                <span class="text-[10px] font-bold">محصولات</span>
             </a>
 
-
-            <!-- Custom -->
-
-            <a
-                href="/custom-order"
-                class="flex flex-col items-center justify-center gap-1"
-            >
-
-                <span class="nav-icon">
-
-                    <svg
-                        class="w-5 h-5"
-                        fill="none"
-                        stroke="currentColor"
-                        stroke-width="1.8"
-                        viewBox="0 0 24 24"
-                    >
-
-                        <path
-                            stroke-linecap="round"
-                            stroke-linejoin="round"
-                            d="M12 3v18M3 12h18"
-                        />
-
-                        <path
-                            stroke-linecap="round"
-                            stroke-linejoin="round"
-                            d="M6 6l12 12M18 6L6 18"
-                        />
-
+            <a href="/cart"
+                class="flex flex-col items-center justify-center gap-1 text-gray-400 active:text-lime transition relative">
+                <span class="relative">
+                    <svg class="w-6 h-6" fill="none" stroke="currentColor" stroke-width="1.8" viewBox="0 0 24 24" aria-hidden="true">
+                        <path stroke-linecap="round" stroke-linejoin="round" d="M2.25 3h1.4l1.6 12.3a2 2 0 002 1.7h9.7a2 2 0 002-1.6l1.3-6.4H5.2M9 21a.75.75 0 100-1.5.75.75 0 000 1.5zm8 0a.75.75 0 100-1.5.75.75 0 000 1.5z" />
                     </svg>
 
+                    <span id="cart-badge-mobile"
+                        class="hidden absolute -top-1.5 -left-2 bg-lime text-black text-[9px] font-bold w-4 h-4 rounded-full flex items-center justify-center">
+                        ۰
+                    </span>
                 </span>
 
-                <span class="text-[9px] font-bold">
-                    تولید اختصاصی
-                </span>
-
+                <span class="text-[10px] font-bold">سبد</span>
             </a>
 
-
-            <!-- Account -->
-
-            <a
-                href="/login"
-                class="flex flex-col items-center justify-center gap-1"
-            >
-
-                <span class="nav-icon">
-
-                    <svg
-                        class="w-5 h-5"
-                        fill="none"
-                        stroke="currentColor"
-                        stroke-width="1.8"
-                        viewBox="0 0 24 24"
-                    >
-
-                        <circle
-                            cx="12"
-                            cy="8"
-                            r="3.2"
-                        />
-
-                        <path
-                            stroke-linecap="round"
-                            d="M5 20c.8-3.2 3.2-5 7-5s6.2 1.8 7 5"
-                        />
-
-                    </svg>
-
-                </span>
-
-                <span class="text-[9px] font-bold">
-                    حساب من
-                </span>
-
+            <a href="/login"
+                class="flex flex-col items-center justify-center gap-1 text-gray-400 active:text-lime transition">
+                <svg class="w-6 h-6" fill="none" stroke="currentColor" stroke-width="1.8" viewBox="0 0 24 24" aria-hidden="true">
+                    <path stroke-linecap="round" stroke-linejoin="round" d="M15.75 6a3.75 3.75 0 11-7.5 0 3.75 3.75 0 017.5 0zM4.501 20.118a7.5 7.5 0 0114.998 0A17.933 17.933 0 0112 21.75c-2.676 0-5.216-.584-7.499-1.632" />
+                </svg>
+                <span class="text-[10px] font-bold">ورود</span>
             </a>
-
         </div>
-
     </nav>
 
+    <?= $extraScripts ?? '' ?>
 </body>
 
 </html>
-
