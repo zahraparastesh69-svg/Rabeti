@@ -1,13 +1,13 @@
 <?php
 // ============================================================
-// Layout — جوراب‌لند (بازطراحی R-v2)
-//   موبایل-اول + دارک + سه‌بعدی + شیشه‌ای
+// Layout — تولیدی جوراب رابطی (هویت فیروزه‌ای برند)
+//   موبایل-اول + دارک + شیشه‌ای + سه‌بعدی
 //   متغیرهای PHP: $pageTitle, $content
-//   اختیاری: $extraHead (برای CSS/JS اضافه صفحات خاص)
+//   اختیاری: $extraHead (CSS/JS اضافه صفحات خاص)
 // ============================================================
 
-$pageTitle = $pageTitle ?? 'جوراب‌لند — بازار عمده جوراب';
-$pageDescription = $pageDescription ?? 'بازار آنلاین عمده جوراب — سفارش مستقیم از تولیدکننده بدون واسطه. خرید عمده جوراب مردانه، زنانه، بچگانه با تخفیف پلکانی.';
+$pageTitle = $pageTitle ?? 'تولیدی جوراب رابطی — تولید و فروش عمده جوراب';
+$pageDescription = $pageDescription ?? 'کارگاه تولیدی جوراب رابطی: تولید و فروش عمده جوراب مردانه، زنانه، بچگانه و ورزشی با قیمت پلکانی. سفارش تولید اختصاصی با برند شما.';
 ?>
 <!DOCTYPE html>
 <html lang="fa" dir="rtl">
@@ -18,11 +18,11 @@ $pageDescription = $pageDescription ?? 'بازار آنلاین عمده جور�
 
     <title><?= htmlspecialchars($pageTitle, ENT_QUOTES, 'UTF-8') ?></title>
     <meta name="description" content="<?= htmlspecialchars($pageDescription, ENT_QUOTES, 'UTF-8') ?>">
-    <meta name="theme-color" content="#0B0B14">
+    <meta name="theme-color" content="#00656b">
 
     <link rel="icon" type="image/svg+xml" href="/favicon.svg">
 
-    <!-- فونت وزیرمتن — preload + preconnect (سریع‌تر از CSS import) -->
+    <!-- فونت وزیرمتن — self-host توصیه می‌شود؛ فعلاً CDN -->
     <link rel="preconnect" href="https://cdn.jsdelivr.net" crossorigin>
     <link rel="preload" as="style"
         href="https://cdn.jsdelivr.net/gh/rastikerdar/vazirmatn@v33.003/Vazirmatn-font-face.css">
@@ -30,9 +30,7 @@ $pageDescription = $pageDescription ?? 'بازار آنلاین عمده جور�
         href="https://cdn.jsdelivr.net/gh/rastikerdar/vazirmatn@v33.003/Vazirmatn-font-face.css"
         rel="stylesheet">
 
-    <!-- Tailwind — build محلی (نسخه production) -->
-    <!-- ⚠️ دستور build: npx tailwindcss -i ./src/input.css -o ./dist/tw.css --minify -->
-    <!-- و در production این را جای CDN بگذار: <link rel="stylesheet" href="/dist/tw.css"> -->
+    <!-- Tailwind — production: build محلی -->
     <script src="https://cdn.tailwindcss.com"></script>
 
     <script>
@@ -40,11 +38,13 @@ $pageDescription = $pageDescription ?? 'بازار آنلاین عمده جور�
             theme: {
                 extend: {
                     colors: {
-                        ink: '#0B0B14',
-                        card: '#14141F',
-                        line: '#232333',
-                        lime: '#CCFF00',
-                        grape: '#8B5CF6',
+                        ink: '#0B1414', // پس‌زمینه دارک (سبز-تیره نه مشکی خالص)
+                        card: '#0F1B1B', // سطح کارت‌ها
+                        line: '#1C2B2B', // خطوط و بوردر
+                        brand: '#00656B', // فیروزه‌ای برند اصلی
+                        'brand-strong': '#004D4D',
+                        'brand-tint': '#0F2525', // tint برای دارک (سبز خیلی تیره)
+                        teal: '#2DD4BF', // تاکید روشن (جای لایم — هم‌خانواده فیروزه‌ای)
                     },
                     fontFamily: {
                         vazir: ['Vazirmatn', 'Tahoma', 'sans-serif']
@@ -62,7 +62,7 @@ $pageDescription = $pageDescription ?? 'بازار آنلاین عمده جور�
 
         /* ✨ افکت شیشه‌ای */
         .glass {
-            background: rgba(20, 20, 31, .75);
+            background: rgba(15, 27, 27, .78);
             backdrop-filter: blur(16px);
             -webkit-backdrop-filter: blur(16px);
         }
@@ -78,16 +78,16 @@ $pageDescription = $pageDescription ?? 'بازار آنلاین عمده جور�
         .card-3d:hover {
             transform: translateY(-8px) rotateX(4deg);
             box-shadow:
-                0 24px 48px -12px rgba(139, 92, 246, .35),
+                0 24px 48px -12px rgba(45, 212, 191, .28),
                 0 8px 16px -8px rgba(0, 0, 0, .6);
         }
 
-        /* 🌈 هاله‌های رنگی — قابل تنظیم با CSS variables */
+        /* 🌈 هاله‌های رنگی پس‌زمینه */
         .glow {
             position: absolute;
             border-radius: 9999px;
             filter: blur(90px);
-            opacity: .35;
+            opacity: .3;
             pointer-events: none;
         }
 
@@ -131,8 +131,8 @@ $pageDescription = $pageDescription ?? 'بازار آنلاین عمده جور�
 <body class="bg-ink text-gray-100 min-h-screen relative overflow-x-hidden font-vazir">
 
     <!-- 🌈 هاله‌های پس‌زمینه -->
-    <div class="glow w-96 h-96 bg-grape -top-32 -right-32" aria-hidden="true"></div>
-    <div class="glow w-80 h-80 bg-lime opacity-10 top-1/2 -left-40" aria-hidden="true"></div>
+    <div class="glow w-96 h-96 bg-brand -top-32 -right-32 opacity-40" aria-hidden="true"></div>
+    <div class="glow w-80 h-80 bg-teal opacity-10 top-1/2 -left-40" aria-hidden="true"></div>
 
     <!-- ▂▂▂ Header ▂▂▂ -->
     <header class="glass border-b border-line sticky top-0 z-50">
@@ -140,15 +140,15 @@ $pageDescription = $pageDescription ?? 'بازار آنلاین عمده جور�
 
             <!-- لوگو -->
             <a href="/" class="font-black text-xl shrink-0 hover:opacity-90 transition">
-                جوراب‌<span class="text-lime">لند</span>
+                تولیدی <span class="text-teal">جوراب رابطی</span>
             </a>
 
             <!-- منو (دسکتاپ) -->
             <nav class="hidden md:flex items-center gap-7 text-sm font-medium text-gray-300" aria-label="منوی اصلی">
-                <a href="/" class="hover:text-lime transition">خانه</a>
-                <a href="/products" class="hover:text-lime transition">محصولات</a>
-                <a href="/custom-order" class="hover:text-lime transition">سفارش اختصاصی</a>
-                <a href="/about" class="hover:text-lime transition">درباره ما</a>
+                <a href="/" class="hover:text-teal transition">خانه</a>
+                <a href="/products" class="hover:text-teal transition">محصولات</a>
+                <a href="/custom-order" class="hover:text-teal transition">سفارش تولید اختصاصی</a>
+                <a href="/about" class="hover:text-teal transition">درباره ما</a>
             </nav>
 
             <!-- سمت چپ -->
@@ -162,16 +162,16 @@ $pageDescription = $pageDescription ?? 'بازار آنلاین عمده جور�
                     </svg>
 
                     <span id="cart-badge"
-                        class="hidden absolute top-0 left-0 bg-lime text-black text-[10px] font-bold w-5 h-5 rounded-full flex items-center justify-center">
+                        class="hidden absolute top-0 left-0 bg-teal text-black text-[10px] font-bold w-5 h-5 rounded-full flex items-center justify-center">
                         ۰
                     </span>
                 </a>
 
                 <a href="/login"
-                    class="text-sm font-bold bg-lime text-black px-4 md:px-5 py-2.5 rounded-xl
-                        hover:brightness-110 hover:-translate-y-0.5 active:translate-y-0.5
-                        shadow-[0_3px_0_rgba(163,230,53,.4),0_6px_14px_rgba(204,255,0,.15)]
-                        active:shadow-[0_1px_0_rgba(163,230,53,.4)] transition">
+                    class="text-sm font-bold bg-brand text-white px-4 md:px-5 py-2.5 rounded-xl
+                        hover:bg-brand-strong hover:-translate-y-0.5 active:translate-y-0.5
+                        shadow-[0_3px_0_#003d3d,0_6px_14px_rgba(0,101,107,.25)]
+                        active:shadow-[0_1px_0_#003d3d] transition">
                     ورود
                 </a>
             </div>
@@ -188,11 +188,11 @@ $pageDescription = $pageDescription ?? 'بازار آنلاین عمده جور�
         <div class="max-w-7xl mx-auto px-4 py-12 grid md:grid-cols-3 gap-10 text-sm text-gray-400">
             <div>
                 <div class="font-black text-white text-lg mb-3">
-                    جوراب‌<span class="text-lime">لند</span>
+                    تولیدی <span class="text-teal">جوراب رابطی</span>
                 </div>
 
                 <p class="leading-7">
-                    بازار آنلاین عمده جوراب — سفارش مستقیم از تولیدکننده، بدون واسطه
+                    کارگاه تولیدی جوراب — سفارش مستقیم از تولیدکننده، بدون واسطه. خرید عمده با قیمت پلکانی و تولید اختصاصی با برند شما.
                 </p>
             </div>
 
@@ -200,9 +200,9 @@ $pageDescription = $pageDescription ?? 'بازار آنلاین عمده جور�
                 <div class="font-bold text-white mb-3">دسترسی سریع</div>
 
                 <ul class="space-y-2">
-                    <li><a href="/products" class="hover:text-lime transition">کاتالوگ محصولات</a></li>
-                    <li><a href="/register" class="hover:text-lime transition">ثبت‌نام عمده‌فروشان</a></li>
-                    <li><a href="/custom-order" class="hover:text-lime transition">سفارش تولید اختصاصی</a></li>
+                    <li><a href="/products" class="hover:text-teal transition">کاتالوگ محصولات</a></li>
+                    <li><a href="/register" class="hover:text-teal transition">ثبت‌نام عمده‌فروشان</a></li>
+                    <li><a href="/custom-order" class="hover:text-teal transition">سفارش تولید اختصاصی</a></li>
                 </ul>
             </div>
 
@@ -211,14 +211,14 @@ $pageDescription = $pageDescription ?? 'بازار آنلاین عمده جور�
 
                 <ul class="space-y-2">
                     <li dir="ltr" class="text-right">۰۲۱ - ۱۲۳۴۵۶۷۸</li>
-                    <li dir="ltr" class="text-right">۰۹۱۲ - ۱۲۳۴۵۶۷</li>
+                    <li dir="ltr" class="text-right">۰۹۱۲ - ۷۲۶ ۴۵۶۰</li>
                     <li>شنبه تا پنجشنبه — ۹ تا ۱۷</li>
                 </ul>
             </div>
         </div>
 
         <div class="border-t border-line py-4 text-center text-xs text-gray-600">
-            © <?= date('Y') ?> تمامی حقوق برای جوراب‌لند محفوظ است
+            © <?= date('Y') ?> تمامی حقوق برای تولیدی جوراب رابطی محفوظ است
         </div>
     </footer>
 
@@ -229,7 +229,7 @@ $pageDescription = $pageDescription ?? 'بازار آنلاین عمده جور�
         <div class="grid grid-cols-4 h-full text-center">
 
             <a href="/"
-                class="flex flex-col items-center justify-center gap-1 text-lime active:scale-95 transition">
+                class="flex flex-col items-center justify-center gap-1 text-teal active:scale-95 transition">
                 <svg class="w-6 h-6" fill="none" stroke="currentColor" stroke-width="1.8" viewBox="0 0 24 24" aria-hidden="true">
                     <path stroke-linecap="round" stroke-linejoin="round" d="M2.25 12l8.95-8.95a1.5 1.5 0 012.1 0L22.25 12M4.5 9.75v10.5h6v-6h3v6h6V9.75" />
                 </svg>
@@ -237,7 +237,7 @@ $pageDescription = $pageDescription ?? 'بازار آنلاین عمده جور�
             </a>
 
             <a href="/products"
-                class="flex flex-col items-center justify-center gap-1 text-gray-400 active:text-lime transition">
+                class="flex flex-col items-center justify-center gap-1 text-gray-400 active:text-teal transition">
                 <svg class="w-6 h-6" fill="none" stroke="currentColor" stroke-width="1.8" viewBox="0 0 24 24" aria-hidden="true">
                     <path stroke-linecap="round" stroke-linejoin="round" d="M3.75 6A2.25 2.25 0 016 3.75h2.25A2.25 2.25 0 0110.5 6v2.25a2.25 2.25 0 01-2.25 2.25H6a2.25 2.25 0 01-2.25-2.25V6zM3.75 15.75A2.25 2.25 0 016 13.5h2.25a2.25 2.25 0 012.25 2.25V18a2.25 2.25 0 01-2.25 2.25H6A2.25 2.25 0 013.75 18v-2.25zM13.5 6a2.25 2.25 0 012.25-2.25H18A2.25 2.25 0 0120.25 6v2.25A2.25 2.25 0 0118 10.5h-2.25a2.25 2.25 0 01-2.25-2.25V6zM13.5 15.75a2.25 2.25 0 012.25-2.25H18a2.25 2.25 0 012.25 2.25V18A2.25 2.25 0 0118 20.25h-2.25A2.25 2.25 0 0113.5 18v-2.25z" />
                 </svg>
@@ -245,14 +245,14 @@ $pageDescription = $pageDescription ?? 'بازار آنلاین عمده جور�
             </a>
 
             <a href="/cart"
-                class="flex flex-col items-center justify-center gap-1 text-gray-400 active:text-lime transition relative">
+                class="flex flex-col items-center justify-center gap-1 text-gray-400 active:text-teal transition relative">
                 <span class="relative">
                     <svg class="w-6 h-6" fill="none" stroke="currentColor" stroke-width="1.8" viewBox="0 0 24 24" aria-hidden="true">
                         <path stroke-linecap="round" stroke-linejoin="round" d="M2.25 3h1.4l1.6 12.3a2 2 0 002 1.7h9.7a2 2 0 002-1.6l1.3-6.4H5.2M9 21a.75.75 0 100-1.5.75.75 0 000 1.5zm8 0a.75.75 0 100-1.5.75.75 0 000 1.5z" />
                     </svg>
 
                     <span id="cart-badge-mobile"
-                        class="hidden absolute -top-1.5 -left-2 bg-lime text-black text-[9px] font-bold w-4 h-4 rounded-full flex items-center justify-center">
+                        class="hidden absolute -top-1.5 -left-2 bg-teal text-black text-[9px] font-bold w-4 h-4 rounded-full flex items-center justify-center">
                         ۰
                     </span>
                 </span>
@@ -261,7 +261,7 @@ $pageDescription = $pageDescription ?? 'بازار آنلاین عمده جور�
             </a>
 
             <a href="/login"
-                class="flex flex-col items-center justify-center gap-1 text-gray-400 active:text-lime transition">
+                class="flex flex-col items-center justify-center gap-1 text-gray-400 active:text-teal transition">
                 <svg class="w-6 h-6" fill="none" stroke="currentColor" stroke-width="1.8" viewBox="0 0 24 24" aria-hidden="true">
                     <path stroke-linecap="round" stroke-linejoin="round" d="M15.75 6a3.75 3.75 0 11-7.5 0 3.75 3.75 0 017.5 0zM4.501 20.118a7.5 7.5 0 0114.998 0A17.933 17.933 0 0112 21.75c-2.676 0-5.216-.584-7.499-1.632" />
                 </svg>
