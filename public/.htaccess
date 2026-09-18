@@ -13,3 +13,7 @@ RewriteRule ^contact/?$ contact.php [L,QSA]
 # احراز هویت
 RewriteRule ^login/?$ login.php [L,QSA]
 RewriteRule ^register/?$ register.php [L,QSA]
+
+# پنل مدیریت
+RewriteRule ^admin/?$ admin/index.php [L,QSA]
+RewriteRule ^admin/([a-z\-]+)/?$ admin/$1.php [L,QSA]
