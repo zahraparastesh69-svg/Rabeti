@@ -16,6 +16,11 @@
         <div class="header-inner">
             <!-- گروه راست: برند + دکمه منو، چسبیده به هم -->
             <div class="header-right">
+                <button class="hamburger" id="menuBtn" type="button" aria-label="منو">
+                    <span></span>
+                    <span></span>
+                    <span></span>
+                </button>
                 <a href="/" class="brand">
                     <div class="brand-icon">🧦</div>
                     <div class="brand-text">
@@ -23,11 +28,7 @@
                         <small>تولید و پخش مستقیم</small>
                     </div>
                 </a>
-                <button class="hamburger" id="menuBtn" type="button" aria-label="منو">
-                    <span></span>
-                    <span></span>
-                    <span></span>
-                </button>
+
             </div>
         </div>
     </header>
