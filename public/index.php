@@ -4,7 +4,7 @@ require __DIR__ . '/../config/database.php';
 // ─── داده‌های صفحه اصلی ───
 $banner = db()->query("SELECT * FROM banners WHERE position='hero' AND is_active=1 ORDER BY sort_order LIMIT 1")->fetch();
 $banner = $banner ?: [];
-$bannerImage = trim($banner['image'] ?? '');
+$bannerImage = trim($banner['image_path'] ?? '');
 $bannerLink  = $banner['link'] ?? '/products';
 
 $categories = db()->query("SELECT * FROM categories WHERE is_active=1 ORDER BY sort_order")->fetchAll();
@@ -155,7 +155,7 @@ ob_start();
         <div class="premium-product-grid">
             <?php foreach ($products as $index => $p): ?>
                 <?php $stock = (int)($p['qty_available'] ?? 0); ?>
-                <a href="/products/<?= $h($p['slug'] ?? $p['id']) ?>" class="premium-product-card">
+                <a href="/product/<?= $h($p['slug'] ?? $p['id']) ?>" class="premium-product-card">
                     <div class="product-visual">
                         <span class="product-index">0<?= $index + 1 ?></span>
                         <span class="product-badge">عمده</span>
