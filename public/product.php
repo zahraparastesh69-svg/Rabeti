@@ -1,5 +1,6 @@
 <?php
 require __DIR__ . '/../config/database.php';
+$h = static fn($v) => htmlspecialchars((string)$v, ENT_QUOTES, 'UTF-8');
 
 /* ─────────── خواندن محصول با slug ─────────── */
 $slug = trim($_GET['slug'] ?? '');
@@ -36,6 +37,74 @@ $stmt = db()->prepare("
 $stmt->execute([$product['id']]);
 $prices = $stmt->fetchAll();
 
+<!-- ▂▂▂ محصول ▂▂▂ -->
+<section class="product-detail">
+
+    <div class="pd-gallery">
+        <div class="pd-main-img premium-visual">
+            <div class="product-surface"></div>
+            <?php if ($mainImage): ?>
+                <img src="/uploads/products/<?= $h($mainImage['image_path']) ?>"
+                     alt="<?= $h($product['name']) ?>">
+            <?php else: ?>
+                <span class="product-sock">🧦</span>
+            <?php endif; ?>
+        </div>
+        <div class="pd-note">📷 عکس واقعی به‌زودی</div>
+    </div>
+
+    <div class="pd-info">
+        <div class="product-meta-line" style="margin-bottom:8px;">
+            <span>کد <?= $h($product['code']) ?></span>
+            <span class="stock-dot"><?= $inStock ? 'موجود' : 'ناموجود' ?></span>
+        </div>
+
+        <h1 class="pd-title"><?= $h($product['name']) ?></h1>
+
+        <div class="pd-desc">
+            <?= nl2br($h($product['description'] ?? 'این محصول مستقیماً از خط تولید کارخانه عرضه می‌شود. برای دریافت نمونه و مذاکره قیمت با ما در تماس باشید.')) ?>
+        </div>
+
+        <div class="pd-price-box">
+            <div class="pd-price-title">قیمت همکاری</div>
+            <?php if ($prices): ?>
+            <table class="pd-price-table">
+                <thead><tr><th>تعداد</th><th>قیمت واحد</th></tr></thead>
+                <tbody>
+                    <?php foreach ($prices as $row): ?>
+                    <tr>
+                        <td><?= $row['min_qty'] > 1 ? 'از ' . number_format($row['min_qty']) . ' جفت' : 'شروع همکاری' ?></td>
+                        <td class="pd-price-cell"><?= number_format($row['price']) ?> تومان</td>
+                    </tr>
+                    <?php endforeach; ?>
+                </tbody>
+            </table>
+            <?php else: ?>
+            <div class="pd-no-price">قیمت به‌زودی اعلام می‌شود — تماس: <span dir="ltr">0912-1234567</span></div>
+            <?php endif; ?>
+        </div>
+
+        <div class="pd-specs">
+            <div class="pd-spec"><span>حداقل سفارش (MOQ)</span><b><?= (int)$product['base_moq'] ?> جفت</b></div>
+            <div class="pd-spec"><span>دسته</span><b><?= $h($product['cat_name'] ?? '') ?></b></div>
+            <div class="pd-spec"><span>موجودی انبار</span><b><?= number_format((int)($product['qty_available'] ?? 0)) ?> جفت</b></div>
+            <div class="pd-spec"><span>ارسال</span><b>سراسر کشور — ۲۴ تا ۷۲ ساعت</b></div>
+        </div>
+
+        <div class="pd-actions">
+            <?php if ($inStock): ?>
+            <button class="btn btn-orange pd-order-btn"
+                    onclick="showToast('🛒 سبد خرید در فاز بعدی فعال می‌شود')">
+                افزودن به سبد سفارش
+            </button>
+            <?php else: ?>
+            <button class="btn pd-disabled" disabled>فعلاً ناموجود</button>
+            <?php endif; ?>
+            <a href="/custom-order" class="pd-link">درخواست تولید با برند اختصاصی ←</a>
+        </div>
+    </div>
+</section>
+
 /* ─────────── محصولات مشابه (همان دسته) ─────────── */
 $stmt = db()->prepare("
     SELECT p.id, p.name, p.slug, p.code, pr.price
@@ -61,12 +130,12 @@ $pageTitle = $product['name'] . ' | جوراب رابطی';
 ob_start();
 ?>
 
-<!-- ▂▂▂ مسیر راهنما (Breadcrumb) ▂▂▂ -->
+<!-- ▂▂▂ مسیر راهنما ▂▂▂ -->
 <nav class="breadcrumb">
     <a href="/">خانه</a> ›
     <a href="/products">محصولات</a> ›
-    <a href="/products?cat=<?= $product['cat_slug'] ?>"><?= htmlspecialchars($product['cat_name']) ?></a> ›
-    <span><?= htmlspecialchars($product['name']) ?></span>
+    <a href="/products?cat=<?= $h($product['cat_slug'] ?? '') ?>"><?= $h($product['cat_name'] ?? '') ?></a> ›
+    <span><?= $h($product['name']) ?></span>
 </nav>
 
 <!-- ▂▂▂ بخش اصلی محصول ▂▂▂ -->

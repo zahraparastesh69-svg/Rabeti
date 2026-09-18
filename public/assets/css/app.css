@@ -4257,3 +4257,76 @@ body.app-body {
     line-height: 1.85;
   }
 }
+/* ═══════════════════════════════════════════════════════════════════════
+   CATALOG V3 — سربرگ کاتالوگ
+   ═══════════════════════════════════════════════════════════════════════ */
+.catalog-head {
+  margin-top: 28px;
+}
+.catalog-title {
+  margin: 6px 0 8px;
+  color: var(--teal-900);
+  font-size: clamp(1.7rem, 3.5vw, 2.4rem);
+  font-weight: 900;
+  letter-spacing: -1px;
+}
+.catalog-sub {
+  margin: 0;
+  color: var(--muted-text);
+  font-size: 0.9rem;
+}
+
+/* بج ناموجود روی کارت محصول */
+.product-badge.out {
+  color: #b4443c;
+  border-color: rgba(180, 68, 60, 0.18);
+}
+
+/* فیلتر فعال با رنگ برند */
+.filter-chip.active {
+  background: var(--teal-800);
+  border-color: var(--teal-800);
+  color: #fff;
+  box-shadow: 0 6px 16px rgba(0, 102, 107, 0.22);
+}
+
+/* ریتم گرید کاتالوگ */
+.catalog-grid {
+  margin-top: 26px;
+}
+@media (max-width: 720px) {
+  .catalog-head {
+    margin-top: 20px;
+  }
+  .catalog-title {
+    font-size: 1.5rem;
+  }
+  .catalog-sub {
+    font-size: 0.78rem;
+  }
+  .filter-bar {
+    margin-inline: -13px; /* اسکرول افقی تا لبه‌های صفحه مثل اپ */
+    padding-inline: 13px;
+  }
+}
+/* ─── ۸) ویژوال Premium در صفحه محصول ─── */
+.pd-main-img.premium-visual {
+  position: relative;
+  display: grid;
+  place-items: center;
+  background:
+    radial-gradient(circle at 50% 30%, #fff, transparent 42%),
+    linear-gradient(145deg, var(--teal-50), #edf3f2);
+}
+.pd-main-img.premium-visual img {
+  position: relative;
+  z-index: 2;
+  width: 82%;
+  height: 82%;
+  object-fit: contain;
+  border-radius: 18px;
+}
+.pd-main-img.premium-visual .product-surface {
+  width: 62%;
+  height: 62%;
+}

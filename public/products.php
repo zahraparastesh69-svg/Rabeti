@@ -1,14 +1,12 @@
 <?php
 require __DIR__ . '/../config/database.php';
 
-/* ─────────── فیلتر دسته از URL: ?cat=men ─────────── */
+/* ─────────── فیلتر دسته ─────────── */
 $catSlug = trim($_GET['cat'] ?? '');
 $activeCat = null;
 
-/* دسته‌بندی‌ها برای نوار فیلتر */
 $categories = db()->query("SELECT * FROM categories WHERE is_active=1 ORDER BY sort_order")->fetchAll();
 
-/* اعتبارسنجی دسته انتخابی (Prepared — نه مستقیم در کوئری!) */
 if ($catSlug !== '') {
     $stmt = db()->prepare("SELECT * FROM categories WHERE slug = ? AND is_active = 1 LIMIT 1");
     $stmt->execute([$catSlug]);
@@ -17,14 +15,14 @@ if ($catSlug !== '') {
         http_response_code(404);
         $pageTitle = 'دسته یافت نشد';
         ob_start();
-        echo '<div class="empty-state"><div class="empty-icon">🔍</div><h2>این دسته پیدا نشد</h2><a href="/products" class="btn btn-orange">همه محصولات</a></div>';
+        echo '<div class="empty-state"><h2>این دسته پیدا نشد</h2><a href="/products" class="btn btn-orange">همه محصولات</a></div>';
         $content = ob_get_clean();
         require __DIR__ . '/../views/layouts/main.php';
         exit;
     }
 }
 
-/* ─────────── کوئری محصولات ─────────── */
+/* ─────────── محصولات ─────────── */
 $sql = "
     SELECT p.id, p.code, p.name, p.slug, p.base_moq,
            pr.price, inv.qty_available,
@@ -38,56 +36,73 @@ $sql = "
 $params = [];
 
 if ($activeCat) {
-    // دسته انتخابی + زیردسته‌هایش
     $sql .= " AND (p.category_id = ? OR c.parent_id = ?) ";
     $params[] = $activeCat['id'];
     $params[] = $activeCat['id'];
 }
 
 $sql .= " ORDER BY p.id DESC LIMIT 60";
-
 $stmt = db()->prepare($sql);
 $stmt->execute($params);
 $products = $stmt->fetchAll();
+
+$h = static fn($v) => htmlspecialchars((string)$v, ENT_QUOTES, 'UTF-8');
 
 $pageTitle = ($activeCat ? $activeCat['name'] . ' — ' : '') . 'کاتالوگ محصولات | جوراب رابطی';
 ob_start();
 ?>
 
-<!-- ▂▂▂ سرصفحه کاتالوگ ▂▂▂ -->
-<section class="page-head">
-    <h1 class="section-title"><?= $activeCat ? htmlspecialchars($activeCat['name']) : 'همه محصولات' ?></h1>
-    <p class="section-sub"><?= count($products) ?> مدل — قیمت عمده کارخانه</p>
+<!-- ▂▂▂ سربرگ کاتالوگ ▂▂▂ -->
+<section class="catalog-head">
+    <span class="eyebrow">CATALOG</span>
+    <h1 class="catalog-title"><?= $activeCat ? $h($activeCat['name']) : 'همه محصولات' ?></h1>
+    <p class="catalog-sub">
+        <?= count($products) ?> مدل — قیمت همکاری، مستقیم از تولیدی
+    </p>
 </section>
 
-<!-- ▂▂▂ نوار فیلتر دسته‌ها (چیپ‌های اسکرولی) ▂▂▂ -->
-<section class="filter-bar">
+<!-- ▂▂▂ نوار فیلتر دسته‌ها ▂▂▂ -->
+<section class="filter-bar" role="tablist">
     <a href="/products" class="filter-chip <?= !$activeCat ? 'active' : '' ?>">همه</a>
     <?php foreach ($categories as $cat): ?>
-        <a href="/products?cat=<?= $cat['slug'] ?>"
+        <a href="/products?cat=<?= $h($cat['slug']) ?>"
             class="filter-chip <?= $activeCat && $activeCat['id'] === $cat['id'] ? 'active' : '' ?>">
-            <?= $cat['icon'] ?> <?= htmlspecialchars($cat['name']) ?>
+            <?= trim($cat['icon'] ?? '') ?: '🧦' ?> <?= $h($cat['name']) ?>
         </a>
     <?php endforeach; ?>
 </section>
 
 <!-- ▂▂▂ گرید محصولات ▂▂▂ -->
 <?php if ($products): ?>
-    <section class="prod-grid">
-        <?php foreach ($products as $p): ?>
-            <a href="/product/<?= $p['slug'] ?>" class="prod-card">
-                <div class="prod-img">🧦</div>
-                <div class="prod-info">
-                    <div class="prod-cat"><?= htmlspecialchars($p['cat_name']) ?></div>
-                    <div class="prod-name"><?= htmlspecialchars($p['name']) ?></div>
-                    <div class="prod-code">کد: <?= $p['code'] ?></div>
-                    <div class="prod-row">
-                        <span class="prod-price"><?= number_format($p['price']) ?> تومان</span>
-                        <span class="prod-stock <?= $p['qty_available'] > 0 ? 'in' : 'out' ?>">
-                            <?= $p['qty_available'] > 0 ? 'موجود' : 'ناموجود' ?>
-                        </span>
+    <section class="premium-product-grid catalog-grid">
+        <?php foreach ($products as $index => $p): ?>
+            <?php $stock = (int)($p['qty_available'] ?? 0); ?>
+            <a href="/product/<?= $h($p['slug']) ?>" class="premium-product-card">
+                <div class="product-visual">
+                    <span class="product-index"><?= str_pad((string)($index + 1), 2, '0', STR_PAD_LEFT) ?></span>
+                    <?php if ($stock > 0): ?>
+                        <span class="product-badge">موجود</span>
+                    <?php else: ?>
+                        <span class="product-badge out">ناموجود</span>
+                    <?php endif; ?>
+                    <div class="product-surface"></div>
+                    <div class="product-sock">🧦</div>
+                    <div class="product-shadow"></div>
+                    <span class="product-open">↗</span>
+                </div>
+                <div class="premium-product-info">
+                    <div class="product-meta-line">
+                        <span>کد <?= $h($p['code']) ?></span>
+                        <span><?= $h($p['cat_name']) ?></span>
                     </div>
-                    <div class="prod-moq">حداقل: <?= $p['base_moq'] ?> جفت</div>
+                    <h3><?= $h($p['name']) ?></h3>
+                    <div class="product-bottom-line">
+                        <div>
+                            <small>قیمت همکاری</small>
+                            <strong><?= $p['price'] !== null ? number_format((float)$p['price']) . ' تومان' : 'استعلام قیمت' ?></strong>
+                        </div>
+                        <span class="product-moq">حداقل <?= (int)$p['base_moq'] ?> جفت</span>
+                    </div>
                 </div>
             </a>
         <?php endforeach; ?>
