@@ -464,3 +464,9 @@ img {
     padding: 36px 20px;
   }
 }
+/* ─── دسته‌های «به‌زودی» ─── */
+.cat-card.is-soon { cursor: default; opacity: .75; }
+.cat-badge-soon {
+    color: var(--muted);
+    background: var(--ink-100, #f1f5f9);
+}
