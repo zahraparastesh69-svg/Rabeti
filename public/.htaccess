@@ -4,6 +4,12 @@ RewriteEngine On
 RewriteRule ^products/?$ products.php [L,QSA]
 
 # /product/{slug}  →  product.php?slug={slug}
+RewriteRule ^custom-order/?$ custom-order.php [L,QSA]
+
 RewriteRule ^product/([a-zA-Z0-9\-]+)/?$ product.php?slug=$1 [L,QSA]
 RewriteRule ^about/?$ about.php [L,QSA]
 RewriteRule ^contact/?$ contact.php [L,QSA]
+
+# احراز هویت
+RewriteRule ^login/?$ login.php [L,QSA]
+RewriteRule ^register/?$ register.php [L,QSA]
