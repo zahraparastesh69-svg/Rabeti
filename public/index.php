@@ -12,12 +12,9 @@ ob_start();
     </p>
     <div class="hero-actions">
         <a href="/products" class="btn btn-orange">مشاهده محصولات ←</a>
-        <a href="/register" class="btn btn-ghost">به‌عنوان تولیدکننده شروع کنید</a>
     </div>
     <div class="hero-img">
-        <!-- 📷 وقتی عکس واقعی کارخانه را داشتید فقط این خط فعال می‌شود:
-        <img src="/assets/images/factory.jpg" alt="خط تولید کارخانه جوراب رابطی">
-        -->
+        <!-- 📷 بعداً: <img src="/assets/images/factory.jpg" alt="خط تولید جوراب رابطی"> -->
         🏭
     </div>
 </section>
