@@ -5,7 +5,6 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
     <title><?= $pageTitle ?? 'تولیدی جوراب رابطی' ?></title>
-    <link href="https://cdn.jsdelivr.net/gh/rastikerdar/vazirmatn@v33.003/Vazirmatn-font-face.css" rel="stylesheet">
     <link rel="stylesheet" href="/assets/css/app.css">
 </head>
 
