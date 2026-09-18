@@ -1,52 +1,58 @@
 <?php
+require __DIR__ . '/../config/database.php';
+
+// بنر هیرو
+$banner = db()->query("SELECT * FROM banners WHERE position='hero' AND is_active=1 ORDER BY sort_order LIMIT 1")->fetch();
+
+// دسته‌بندی‌ها
+$categories = db()->query("SELECT * FROM categories WHERE is_active=1 ORDER BY sort_order")->fetchAll();
+
+// پرفروش‌ها: ۴ محصول با قیمت و موجودی
+$products = db()->query("
+    SELECT p.id, p.code, p.name, p.base_moq, pr.price, inv.qty_available
+    FROM products p
+    LEFT JOIN product_prices pr ON pr.product_id = p.id AND pr.customer_group='wholesale'
+    LEFT JOIN inventory inv ON inv.product_id = p.id
+    WHERE p.is_active = 1
+    ORDER BY p.id
+    LIMIT 4
+")->fetchAll();
+?>
+<?php
 $pageTitle = 'تولیدی جوراب رابطی — عمده، بدون واسطه';
 ob_start();
 ?>
 
 <!-- ▂▂▂ هیرو ▂▂▂ -->
 <section class="hero">
-    <h1>محصولات تولیدی جوراب رابطی با کیفیت تضمینی و قیمت عمده</h1>
-    <p>
-        خرید عمده جوراب مستقیم از تولیدکننده — کاتالوگ کامل، قیمت ویژه
-        فروشگاه‌داران و پخش‌کنندگان، ارسال به سراسر کشور
-    </p>
+    <h1><?= htmlspecialchars($banner['title'] ?? 'تولیدی جوراب رابطی') ?></h1>
+    <p><?= htmlspecialchars($banner['subtitle'] ?? '') ?></p>
     <div class="hero-actions">
-        <a href="/products" class="btn btn-orange">مشاهده محصولات ←</a>
-        <a href="/register" class="btn btn-ghost">به‌عنوان تولیدکننده شروع کنید</a>
+        <a href="<?= htmlspecialchars($banner['link'] ?? '/products') ?>" class="btn btn-orange">مشاهده محصولات ←</a>
     </div>
-    <!-- 📷 عکس واقعی کارخانه — فعلاً Placeholder -->
-    <div class="hero-img">🧦 🏭</div>
+    <div class="hero-img">🧦</div>
 </section>
 
-<section class="section">
-  <div class="section-head">
-    <h2 class="section-title">دسته‌بندی محصولات</h2>
-    <p class="section-sub">انواع جوراب تولیدی — عمده و با قیمت کارخانه (برای مشاهده مدل‌ها کلیک کنید)</p>
-  </div>
 
-  <div class="cat-grid">
-    <?php foreach ($categories as $cat): ?>
-      <div class="cat-card" tabindex="0" role="button" aria-expanded="false">
-        <div class="cat-icon"><?= htmlspecialchars($cat['icon']) ?></div>
-        <div class="cat-name"><?= htmlspecialchars($cat['title']) ?></div>
-        <span class="cat-badge"><?= count($cat['subcategories']) ?> زیردسته</span>
-        
-        <?php if (!empty($cat['subcategories'])): ?>
-          <div class="cat-subs">
-            <div class="cat-chips">
-              <?php foreach ($cat['subcategories'] as $sub): ?>
-                <a href="/products?category=<?= urlencode($sub['slug']) ?>" 
-                   class="cat-chip" 
-                   onclick="event.stopPropagation();">
-                  <?= htmlspecialchars($sub['title']) ?>
-                </a>
-              <?php endforeach; ?>
-            </div>
-          </div>
-        <?php endif; ?>
-      </div>
-    <?php endforeach; ?>
-  </div>
+<section class="section">
+    <div class="section-head">
+        <h2 class="section-title">دسته‌بندی محصولات</h2>
+        <p class="section-sub">انواع جوراب تولیدی — عمده و با قیمت کارخانه (برای مشاهده مدل‌ها کلیک کنید)</p>
+    </div>
+
+    <div class="prod-grid">
+        <?php foreach ($products as $p): ?>
+            <a href="/products/<?= $p['slug'] ?? $p['id'] ?>" class="prod-card">
+                <div class="prod-img">🧦</div>
+                <div class="prod-info">
+                    <div class="prod-name"><?= htmlspecialchars($p['name']) ?></div>
+                    <div class="prod-code">کد: <?= $p['code'] ?></div>
+                    <div class="prod-price"><?= number_format($p['price']) ?> تومان</div>
+                    <div class="prod-moq">حداقل سفارش: <?= $p['base_moq'] ?> جفت</div>
+                </div>
+            </a>
+        <?php endforeach; ?>
+    </div>
 </section>
 
 <!-- ▂▂▂ چرا جوراب رابطی؟ ▂▂▂ -->
