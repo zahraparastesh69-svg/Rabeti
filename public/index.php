@@ -18,39 +18,35 @@ ob_start();
     <div class="hero-img">🧦 🏭</div>
 </section>
 
-<!-- ▂▂▂ دسته‌بندی محصولات ▂▂▂ -->
 <section class="section">
+  <div class="section-head">
     <h2 class="section-title">دسته‌بندی محصولات</h2>
-    <p class="section-sub">انواع جوراب تولیدی — عمده و با قیمت کارخانه</p>
+    <p class="section-sub">انواع جوراب تولیدی — عمده و با قیمت کارخانه (برای مشاهده مدل‌ها کلیک کنید)</p>
+  </div>
 
-    <div class="cat-grid">
-        <?php
-        // 🔧 موقت — بعداً از جدول categories دیتابیس خوانده می‌شود
-        $categories = [
-            ['🧦', 'مردانه',    ['نخی', 'اسپرت', 'ساق‌بلند', 'مجلسی']],
-            ['🧦', 'زنانه',     ['نازک', 'پشمی', 'ساق‌کوتاه', 'رنگارنگ']],
-            ['🧒', 'بچگانه',    ['نوزادی', 'کودکانه', 'مدرسه']],
-            ['⚽', 'ورزشی',     ['فوتبال', 'توپ‌دار', 'کوهنوردی']],
-            ['🧶', 'پشمی',      ['زمستانی', 'جیر', 'برک']],
-            ['🎁', 'ست و پک',   ['ست ۳عددی', 'پک هدیه', 'جعبه عمده']],
-        ];
-        foreach ($categories as [$icon, $name, $subs]):
-        ?>
-            <div class="cat-card" role="button" tabindex="0">
-                <div class="cat-icon"><?= $icon ?></div>
-                <div class="cat-name"><?= $name ?></div>
-                <span class="cat-badge"><?= count($subs) ?> زیردسته</span>
-
-                <div class="cat-subs">
-                    <div class="cat-chips">
-                        <?php foreach ($subs as $sub): ?>
-                            <a href="/products" class="cat-chip"><?= $sub ?></a>
-                        <?php endforeach; ?>
-                    </div>
-                </div>
+  <div class="cat-grid">
+    <?php foreach ($categories as $cat): ?>
+      <div class="cat-card" tabindex="0" role="button" aria-expanded="false">
+        <div class="cat-icon"><?= htmlspecialchars($cat['icon']) ?></div>
+        <div class="cat-name"><?= htmlspecialchars($cat['title']) ?></div>
+        <span class="cat-badge"><?= count($cat['subcategories']) ?> زیردسته</span>
+        
+        <?php if (!empty($cat['subcategories'])): ?>
+          <div class="cat-subs">
+            <div class="cat-chips">
+              <?php foreach ($cat['subcategories'] as $sub): ?>
+                <a href="/products?category=<?= urlencode($sub['slug']) ?>" 
+                   class="cat-chip" 
+                   onclick="event.stopPropagation();">
+                  <?= htmlspecialchars($sub['title']) ?>
+                </a>
+              <?php endforeach; ?>
             </div>
-        <?php endforeach; ?>
-    </div>
+          </div>
+        <?php endif; ?>
+      </div>
+    <?php endforeach; ?>
+  </div>
 </section>
 
 <!-- ▂▂▂ چرا جوراب رابطی؟ ▂▂▂ -->

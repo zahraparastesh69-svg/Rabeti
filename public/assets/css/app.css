@@ -655,3 +655,15 @@ img {
     margin-bottom: 8px;
   }
 }
+@media (min-width: 992px) {
+  .cat-grid {
+    grid-template-columns: repeat(5, 1fr); /* هر ۵ دسته در یک سطر کاملاً متقارن */
+    gap: 14px;
+  }
+}
+
+@media (max-width: 768px) {
+  .cat-grid {
+    grid-template-columns: repeat(2, 1fr); /* در موبایل ۲ ستونه */
+  }
+}
