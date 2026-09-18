@@ -271,59 +271,6 @@ img {
   margin-top: 6px;
 }
 
-/* ─── هیرو بنر ─── */
-.hero {
-  background: linear-gradient(160deg, var(--teal-800), var(--teal-900));
-  border-radius: var(--r-card-lg);
-  margin-top: 20px;
-  padding: 36px 28px;
-  color: #fff;
-  position: relative;
-  overflow: hidden;
-  display: flex;
-  flex-direction: column;
-}
-
-.hero h1 {
-  font-size: clamp(1.4rem, 3.5vw, 2.2rem);
-  font-weight: 900;
-  line-height: 1.6;
-  margin-bottom: 12px;
-  color: #fff;
-}
-
-.hero p {
-  color: var(--on-dark);
-  line-height: 1.9;
-  font-size: 0.95rem;
-  margin-bottom: 24px;
-  max-width: 650px;
-}
-
-.hero-actions {
-  display: flex;
-  flex-wrap: wrap;
-  align-items: center;
-  gap: 12px;
-  margin-bottom: 24px;
-}
-
-.hero-img {
-  width: 100%;
-  min-height: 160px;
-  border-radius: 18px;
-  background: linear-gradient(
-    135deg,
-    rgba(15, 54, 65, 0.7),
-    rgba(36, 89, 107, 0.7)
-  );
-  border: 1px solid rgba(255, 255, 255, 0.1);
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  font-size: 3rem;
-  overflow: hidden;
-}
 
 /* ─── گرید دسته‌بندی و آکاردئون ─── */
 .cat-grid {
@@ -1487,3 +1434,156 @@ img {
   color: #64748b;
   line-height: 1.6;
 }
+/* ═════════════ هدر: دکمه برجسته ورود/ثبت‌نام ═════════════ */
+.btn-login-highlight {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 6px;
+    padding: 10px 20px;
+    background: linear-gradient(135deg, #f59e0b, #ea580c); /* نارنجی سیستم */
+    color: #fff;
+    font-size: 14px;
+    font-weight: 700;
+    border-radius: 12px;
+    text-decoration: none;
+    box-shadow: 0 4px 14px rgba(234, 88, 12, .28);
+    transition: transform .18s ease, box-shadow .18s ease;
+    white-space: nowrap;
+}
+.btn-login-highlight:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 7px 20px rgba(234, 88, 12, .38);
+}
+
+/* ═════════════ منوی کاربر (چیپ + کشویی) ═════════════ */
+.user-menu {
+    position: relative;
+}
+.user-profile-chip {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    padding: 5px 12px 5px 5px;
+    background: #fff;
+    border: 1px solid #e5e7eb;
+    border-radius: 999px;
+    cursor: pointer;
+    transition: box-shadow .18s ease, border-color .18s ease;
+}
+.user-profile-chip:hover {
+    border-color: #0d9488;
+    box-shadow: 0 3px 12px rgba(13, 148, 136, .16);
+}
+.user-avatar {
+    width: 32px;
+    height: 32px;
+    border-radius: 50%;
+    background: linear-gradient(135deg, #0d9488, #14b8a6); /* فیروزه‌ای سیستم */
+: 800;
+fff;
+    display: grid;
+    place-items: center;
+    font-weight: 800;
+    font-size: 15px;
+}
+.user-chip-name {
+    font-size: 13.5px;
+    font-weight: 600;
+    color: #333;
+    max-width: 110px;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+.caret {
+    font-size: 12px;
+    color: #888;
+    transition: transform .18s ease;
+}
+.user-menu.open .caret {
+    transform: rotate(180deg);
+}
+
+.user-dropdown {
+    position: absolute;
+    top: calc(100% + 10px);
+    left: 0;
+    min-width: 235px;
+    background: #fff;
+    border-radius: 14px;
+    box-shadow: 0 14px 45px rgba(0, 0, 0, .14);
+    padding: 8px;
+    opacity: 0;
+    visibility: hidden;
+    transform: translateY(10px);
+    transition: opacity .2s ease, transform .2s ease, visibility .2s;
+    z-index: 120;
+}
+.user-dropdown.open {
+    opacity: 1;
+    visibility: visible;
+    transform: translateY(0);
+}
+.user-dropdown-head {
+    padding: 10px 12px 12px;
+    border-bottom: 1px solid #f0f0f0;
+    margin-bottom: 6px;
+}
+.user-dropdown-head b {
+    display: block;
+    font-size: 14.5px;
+    color: #111;
+}
+.user-dropdown-head span {
+    display: block;
+    font-size: 12px;
+    color: #888;
+    direction: ltr;
+    text-align: right;
+    margin-top: 2px;
+}
+.user-dropdown a {
+    display: flex;
+    align-items: center;
+    gap: 9px;
+    padding: 10px 12px;
+    border-radius: 9px;
+    color: #333;
+    text-decoration: none;
+    font-size: 14px;
+    transition: background .15s ease;
+}
+.user-dropdown a:hover {
+    background: #f5f5f4;
+}
+.user-dropdown a.logout {
+    color: #dc2626;
+}
+.user-dropdown a.logout:hover {
+    background: #fef2f2;
+}
+.user-dropdown-divider {
+    height: 1px;
+    background: #f0f0f0;
+    margin: 6px 0;
+}
+
+/* جداکننده منوی Drawer */
+.drawer-divider {
+    height: 1px;
+    background: #e5e7eb;
+    margin: 10px 0;
+}
+
+/* ═════════════ بنر هیرو (بدون کادر اضافه — تمام‌عرض) ═════════════ */
+.hero-container {
+    width: 100%;
+}
+.hero-banner {
+    position: relative;
+    width: 100%;
+    border-radius: 18px;
+    overflow: hidden;
+    background: linear-gradient(135deg, #0f766e, #14b8a6); /* فیروزه‌ای سیستم */
+    min-height: 320px; /*

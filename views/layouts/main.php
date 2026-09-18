@@ -1,9 +1,13 @@
 <?php
-// نمونه متغیرهای فرضی برای لاگین (در سیستم خودتان از Session یا Auth استفاده کنید)
-$isLoggedIn = $isLoggedIn ?? false;
-$userName   = $userName ?? 'کاربر گرامی';
+// ═════════════ اطلاعات کاربر (مطابق Session/Auth خودتان تنظیم کنید) ═════════════
+$isLoggedIn  = $isLoggedIn ?? false;
+$userName    = $userName ?? 'کاربر گرامی';
+$userMobile  = $userMobile ?? '';
+$userInitial = mb_substr($userName, 0, 1);
+
 $cartCount  = $cartCount ?? 0;
 $notifCount = $notifCount ?? 0;
+$msgCount   = $msgCount ?? 0;
 ?>
 <!DOCTYPE html>
 <html lang="fa" dir="rtl">
@@ -17,10 +21,11 @@ $notifCount = $notifCount ?? 0;
 
 <body>
 
-    <!-- هدر سایت -->
+    <!-- ═════════════ هدر سایت ═════════════ -->
     <header class="header">
         <div class="header-inner">
-            <!-- سمت راست: برند و دکمه منو -->
+
+            <!-- سمت راست: دکمه منو + برند -->
             <div class="header-right">
                 <button class="hamburger" id="menuBtn" type="button" aria-label="منو">
                     <span></span>
@@ -36,39 +41,71 @@ $notifCount = $notifCount ?? 0;
                 </a>
             </div>
 
-            <!-- سمت چپ: اعلان، سبد خرید، حساب کاربری -->
+            <!-- سمت چپ: پیام، اعلان، سبد خرید، کاربر -->
             <div class="header-left">
+
+                <!-- پیام‌ها -->
+                <a href="/messages" class="header-action-btn" aria-label="پیام‌ها" title="پیام‌ها">
+                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                        <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"></path>
+                    </svg>
+                    <?php if ($msgCount > 0): ?>
+                        <span class="badge"><?= (int)$msgCount ?></span>
+                    <?php endif; ?>
+                </a>
+
                 <!-- اعلان‌ها -->
                 <a href="/notifications" class="header-action-btn" aria-label="اعلان‌ها" title="اعلان‌ها">
-                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"></path><path d="M13.73 21a2 2 0 0 1-3.46 0"></path></svg>
+                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                        <path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"></path>
+                        <path d="M13.73 21a2 2 0 0 1-3.46 0"></path>
+                    </svg>
                     <?php if ($notifCount > 0): ?>
-                        <span class="badge"><?= $notifCount ?></span>
+                        <span class="badge"><?= (int)$notifCount ?></span>
                     <?php endif; ?>
                 </a>
 
                 <!-- سبد خرید -->
                 <a href="/cart" class="header-action-btn" aria-label="سبد خرید" title="سبد خرید">
-                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="9" cy="21" r="1"></circle><circle cx="20" cy="21" r="1"></circle><path d="M1 1h4l2.68 13.39a2 2 0 0 0 2 1.61h9.72a2 2 0 0 0 2-1.61L23 6H6"></path></svg>
+                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                        <circle cx="9" cy="21" r="1"></circle>
+                        <circle cx="20" cy="21" r="1"></circle>
+                        <path d="M1 1h4l2.68 13.39a2 2 0 0 0 2 1.61h9.72a2 2 0 0 0 2-1.61L23 6H6"></path>
+                    </svg>
                     <?php if ($cartCount > 0): ?>
-                        <span class="badge"><?= $cartCount ?></span>
+                        <span class="badge"><?= (int)$cartCount ?></span>
                     <?php endif; ?>
                 </a>
 
                 <!-- احراز هویت -->
                 <div class="user-auth-section">
                     <?php if ($isLoggedIn): ?>
-                        <a href="/profile" class="user-profile-chip">
-                            <span class="avatar-icon">👤</span>
-                            <span class="user-name"><?= htmlspecialchars($userName) ?></span>
-                        </a>
-                    <?php else: ?>
-                        <div class="auth-links">
-                            <a href="/login" class="btn-link">ورود</a>
-                            <span class="divider">/</span>
-                            <a href="/register" class="btn-link">ثبت‌نام</a>
+                        <div class="user-menu" id="userMenu">
+                            <button class="user-profile-chip" id="userMenuToggle" type="button" aria-expanded="false" aria-haspopup="true">
+                                <span class="user-avatar"><?= htmlspecialchars($userInitial) ?></span>
+                                <span class="user-chip-name"><?= htmlspecialchars($userName) ?></span>
+                                <span class="caret">▾</span>
+                            </button>
+                            <div class="user-dropdown" id="userDropdown">
+                                <div class="user-dropdown-head">
+                                    <b><?= htmlspecialchars($userName) ?></b>
+                                    <?php if ($userMobile): ?>
+                                        <span><?= htmlspecialchars($userMobile) ?></span>
+                                    <?php endif; ?>
+                                </div>
+                                <a href="/account">👤 حساب کاربری</a>
+                                <a href="/orders">📦 پیگیری سفارش</a>
+                                <a href="/account/wishlist">❤️ علاقه‌مندی‌ها</a>
+                                <a href="/account/addresses">📍 آدرس‌ها</a>
+                                <div class="user-dropdown-divider"></div>
+                                <a href="/logout" class="logout">🚪 خروج از حساب</a>
+                            </div>
                         </div>
+                    <?php else: ?>
+                        <a href="/login" class="btn-login-highlight">ورود / ثبت‌نام</a>
                     <?php endif; ?>
                 </div>
+
             </div>
         </div>
     </header>
@@ -88,61 +125,24 @@ $notifCount = $notifCount ?? 0;
             <a href="/custom-order" class="drawer-link">🏷️ سفارش تولید اختصاصی</a>
             <a href="/about" class="drawer-link">🏭 درباره ما</a>
             <a href="/contact" class="drawer-link">📞 تماس با ما</a>
+            <div class="drawer-divider"></div>
+            <?php if ($isLoggedIn): ?>
+                <a href="/account" class="drawer-link">👤 حساب کاربری</a>
+                <a href="/orders" class="drawer-link">📦 پیگیری سفارش</a>
+                <a href="/logout" class="drawer-link">🚪 خروج از حساب</a>
+            <?php else: ?>
+                <a href="/login" class="drawer-link">👤 ورود / ثبت‌نام</a>
+            <?php endif; ?>
         </nav>
     </aside>
 
-    <!-- محتوای صفحات -->
+    <!-- ═════════════ محتوای صفحه ═════════════ -->
+    <!-- بنر هیرو و کارت‌های مزایا به index.php منتقل شده‌اند -->
     <main class="container">
-        <!-- ساختار جدید هیرو بنر فیروزه‌ای -->
-        <section class="hero-container">
-            <div class="hero-banner">
-                <!-- تصویر یا آیکون مرکزی بنر -->
-                <div class="banner-inner-icon">🧦</div>
-            </div>
-            
-            <!-- دکمه خارج از بنر با فاصله مناسب -->
-            <div class="hero-cta-wrap">
-                <a href="/products" class="btn-hero">
-                    <span>مشاهده محصولات</span>
-                    <span class="arrow">←</span>
-                </a>
-            </div>
-        </section>
-
         <?= $content ?>
     </main>
 
-    <!-- بخش زنجیره مزایا و خدمات سه‌بعدی (قبل از فوتر) -->
-    <section class="container features-3d-section">
-        <div class="features-grid">
-            <div class="feature-card-3d">
-                <div class="card-glow"></div>
-                <div class="feature-icon">⏱️</div>
-                <h3>ثبت سفارش ۲۴ ساعته</h3>
-                <p>سامانه اتوماتیک دریافت سفارش عمده در تمامی ساعات شبانه‌روز</p>
-            </div>
-            <div class="feature-card-3d">
-                <div class="card-glow"></div>
-                <div class="feature-icon">🏷️</div>
-                <h3>تولید با طرح و برند شما</h3>
-                <p>بافت سفارشی و بسته‌بندی با لیبل و برند اختصاصی شما</p>
-            </div>
-            <div class="feature-card-3d">
-                <div class="card-glow"></div>
-                <div class="feature-icon">🚀</div>
-                <h3>تحویل فوری به سراسر کشور</h3>
-                <p>ارسال سریع بار از کارخانه به باربری و تحویل در کوتاه‌ترین زمان</p>
-            </div>
-            <div class="feature-card-3d">
-                <div class="card-glow"></div>
-                <div class="feature-icon">✨</div>
-                <h3>تضمین کیفیت و قیمت</h3>
-                <p>استفاده از نخ و کش درجه یک با تضمین مستقیم کارخانه</p>
-            </div>
-        </div>
-    </section>
-
-    <!-- فوتر -->
+    <!-- ═════════════ فوتر ═════════════ -->
     <footer class="footer">
         <div class="footer-inner">
             <div>
@@ -171,5 +171,60 @@ $notifCount = $notifCount ?? 0;
     </footer>
 
     <script src="/assets/js/app.js"></script>
+    <script>
+        (function() {
+            // ═══ منوی کشویی موبایل (Drawer) ═══
+            var menuBtn = document.getElementById('menuBtn');
+            var closeBtn = document.getElementById('closeBtn');
+            var drawer = document.getElementById('drawer');
+            var overlay = document.getElementById('overlay');
+
+            function openDrawer() {
+                if (drawer) drawer.classList.add('open');
+                if (overlay) overlay.classList.add('show');
+                document.body.style.overflow = 'hidden';
+            }
+
+            function closeDrawer() {
+                if (drawer) drawer.classList.remove('open');
+                if (overlay) overlay.classList.remove('show');
+                document.body.style.overflow = '';
+            }
+            if (menuBtn) menuBtn.addEventListener('click', openDrawer);
+            if (closeBtn) closeBtn.addEventListener('click', closeDrawer);
+            if (overlay) overlay.addEventListener('click', closeDrawer);
+
+            // ═══ منوی کشویی کاربر ═══
+            var userMenu = document.getElementById('userMenu');
+            var userToggle = document.getElementById('userMenuToggle');
+            var userDropdown = document.getElementById('userDropdown');
+
+            if (userMenu && userToggle && userDropdown) {
+                userToggle.addEventListener('click', function(e) {
+                    e.stopPropagation();
+                    var isOpen = userDropdown.classList.toggle('open');
+                    userMenu.classList.toggle('open', isOpen);
+                    userToggle.setAttribute('aria-expanded', isOpen ? 'true' : 'false');
+                });
+                document.addEventListener('click', function(e) {
+                    if (!userMenu.contains(e.target)) {
+                        userDropdown.classList.remove('open');
+                        userMenu.classList.remove('open');
+                        userToggle.setAttribute('aria-expanded', 'false');
+                    }
+                });
+            }
+
+            // ═══ Fallback تصویر بنر (در صورت خطا در لود عکس) ═══
+            document.querySelectorAll('.banner-img').forEach(function(img) {
+                img.addEventListener('error', function() {
+                    this.style.display = 'none';
+                    var fb = document.getElementById('bannerFallback');
+                    if (fb) fb.classList.add('show');
+                });
+            });
+        })();
+    </script>
 </body>
+
 </html>
