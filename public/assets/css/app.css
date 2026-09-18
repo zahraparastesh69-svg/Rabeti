@@ -10,7 +10,7 @@
   --teal-800: #17505f;
   --teal-700: #1d5c6e;
   --teal-100: #e3eef1;
-  --teal-50:  #f0f6f8;
+  --teal-50: #f0f6f8;
 
   --orange: #e5a33d;
   --orange-dark: #cc8a25;
@@ -39,7 +39,12 @@
 }
 
 body {
-  font-family: "Vazirmatn", -apple-system, BlinkMacSystemFont, Tahoma, sans-serif;
+  font-family:
+    "Vazirmatn",
+    -apple-system,
+    BlinkMacSystemFont,
+    Tahoma,
+    sans-serif;
   background: var(--cream);
   color: var(--ink);
   direction: rtl;
@@ -49,7 +54,7 @@ body {
   /* جلوگیری از کشیده شدن بیش از حد در نمایشگرهای عریض تبلت و دسکتاپ */
   max-width: 480px;
   margin: 0 auto;
-  box-shadow: 0 0 40px rgba(0,0,0,0.04);
+  box-shadow: 0 0 40px rgba(0, 0, 0, 0.04);
   position: relative;
   background-color: var(--surface);
 }
@@ -256,7 +261,12 @@ img {
 .hero-overlay {
   position: absolute;
   inset: 0;
-  background: linear-gradient(0deg, rgba(10, 37, 44, 0.9) 0%, rgba(10, 37, 44, 0.2) 65%, transparent 100%);
+  background: linear-gradient(
+    0deg,
+    rgba(10, 37, 44, 0.9) 0%,
+    rgba(10, 37, 44, 0.2) 65%,
+    transparent 100%
+  );
   display: flex;
   flex-direction: column;
   justify-content: flex-end;
@@ -327,7 +337,10 @@ img {
 /* چیدمان شبکه‌ای منظم مناسب تاچ گوشی */
 .cat-grid {
   display: grid;
-  grid-template-columns: repeat(4, 1fr); /* ۴ ستون استاندارد آیکونی یا ۲ ستون کارتی */
+  grid-template-columns: repeat(
+    4,
+    1fr
+  ); /* ۴ ستون استاندارد آیکونی یا ۲ ستون کارتی */
   gap: 12px;
   margin-bottom: 28px;
 }
@@ -523,4 +536,193 @@ img {
 .btn-outline {
   border: 1px solid rgba(255, 255, 255, 0.3);
   color: #ffffff;
+}
+/* ─── اصلاح ابعاد برای تبلت و دسکتاپ ویندوزی ─── */
+body {
+  font-family:
+    "Vazirmatn",
+    -apple-system,
+    BlinkMacSystemFont,
+    Tahoma,
+    sans-serif;
+  background-color: var(--cream);
+  color: var(--ink);
+  direction: rtl;
+  text-align: right;
+  line-height: 1.6;
+  min-height: 100vh;
+  margin: 0;
+  /* حذف محدودیت ۴۸۰ پیکسل از بادی */
+  max-width: 100%;
+}
+
+/* محفظه وسط‌چین که در موبایل فول‌است و در ویندوز شکیل و حداکثر ۱۱۰۰px است */
+.header-container,
+.page-wrapper {
+  width: 100%;
+  max-width: 1100px;
+  margin: 0 auto;
+  padding: 0 16px;
+}
+
+.page-wrapper {
+  padding-top: 16px;
+  padding-bottom: 50px;
+}
+
+/* ─── هدر ─── */
+.app-header {
+  position: sticky;
+  top: 0;
+  z-index: 100;
+  background: rgba(251, 249, 244, 0.95);
+  backdrop-filter: blur(10px);
+  -webkit-backdrop-filter: blur(10px);
+  border-bottom: 1px solid var(--border);
+  height: 64px;
+  display: flex;
+  align-items: center;
+}
+
+.header-container {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+/* دکمه همبرگر سه خط (راست) */
+.hamburger {
+  background: transparent;
+  border: none;
+  cursor: pointer;
+  width: 44px;
+  height: 44px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 5px;
+  border-radius: 12px;
+  padding: 8px;
+}
+
+.hamburger:hover {
+  background: var(--teal-50);
+}
+
+.hamburger span {
+  display: block;
+  width: 22px;
+  height: 2.5px;
+  background: var(--ink);
+  border-radius: 4px;
+}
+
+/* ─── منوی کشویی Drawer (راست‌چین و روان) ─── */
+.overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(10, 37, 44, 0.5);
+  backdrop-filter: blur(2px);
+  opacity: 0;
+  visibility: hidden;
+  transition:
+    opacity 0.3s ease,
+    visibility 0.3s ease;
+  z-index: 998;
+}
+
+.overlay.is-open {
+  opacity: 1;
+  visibility: visible;
+}
+
+.drawer {
+  position: fixed;
+  top: 0;
+  right: 0;
+  bottom: 0;
+  width: 300px;
+  max-width: 85vw;
+  background: #ffffff;
+  z-index: 999;
+  transform: translateX(100%); /* پیش‌فرض خارج از دید */
+  transition: transform 0.3s cubic-bezier(0.16, 1, 0.3, 1);
+  display: flex;
+  flex-direction: column;
+  box-shadow: -6px 0 25px rgba(0, 0, 0, 0.15);
+}
+
+.drawer.is-open {
+  transform: translateX(0); /* باز شدن به سمت چپ در جهت فارسی */
+}
+
+.drawer-header {
+  padding: 18px 20px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  border-bottom: 1px solid var(--border);
+}
+
+.drawer-title {
+  font-weight: 800;
+  font-size: 0.95rem;
+  color: var(--teal-950);
+}
+
+.drawer-close {
+  background: none;
+  border: none;
+  font-size: 1.8rem;
+  line-height: 1;
+  color: var(--muted);
+  cursor: pointer;
+  padding: 4px 8px;
+  border-radius: 8px;
+}
+
+.drawer-close:hover {
+  background: var(--teal-50);
+  color: var(--ink);
+}
+
+.drawer-nav {
+  padding: 16px 12px;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.drawer-link {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 12px 14px;
+  border-radius: 12px;
+  font-size: 0.95rem;
+  font-weight: 600;
+  color: var(--ink);
+  transition: background 0.2s ease;
+}
+
+.drawer-link:hover {
+  background: var(--teal-50);
+  color: var(--teal-900);
+}
+
+/* ─── ریسپانسیو بنر و دسته‌ها برای ویندوز ─── */
+@media (min-width: 768px) {
+  .hero-banner {
+    aspect-ratio: 24 / 9; /* در ویندوز کشیده و عریض‌تر می‌شود */
+    min-height: 260px;
+  }
+
+  .cat-grid {
+    grid-template-columns: repeat(
+      6,
+      1fr
+    ); /* در ویندوز ۶ دسته‌بندی در یک سطر جا می‌شوند */
+    gap: 16px;
+  }
 }
