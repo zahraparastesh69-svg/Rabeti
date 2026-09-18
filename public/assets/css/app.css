@@ -1,10 +1,11 @@
-/* ══════════════════════════════════════════════════════
-   جوراب رابطی — پلتفرم موبایل (Mobile-First Design)
-   پالت رنگی: ۶۰٪ کرم / ۳۰٪ فیروزه‌ای / ۱۰٪ نارنجی
-   ══════════════════════════════════════════════════════ */
+/* ══════════════════════════════════════════════════════════════
+   پروژه جوراب رابطی — سیستم طراحی یکپارچه (app.css)
+   پالت رنگی استاندارد: ۶۰٪ کرم / ۳۰٪ فیروزه‌ای / ۱۰٪ نارنجی
+   ══════════════════════════════════════════════════════════════ */
 
+/* ─── ۱. متغیرها و توکن‌ها ─── */
 :root {
-  /* پالت رنگ‌ها */
+  /* پالت فیروزه‌ای */
   --teal-950: #0a252c;
   --teal-900: #123c47;
   --teal-800: #17505f;
@@ -12,537 +13,48 @@
   --teal-100: #e3eef1;
   --teal-50: #f0f6f8;
 
+  /* پالت نارنجی */
   --orange: #e5a33d;
-  --orange-dark: #cc8a25;
+  --orange-hover: #d4932d;
   --orange-light: #fef5e7;
 
+  /* پایه‌ها و خنثی */
   --cream: #fbf9f4;
   --surface: #ffffff;
   --ink: #142228;
   --muted: #62777f;
   --border: #ece7db;
 
-  /* سیستم گوشه‌گرد و سایه استاندارد موبایل */
+  /* فرم و سایه‌ها */
   --r-btn: 999px;
-  --r-card: 18px;
-  --r-card-sm: 14px;
-  --shadow-sm: 0 2px 8px rgba(18, 60, 71, 0.05);
-  --shadow-md: 0 10px 24px -6px rgba(18, 60, 71, 0.08);
+  --r-card: 16px;
+  --r-card-sm: 12px;
+  --shadow-sm: 0 2px 8px rgba(18, 60, 71, 0.06);
+  --shadow-md: 0 10px 24px -6px rgba(18, 60, 71, 0.12);
 }
 
-/* ─── Reset & Base ─── */
-* {
+/* ─── ۲. ریست پایه و ساختار صفحه ─── */
+*,
+*::before,
+*::after {
   margin: 0;
   padding: 0;
   box-sizing: border-box;
   -webkit-tap-highlight-color: transparent;
 }
 
+html {
+  font-size: 16px;
+  scroll-behavior: smooth;
+}
+
 body {
   font-family:
     "Vazirmatn",
     -apple-system,
     BlinkMacSystemFont,
-    Tahoma,
-    sans-serif;
-  background: var(--cream);
-  color: var(--ink);
-  direction: rtl;
-  text-align: right;
-  line-height: 1.6;
-  min-height: 100vh;
-  /* جلوگیری از کشیده شدن بیش از حد در نمایشگرهای عریض تبلت و دسکتاپ */
-  max-width: 480px;
-  margin: 0 auto;
-  box-shadow: 0 0 40px rgba(0, 0, 0, 0.04);
-  position: relative;
-  background-color: var(--surface);
-}
-
-body.drawer-open {
-  overflow: hidden;
-}
-
-a {
-  text-decoration: none;
-  color: inherit;
-}
-
-img {
-  max-width: 100%;
-  height: auto;
-  display: block;
-}
-
-/* ─── هدر اپلیکیشنی ─── */
-.app-header {
-  position: sticky;
-  top: 0;
-  z-index: 100;
-  background: rgba(251, 249, 244, 0.94);
-  backdrop-filter: blur(12px);
-  -webkit-backdrop-filter: blur(12px);
-  border-bottom: 1px solid var(--border);
-  height: 60px;
-  padding: 0 16px;
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-}
-
-/* دکمه سه‌خط (سمت راست - شروع خط) */
-.hamburger {
-  background: transparent;
-  border: none;
-  cursor: pointer;
-  width: 40px;
-  height: 40px;
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  justify-content: center;
-  gap: 5px;
-  border-radius: 12px;
-  transition: background 0.2s;
-}
-
-.hamburger:active {
-  background: var(--teal-100);
-}
-
-.hamburger span {
-  width: 22px;
-  height: 2.2px;
-  background: var(--ink);
-  border-radius: 4px;
-}
-
-/* عنوان و لوگو برند (سمت چپ) */
-.brand {
-  display: flex;
-  align-items: center;
-  gap: 10px;
-}
-
-.brand-title {
-  font-weight: 900;
-  font-size: 1rem;
-  color: var(--teal-900);
-}
-
-.brand-icon {
-  width: 34px;
-  height: 34px;
-  background: linear-gradient(135deg, var(--teal-800), var(--teal-950));
-  color: #fff;
-  border-radius: 10px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  font-size: 1.1rem;
-  box-shadow: 0 4px 10px rgba(18, 60, 71, 0.2);
-}
-
-/* ─── منوی کشویی راست‌چین (Drawer) ─── */
-.overlay {
-  position: fixed;
-  inset: 0;
-  background: rgba(10, 37, 44, 0.45);
-  backdrop-filter: blur(3px);
-  opacity: 0;
-  visibility: hidden;
-  transition: all 0.3s ease;
-  z-index: 200;
-}
-
-.overlay.active {
-  opacity: 1;
-  visibility: visible;
-}
-
-.drawer {
-  position: fixed;
-  top: 0;
-  right: 0;
-  bottom: 0;
-  width: min(300px, 80vw);
-  background: #ffffff;
-  z-index: 300;
-  transform: translateX(100%);
-  transition: transform 0.32s cubic-bezier(0.16, 1, 0.3, 1);
-  display: flex;
-  flex-direction: column;
-  box-shadow: -10px 0 30px rgba(0, 0, 0, 0.12);
-}
-
-.drawer.active {
-  transform: translateX(0);
-}
-
-.drawer-header {
-  padding: 18px 20px;
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  border-bottom: 1px solid var(--border);
-}
-
-.drawer-close {
-  background: none;
-  border: none;
-  font-size: 1.6rem;
-  color: var(--muted);
-  cursor: pointer;
-  width: 36px;
-  height: 36px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  border-radius: 50%;
-}
-
-.drawer-close:active {
-  background: var(--cream);
-}
-
-.drawer-nav {
-  padding: 16px 12px;
-  overflow-y: auto;
-  display: flex;
-  flex-direction: column;
-  gap: 6px;
-}
-
-.drawer-link {
-  display: flex;
-  align-items: center;
-  gap: 12px;
-  padding: 12px 16px;
-  border-radius: 12px;
-  font-size: 0.95rem;
-  font-weight: 600;
-  color: var(--ink);
-  transition: background 0.2s;
-}
-
-.drawer-link:active {
-  background: var(--teal-100);
-  color: var(--teal-900);
-}
-
-/* ─── محتوای اصلی و کانتینر ─── */
-.app-content {
-  padding: 16px 16px 40px;
-}
-
-/* ─── بنر استاندارد موبایل (App Hero Banner) ─── */
-.hero-banner {
-  position: relative;
-  width: 100%;
-  aspect-ratio: 16 / 9; /* نسبت تصویر استاندارد بنرهای موبایلی */
-  min-height: 180px;
-  border-radius: var(--r-card);
-  overflow: hidden;
-  box-shadow: var(--shadow-md);
-  margin-bottom: 24px;
-  background: linear-gradient(135deg, var(--teal-800), var(--teal-950));
-}
-
-/* عکس دریافتی از دیتابیس */
-.hero-banner img {
-  width: 100%;
-  height: 100%;
-  object-fit: cover;
-  position: absolute;
-  inset: 0;
-}
-
-/* کاور گرادیانی برای خوانایی متن‌های روی بنر */
-.hero-overlay {
-  position: absolute;
-  inset: 0;
-  background: linear-gradient(
-    0deg,
-    rgba(10, 37, 44, 0.9) 0%,
-    rgba(10, 37, 44, 0.2) 65%,
-    transparent 100%
-  );
-  display: flex;
-  flex-direction: column;
-  justify-content: flex-end;
-  padding: 16px 18px;
-}
-
-.hero-tag {
-  align-self: flex-start;
-  background: rgba(229, 163, 61, 0.9);
-  color: #2b1f05;
-  font-size: 0.72rem;
-  font-weight: 800;
-  padding: 3px 9px;
-  border-radius: 6px;
-  margin-bottom: 6px;
-}
-
-.hero-title {
-  color: #ffffff;
-  font-size: 1.15rem;
-  font-weight: 900;
-  margin-bottom: 4px;
-  line-height: 1.4;
-}
-
-.hero-subtitle {
-  color: var(--teal-100);
-  font-size: 0.8rem;
-  margin-bottom: 12px;
-}
-
-.hero-btn {
-  align-self: flex-start;
-  background: var(--orange);
-  color: #382500;
-  font-weight: 700;
-  font-size: 0.82rem;
-  padding: 8px 18px;
-  border-radius: var(--r-btn);
-  transition: transform 0.15s ease;
-}
-
-.hero-btn:active {
-  transform: scale(0.96);
-  background: var(--orange-dark);
-}
-
-/* ─── بخش دسته‌بندی‌ها (App Grid) ─── */
-.section-head {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  margin-bottom: 14px;
-}
-
-.section-head h2 {
-  font-size: 1.05rem;
-  font-weight: 800;
-  color: var(--ink);
-}
-
-.section-head a {
-  font-size: 0.8rem;
-  color: var(--teal-700);
-  font-weight: 600;
-}
-
-/* چیدمان شبکه‌ای منظم مناسب تاچ گوشی */
-.cat-grid {
-  display: grid;
-  grid-template-columns: repeat(
-    4,
-    1fr
-  ); /* ۴ ستون استاندارد آیکونی یا ۲ ستون کارتی */
-  gap: 12px;
-  margin-bottom: 28px;
-}
-
-.cat-item {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  text-align: center;
-  cursor: pointer;
-  transition: transform 0.15s ease;
-}
-
-.cat-item:active {
-  transform: scale(0.94);
-}
-
-/* ظرف عکس دسته که بعداً تصویر از دیتابیس جایگزین می‌شود */
-.cat-img-box {
-  width: 64px;
-  height: 64px;
-  background: var(--teal-50);
-  border: 1px solid var(--border);
-  border-radius: 20px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  margin-bottom: 8px;
-  overflow: hidden;
-  box-shadow: var(--shadow-sm);
-  position: relative;
-}
-
-.cat-img-box img {
-  width: 100%;
-  height: 100%;
-  object-fit: cover;
-}
-
-.cat-label {
-  font-size: 0.78rem;
-  font-weight: 700;
-  color: var(--ink);
-  line-height: 1.3;
-}
-
-/* استخوان‌بندی تصویر برای آمادگی اتصال دیتابیس (Placeholder / Skeleton) */
-.db-image-placeholder {
-  background: linear-gradient(110deg, #ece7db 8%, #f5f1e8 18%, #ece7db 33%);
-  background-size: 200% 100%;
-  animation: shimmer 1.5s linear infinite;
-}
-
-@keyframes shimmer {
-  to {
-    background-position-x: -200%;
-  }
-}
-/* ─── سکشن‌های استاندارد صفحه ─── */
-.app-section {
-  margin-bottom: 24px;
-}
-
-.section-head {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  margin-bottom: 12px;
-}
-
-.section-head h2 {
-  font-size: 1rem;
-  font-weight: 800;
-  color: var(--ink);
-}
-
-.section-head a {
-  font-size: 0.8rem;
-  color: var(--teal-800);
-  font-weight: 700;
-}
-
-/* ─── چیدمان گرید ۳ ستونه موبایلی برای دسته‌ها ─── */
-.cat-grid {
-  display: grid;
-  grid-template-columns: repeat(3, 1fr);
-  gap: 12px;
-}
-
-.cat-item {
-  background: #ffffff;
-  border: 1px solid var(--border);
-  border-radius: var(--r-card-sm);
-  padding: 12px 6px;
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  text-align: center;
-  box-shadow: var(--shadow-sm);
-  transition: transform 0.15s ease;
-}
-
-.cat-item:active {
-  transform: scale(0.96);
-  background: var(--teal-50);
-}
-
-.cat-img-box {
-  width: 52px;
-  height: 52px;
-  background: var(--teal-50);
-  border-radius: 14px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  margin-bottom: 8px;
-  overflow: hidden;
-}
-
-.cat-img-box img {
-  width: 100%;
-  height: 100%;
-  object-fit: cover;
-}
-
-.cat-icon-placeholder {
-  font-size: 1.5rem;
-}
-
-.cat-label {
-  font-size: 0.85rem;
-  font-weight: 800;
-  color: var(--ink);
-}
-
-.cat-sublabel {
-  font-size: 0.7rem;
-  color: var(--muted);
-  margin-top: 2px;
-}
-
-/* ─── کارت مزایا (چرا جوراب رابطی) ─── */
-.why-card {
-  background: linear-gradient(145deg, var(--teal-900), var(--teal-950));
-  color: #ffffff;
-  border-radius: var(--r-card);
-  padding: 18px;
-  box-shadow: var(--shadow-md);
-}
-
-.why-badge {
-  display: inline-block;
-  background: rgba(255, 255, 255, 0.12);
-  color: var(--teal-100);
-  font-size: 0.72rem;
-  padding: 4px 10px;
-  border-radius: 6px;
-  margin-bottom: 10px;
-}
-
-.why-card h3 {
-  font-size: 1.05rem;
-  font-weight: 800;
-  margin-bottom: 8px;
-}
-
-.why-card p {
-  font-size: 0.82rem;
-  line-height: 1.6;
-  color: var(--teal-100);
-  margin-bottom: 16px;
-}
-
-.why-footer {
-  display: flex;
-  gap: 8px;
-}
-
-.why-footer .btn {
-  flex: 1;
-  text-align: center;
-  padding: 10px 0;
-  border-radius: var(--r-btn);
-  font-size: 0.82rem;
-  font-weight: 700;
-}
-
-.btn-orange {
-  background: var(--orange);
-  color: #2b1f05;
-}
-
-.btn-outline {
-  border: 1px solid rgba(255, 255, 255, 0.3);
-  color: #ffffff;
-}
-/* ─── اصلاح ابعاد برای تبلت و دسکتاپ ویندوزی ─── */
-body {
-  font-family:
-    "Vazirmatn",
-    -apple-system,
-    BlinkMacSystemFont,
+    "Segoe UI",
+    Roboto,
     Tahoma,
     sans-serif;
   background-color: var(--cream);
@@ -551,31 +63,43 @@ body {
   text-align: right;
   line-height: 1.6;
   min-height: 100vh;
-  margin: 0;
-  /* حذف محدودیت ۴۸۰ پیکسل از بادی */
-  max-width: 100%;
+  width: 100%;
 }
 
-/* محفظه وسط‌چین که در موبایل فول‌است و در ویندوز شکیل و حداکثر ۱۱۰۰px است */
+a {
+  text-decoration: none;
+  color: inherit;
+  display: inline-block;
+}
+
+img {
+  max-width: 100%;
+  height: auto;
+  display: block;
+}
+
+/* کانتینر اصلی: در موبایل فول و در ویندوز/مانیتور حداکثر ۱۱۰۰ پیکسل وسط‌چین */
 .header-container,
 .page-wrapper {
   width: 100%;
   max-width: 1100px;
-  margin: 0 auto;
-  padding: 0 16px;
+  margin-left: auto;
+  margin-right: auto;
+  padding-left: 16px;
+  padding-right: 16px;
 }
 
 .page-wrapper {
-  padding-top: 16px;
-  padding-bottom: 50px;
+  padding-top: 18px;
+  padding-bottom: 60px;
 }
 
-/* ─── هدر ─── */
+/* ─── ۳. هدر و نوار بالا ─── */
 .app-header {
   position: sticky;
   top: 0;
   z-index: 100;
-  background: rgba(251, 249, 244, 0.95);
+  background: rgba(251, 249, 244, 0.96);
   backdrop-filter: blur(10px);
   -webkit-backdrop-filter: blur(10px);
   border-bottom: 1px solid var(--border);
@@ -590,7 +114,7 @@ body {
   justify-content: space-between;
 }
 
-/* دکمه همبرگر سه خط (راست) */
+/* دکمه سه خط منو (راست) */
 .hamburger {
   background: transparent;
   border: none;
@@ -604,26 +128,54 @@ body {
   gap: 5px;
   border-radius: 12px;
   padding: 8px;
+  transition: background-color 0.2s ease;
 }
 
-.hamburger:hover {
-  background: var(--teal-50);
+.hamburger:hover,
+.hamburger:active {
+  background-color: var(--teal-100);
 }
 
 .hamburger span {
   display: block;
   width: 22px;
   height: 2.5px;
-  background: var(--ink);
+  background-color: var(--teal-950);
   border-radius: 4px;
 }
 
-/* ─── منوی کشویی Drawer (راست‌چین و روان) ─── */
+/* لوگو و نام برند (چپ) */
+.brand {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.brand-title {
+  font-weight: 900;
+  font-size: 1.05rem;
+  color: var(--teal-900);
+}
+
+.brand-icon {
+  width: 38px;
+  height: 38px;
+  background: linear-gradient(135deg, var(--teal-800), var(--teal-950));
+  color: #ffffff;
+  border-radius: 10px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 1.2rem;
+  box-shadow: 0 4px 10px rgba(18, 60, 71, 0.2);
+}
+
+/* ─── ۴. منوی کشویی سه‌خط (Drawer) — کامپوننت امن و راست‌چین ─── */
 .overlay {
   position: fixed;
   inset: 0;
-  background: rgba(10, 37, 44, 0.5);
-  backdrop-filter: blur(2px);
+  background: rgba(10, 37, 44, 0.55);
+  backdrop-filter: blur(3px);
   opacity: 0;
   visibility: hidden;
   transition:
@@ -646,15 +198,15 @@ body {
   max-width: 85vw;
   background: #ffffff;
   z-index: 999;
-  transform: translateX(100%); /* پیش‌فرض خارج از دید */
+  transform: translateX(100%); /* منو در سمت راست پنهان است */
   transition: transform 0.3s cubic-bezier(0.16, 1, 0.3, 1);
   display: flex;
   flex-direction: column;
-  box-shadow: -6px 0 25px rgba(0, 0, 0, 0.15);
+  box-shadow: -8px 0 28px rgba(0, 0, 0, 0.15);
 }
 
 .drawer.is-open {
-  transform: translateX(0); /* باز شدن به سمت چپ در جهت فارسی */
+  transform: translateX(0); /* باز شدن به سمت چپ در صفحه RTL */
 }
 
 .drawer-header {
@@ -678,7 +230,11 @@ body {
   line-height: 1;
   color: var(--muted);
   cursor: pointer;
-  padding: 4px 8px;
+  width: 36px;
+  height: 36px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
   border-radius: 8px;
 }
 
@@ -689,9 +245,10 @@ body {
 
 .drawer-nav {
   padding: 16px 12px;
+  overflow-y: auto;
   display: flex;
   flex-direction: column;
-  gap: 8px;
+  gap: 6px;
 }
 
 .drawer-link {
@@ -703,26 +260,267 @@ body {
   font-size: 0.95rem;
   font-weight: 600;
   color: var(--ink);
-  transition: background 0.2s ease;
+  transition:
+    background-color 0.2s ease,
+    color 0.2s ease;
 }
 
-.drawer-link:hover {
-  background: var(--teal-50);
+.drawer-link:hover,
+.drawer-link:active {
+  background-color: var(--teal-50);
   color: var(--teal-900);
 }
 
-/* ─── ریسپانسیو بنر و دسته‌ها برای ویندوز ─── */
+/* ─── ۵. بنر اسلایدی موبایلی (Hero Banner) ─── */
+.hero-banner {
+  position: relative;
+  width: 100%;
+  aspect-ratio: 16 / 9; /* نسبت تصویر ایده‌آل بنرهای اپلیکیشن */
+  min-height: 180px;
+  border-radius: var(--r-card);
+  overflow: hidden;
+  box-shadow: var(--shadow-md);
+  margin-bottom: 24px;
+  background: linear-gradient(135deg, var(--teal-800), var(--teal-950));
+}
+
+.hero-banner img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  position: absolute;
+  inset: 0;
+}
+
+.hero-overlay {
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(
+    0deg,
+    rgba(10, 37, 44, 0.92) 0%,
+    rgba(10, 37, 44, 0.3) 65%,
+    transparent 100%
+  );
+  display: flex;
+  flex-direction: column;
+  justify-content: flex-end;
+  padding: 16px 18px;
+  z-index: 2;
+}
+
+.hero-tag {
+  align-self: flex-start;
+  background: rgba(229, 163, 61, 0.95);
+  color: #2b1f05;
+  font-size: 0.72rem;
+  font-weight: 800;
+  padding: 4px 10px;
+  border-radius: 6px;
+  margin-bottom: 6px;
+}
+
+.hero-title {
+  color: #ffffff;
+  font-size: 1.15rem;
+  font-weight: 900;
+  margin-bottom: 4px;
+  line-height: 1.35;
+}
+
+.hero-subtitle {
+  color: var(--teal-100);
+  font-size: 0.82rem;
+  margin-bottom: 12px;
+  line-height: 1.4;
+}
+
+.hero-btn {
+  align-self: flex-start;
+  background: var(--orange);
+  color: #2e1d00;
+  font-weight: 800;
+  font-size: 0.82rem;
+  padding: 9px 20px;
+  border-radius: var(--r-btn);
+  transition:
+    transform 0.15s ease,
+    background 0.2s ease;
+}
+
+.hero-btn:active {
+  transform: scale(0.96);
+  background: var(--orange-hover);
+}
+
+/* ─── ۶. بخش‌ها و دسته‌بندی‌ها (Categories) ─── */
+.app-section {
+  margin-bottom: 28px;
+}
+
+.section-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 14px;
+}
+
+.section-head h2 {
+  font-size: 1.05rem;
+  font-weight: 800;
+  color: var(--teal-950);
+}
+
+.section-head a {
+  font-size: 0.8rem;
+  color: var(--teal-700);
+  font-weight: 700;
+}
+
+/* در موبایل ۳ ستون شکیل */
+.cat-grid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 10px;
+}
+
+.cat-item {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--r-card-sm);
+  padding: 12px 6px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  text-align: center;
+  box-shadow: var(--shadow-sm);
+  transition:
+    transform 0.15s ease,
+    border-color 0.2s ease;
+}
+
+.cat-item:active {
+  transform: scale(0.95);
+  background: var(--teal-50);
+}
+
+.cat-img-box {
+  width: 52px;
+  height: 52px;
+  background: var(--teal-50);
+  border-radius: 14px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  margin-bottom: 8px;
+  overflow: hidden;
+  font-size: 1.5rem;
+}
+
+.cat-img-box img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.cat-label {
+  font-size: 0.85rem;
+  font-weight: 800;
+  color: var(--ink);
+}
+
+.cat-sublabel {
+  font-size: 0.7rem;
+  color: var(--muted);
+  margin-top: 3px;
+}
+
+/* ─── ۷. کارت مزیت همکاری (چرا جوراب رابطی) ─── */
+.why-card {
+  background: linear-gradient(145deg, var(--teal-900), var(--teal-950));
+  color: #ffffff;
+  border-radius: var(--r-card);
+  padding: 20px 18px;
+  box-shadow: var(--shadow-md);
+}
+
+.why-badge {
+  display: inline-block;
+  background: rgba(255, 255, 255, 0.12);
+  color: var(--teal-100);
+  font-size: 0.72rem;
+  font-weight: 700;
+  padding: 4px 10px;
+  border-radius: 6px;
+  margin-bottom: 10px;
+}
+
+.why-card h3 {
+  font-size: 1.1rem;
+  font-weight: 900;
+  margin-bottom: 8px;
+}
+
+.why-card p {
+  font-size: 0.82rem;
+  line-height: 1.65;
+  color: var(--teal-100);
+  margin-bottom: 18px;
+}
+
+.why-footer {
+  display: flex;
+  gap: 10px;
+}
+
+.why-footer .btn {
+  flex: 1;
+  text-align: center;
+  padding: 10px 0;
+  border-radius: var(--r-btn);
+  font-size: 0.82rem;
+  font-weight: 800;
+  transition: transform 0.15s ease;
+}
+
+.why-footer .btn:active {
+  transform: scale(0.97);
+}
+
+.btn-orange {
+  background: var(--orange);
+  color: #2b1f05;
+}
+
+.btn-outline {
+  border: 1px solid rgba(255, 255, 255, 0.3);
+  color: #ffffff;
+}
+
+/* ─── ۸. ریسپانسیو ویندوز / تبلت (مانیتورهای عریض) ─── */
 @media (min-width: 768px) {
   .hero-banner {
-    aspect-ratio: 24 / 9; /* در ویندوز کشیده و عریض‌تر می‌شود */
+    aspect-ratio: 24 / 9; /* ابعاد هماهنگ با دسکتاپ و مانیتور */
     min-height: 260px;
+  }
+
+  .hero-title {
+    font-size: 1.6rem;
+  }
+
+  .hero-subtitle {
+    font-size: 0.95rem;
   }
 
   .cat-grid {
     grid-template-columns: repeat(
       6,
       1fr
-    ); /* در ویندوز ۶ دسته‌بندی در یک سطر جا می‌شوند */
-    gap: 16px;
+    ); /* در ویندوز ۶ دسته‌بندی در یک سطر جا می‌گیرند */
+    gap: 14px;
+  }
+
+  .cat-item:hover {
+    transform: translateY(-3px);
+    border-color: var(--teal-700);
   }
 }
