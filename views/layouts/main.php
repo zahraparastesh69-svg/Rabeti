@@ -46,9 +46,7 @@ $msgCount   = $msgCount ?? 0;
 
                 <!-- پیام‌ها -->
                 <a href="/messages" class="header-action-btn" aria-label="پیام‌ها" title="پیام‌ها">
-                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                        <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"></path>
-                    </svg>
+                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"></path></svg>
                     <?php if ($msgCount > 0): ?>
                         <span class="badge"><?= (int)$msgCount ?></span>
                     <?php endif; ?>
@@ -56,10 +54,7 @@ $msgCount   = $msgCount ?? 0;
 
                 <!-- اعلان‌ها -->
                 <a href="/notifications" class="header-action-btn" aria-label="اعلان‌ها" title="اعلان‌ها">
-                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                        <path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"></path>
-                        <path d="M13.73 21a2 2 0 0 1-3.46 0"></path>
-                    </svg>
+                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"></path><path d="M13.73 21a2 2 0 0 1-3.46 0"></path></svg>
                     <?php if ($notifCount > 0): ?>
                         <span class="badge"><?= (int)$notifCount ?></span>
                     <?php endif; ?>
@@ -67,11 +62,7 @@ $msgCount   = $msgCount ?? 0;
 
                 <!-- سبد خرید -->
                 <a href="/cart" class="header-action-btn" aria-label="سبد خرید" title="سبد خرید">
-                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                        <circle cx="9" cy="21" r="1"></circle>
-                        <circle cx="20" cy="21" r="1"></circle>
-                        <path d="M1 1h4l2.68 13.39a2 2 0 0 0 2 1.61h9.72a2 2 0 0 0 2-1.61L23 6H6"></path>
-                    </svg>
+                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="9" cy="21" r="1"></circle><circle cx="20" cy="21" r="1"></circle><path d="M1 1h4l2.68 13.39a2 2 0 0 0 2 1.61h9.72a2 2 0 0 0 2-1.61L23 6H6"></path></svg>
                     <?php if ($cartCount > 0): ?>
                         <span class="badge"><?= (int)$cartCount ?></span>
                     <?php endif; ?>
@@ -172,59 +163,57 @@ $msgCount   = $msgCount ?? 0;
 
     <script src="/assets/js/app.js"></script>
     <script>
-        (function() {
-            // ═══ منوی کشویی موبایل (Drawer) ═══
-            var menuBtn = document.getElementById('menuBtn');
-            var closeBtn = document.getElementById('closeBtn');
-            var drawer = document.getElementById('drawer');
-            var overlay = document.getElementById('overlay');
+    (function () {
+        // ═══ منوی کشویی موبایل (Drawer) ═══
+        var menuBtn  = document.getElementById('menuBtn');
+        var closeBtn = document.getElementById('closeBtn');
+        var drawer   = document.getElementById('drawer');
+        var overlay  = document.getElementById('overlay');
 
-            function openDrawer() {
-                if (drawer) drawer.classList.add('open');
-                if (overlay) overlay.classList.add('show');
-                document.body.style.overflow = 'hidden';
-            }
+        function openDrawer() {
+            if (drawer)  drawer.classList.add('open');
+            if (overlay) overlay.classList.add('show');
+            document.body.style.overflow = 'hidden';
+        }
+        function closeDrawer() {
+            if (drawer)  drawer.classList.remove('open');
+            if (overlay) overlay.classList.remove('show');
+            document.body.style.overflow = '';
+        }
+        if (menuBtn)  menuBtn.addEventListener('click', openDrawer);
+        if (closeBtn) closeBtn.addEventListener('click', closeDrawer);
+        if (overlay)  overlay.addEventListener('click', closeDrawer);
 
-            function closeDrawer() {
-                if (drawer) drawer.classList.remove('open');
-                if (overlay) overlay.classList.remove('show');
-                document.body.style.overflow = '';
-            }
-            if (menuBtn) menuBtn.addEventListener('click', openDrawer);
-            if (closeBtn) closeBtn.addEventListener('click', closeDrawer);
-            if (overlay) overlay.addEventListener('click', closeDrawer);
+        // ═══ منوی کشویی کاربر ═══
+        var userMenu     = document.getElementById('userMenu');
+        var userToggle   = document.getElementById('userMenuToggle');
+        var userDropdown = document.getElementById('userDropdown');
 
-            // ═══ منوی کشویی کاربر ═══
-            var userMenu = document.getElementById('userMenu');
-            var userToggle = document.getElementById('userMenuToggle');
-            var userDropdown = document.getElementById('userDropdown');
-
-            if (userMenu && userToggle && userDropdown) {
-                userToggle.addEventListener('click', function(e) {
-                    e.stopPropagation();
-                    var isOpen = userDropdown.classList.toggle('open');
-                    userMenu.classList.toggle('open', isOpen);
-                    userToggle.setAttribute('aria-expanded', isOpen ? 'true' : 'false');
-                });
-                document.addEventListener('click', function(e) {
-                    if (!userMenu.contains(e.target)) {
-                        userDropdown.classList.remove('open');
-                        userMenu.classList.remove('open');
-                        userToggle.setAttribute('aria-expanded', 'false');
-                    }
-                });
-            }
-
-            // ═══ Fallback تصویر بنر (در صورت خطا در لود عکس) ═══
-            document.querySelectorAll('.banner-img').forEach(function(img) {
-                img.addEventListener('error', function() {
-                    this.style.display = 'none';
-                    var fb = document.getElementById('bannerFallback');
-                    if (fb) fb.classList.add('show');
-                });
+        if (userMenu && userToggle && userDropdown) {
+            userToggle.addEventListener('click', function (e) {
+                e.stopPropagation();
+                var isOpen = userDropdown.classList.toggle('open');
+                userMenu.classList.toggle('open', isOpen);
+                userToggle.setAttribute('aria-expanded', isOpen ? 'true' : 'false');
             });
-        })();
+            document.addEventListener('click', function (e) {
+                if (!userMenu.contains(e.target)) {
+                    userDropdown.classList.remove('open');
+                    userMenu.classList.remove('open');
+                    userToggle.setAttribute('aria-expanded', 'false');
+                }
+            });
+        }
+
+        // ═══ Fallback تصویر بنر (در صورت خطا در لود عکس) ═══
+        document.querySelectorAll('.banner-img').forEach(function (img) {
+            img.addEventListener('error', function () {
+                this.style.display = 'none';
+                var fb = document.getElementById('bannerFallback');
+                if (fb) fb.classList.add('show');
+            });
+        });
+    })();
     </script>
 </body>
-
 </html>
