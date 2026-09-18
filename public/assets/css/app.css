@@ -251,7 +251,7 @@ img {
   gap: 6px;
   padding: 9px 18px;
   background:var(--ink);
-  color: var(--ink);
+  color: var(--ink-100);
   font-size: 0.85rem;
   font-weight: 800;
   border-radius: 12px;
