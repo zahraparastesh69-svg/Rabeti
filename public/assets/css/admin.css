@@ -1,232 +1,148 @@
 /* ══════════ پنل مدیریت ══════════ */
-.admin-body {
-  background: var(--cream);
-}
+.admin-body { background: var(--cream); }
 
 .admin-sidebar {
-  position: fixed;
-  top: 0;
-  right: 0;
-  bottom: 0;
-  width: 240px;
-  background: var(--teal-900);
-  color: #fff;
-  z-index: 200;
-  display: flex;
-  flex-direction: column;
+    position: fixed;
+    top: 0; right: 0; bottom: 0;
+    width: 240px;
+    background: var(--teal-900);
+    color: #fff;
+    z-index: 200;
+    display: flex;
+    flex-direction: column;
 }
 .admin-side-brand {
-  display: flex;
-  align-items: center;
-  gap: 10px;
-  font-weight: 800;
-  padding: 20px 18px;
-  border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    font-weight: 800;
+    padding: 20px 18px;
+    border-bottom: 1px solid rgba(255,255,255,.1);
 }
-.admin-nav {
-  padding: 12px;
-  flex: 1;
-  overflow-y: auto;
-}
+.admin-nav { padding: 12px; flex: 1; overflow-y: auto; }
 .admin-nav-link {
-  display: flex;
-  align-items: center;
-  gap: 10px;
-  color: #bcd8de;
-  font-size: 0.88rem;
-  font-weight: 600;
-  padding: 12px 14px;
-  border-radius: 12px;
-  margin-bottom: 4px;
-  transition: 0.2s;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    color: #bcd8de;
+    font-size: .88rem;
+    font-weight: 600;
+    padding: 12px 14px;
+    border-radius: 12px;
+    margin-bottom: 4px;
+    transition: .2s;
 }
-.admin-nav-link:hover {
-  background: rgba(255, 255, 255, 0.08);
-  color: #fff;
-}
-.admin-nav-link.active {
-  background: var(--orange);
-  color: var(--on-orange);
-}
-.admin-nav-link.danger:hover {
-  background: rgba(180, 68, 60, 0.25);
-  color: #ffb4ad;
-}
+.admin-nav-link:hover { background: rgba(255,255,255,.08); color: #fff; }
+.admin-nav-link.active { background: var(--orange); color: var(--on-orange); }
+.admin-nav-link.danger:hover { background: rgba(180,68,60,.25); color: #ffb4ad; }
 .side-badge {
-  margin-right: auto;
-  background: rgba(255, 255, 255, 0.15);
-  border-radius: 20px;
-  font-size: 0.68rem;
-  padding: 2px 10px;
+    margin-right: auto;
+    background: rgba(255,255,255,.15);
+    border-radius: 20px;
+    font-size: .68rem;
+    padding: 2px 10px;
 }
-.admin-nav-link.active .side-badge {
-  background: rgba(0, 0, 0, 0.15);
-}
-.admin-sep {
-  border: none;
-  border-top: 1px solid rgba(255, 255, 255, 0.1);
-  margin: 10px 0;
-}
+.admin-nav-link.active .side-badge { background: rgba(0,0,0,.15); }
+.admin-sep { border: none; border-top: 1px solid rgba(255,255,255,.1); margin: 10px 0; }
 
 .admin-main {
-  margin-right: 240px;
-  min-height: 100vh;
-  display: flex;
-  flex-direction: column;
+    margin-right: 240px;
+    min-height: 100vh;
+    display: flex;
+    flex-direction: column;
 }
 .admin-topbar {
-  background: #fff;
-  border-bottom: 1px solid var(--card-border);
-  padding: 14px 20px;
-  display: flex;
-  align-items: center;
-  gap: 14px;
-  position: sticky;
-  top: 0;
-  z-index: 100;
+    background: #fff;
+    border-bottom: 1px solid var(--card-border);
+    padding: 14px 20px;
+    display: flex;
+    align-items: center;
+    gap: 14px;
+    position: sticky;
+    top: 0;
+    z-index: 100;
 }
-.admin-topbar-title {
-  font-weight: 800;
-  font-size: 0.95rem;
-}
+.admin-topbar-title { font-weight: 800; font-size: .95rem; }
 .admin-user {
-  margin-right: auto;
-  font-size: 0.78rem;
-  color: var(--muted);
+    margin-right: auto;
+    font-size: .78rem;
+    color: var(--muted);
 }
-.admin-burger {
-  display: none;
-  background: none;
-  border: none;
-  font-size: 1.3rem;
-  cursor: pointer;
-}
+.admin-burger { display: none; background: none; border: none; font-size: 1.3rem; cursor: pointer; }
 
-.admin-content {
-  padding: 22px 20px;
-  flex: 1;
-}
+.admin-content { padding: 22px 20px; flex: 1; }
 
 /* کارت‌های آمار */
 .stat-cards {
-  display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(180px, 1fr));
-  gap: 14px;
-  margin-bottom: 28px;
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(180px, 1fr));
+    gap: 14px;
+    margin-bottom: 28px;
 }
 .stat-card {
-  background: #fff;
-  border: 1px solid var(--card-border);
-  border-radius: var(--r-card);
-  padding: 20px;
+    background: #fff;
+    border: 1px solid var(--card-border);
+    border-radius: var(--r-card);
+    padding: 20px;
 }
-.stat-card .num {
-  font-size: 1.6rem;
-  font-weight: 900;
-  color: var(--teal-800);
-}
-.stat-card .lbl {
-  font-size: 0.75rem;
-  color: var(--muted);
-  margin-top: 6px;
-}
-.stat-card.accent {
-  border-right: 4px solid var(--orange);
-}
+.stat-card .num { font-size: 1.6rem; font-weight: 900; color: var(--teal-800); }
+.stat-card .lbl { font-size: .75rem; color: var(--muted); margin-top: 6px; }
+.stat-card.accent { border-right: 4px solid var(--orange); }
 
 /* جدول‌ها */
 .admin-table-wrap {
-  background: #fff;
-  border: 1px solid var(--card-border);
-  border-radius: var(--r-card);
-  overflow-x: auto;
+    background: #fff;
+    border: 1px solid var(--card-border);
+    border-radius: var(--r-card);
+    overflow-x: auto;
 }
-.admin-table {
-  width: 100%;
-  border-collapse: collapse;
-  font-size: 0.82rem;
-  min-width: 600px;
-}
+.admin-table { width: 100%; border-collapse: collapse; font-size: .82rem; min-width: 600px; }
 .admin-table th {
-  text-align: right;
-  background: var(--teal-100);
-  color: var(--teal-800);
-  font-weight: 700;
-  padding: 12px 14px;
-  white-space: nowrap;
+    text-align: right;
+    background: var(--teal-100);
+    color: var(--teal-800);
+    font-weight: 700;
+    padding: 12px 14px;
+    white-space: nowrap;
 }
 .admin-table td {
-  padding: 12px 14px;
-  border-top: 1px solid var(--card-border);
-  vertical-align: top;
+    padding: 12px 14px;
+    border-top: 1px solid var(--card-border);
+    vertical-align: top;
 }
-.admin-table tr:hover td {
-  background: #fafcfd;
-}
+.admin-table tr:hover td { background: #fafcfD; }
 
 /* بج‌های وضعیت */
 .st-badge {
-  font-size: 0.7rem;
-  font-weight: 700;
-  border-radius: 20px;
-  padding: 4px 12px;
-  white-space: nowrap;
+    font-size: .7rem;
+    font-weight: 700;
+    border-radius: 20px;
+    padding: 4px 12px;
+    white-space: nowrap;
 }
-.st-new {
-  background: #fff4e0;
-  color: #a06010;
-}
-.st-in_review {
-  background: #e8f0fd;
-  color: #2b5db8;
-}
-.st-quoted {
-  background: var(--teal-100);
-  color: var(--teal-800);
-}
-.st-converted {
-  background: #e8f5ee;
-  color: #1a7f4b;
-}
-.st-rejected {
-  background: #fdeeee;
-  color: #b4443c;
-}
-.st-answered {
-  background: #e8f5ee;
-  color: #1a7f4b;
-}
-.st-read {
-  background: #e8f0fd;
-  color: #2b5db8;
-}
+.st-new      { background: #fff4e0; color: #a06010; }
+.st-in_review{ background: #e8f0fd; color: #2b5db8; }
+.st-quoted   { background: var(--teal-100); color: var(--teal-800); }
+.st-converted{ background: #e8f5ee; color: #1a7f4b; }
+.st-rejected { background: #fdeeee; color: #b4443c; }
+.st-answered { background: #e8f5ee; color: #1a7f4b; }
+.st-read     { background: #e8f0fd; color: #2b5db8; }
 
 /* موبایل */
 @media (max-width: 900px) {
-  .admin-sidebar {
-    transform: translateX(100%);
-    transition: transform 0.3s;
-  }
-  .admin-sidebar.open {
-    transform: translateX(0);
-  }
-  .admin-overlay {
-    position: fixed;
-    inset: 0;
-    background: rgba(26, 43, 50, 0.5);
-    opacity: 0;
-    pointer-events: none;
-    transition: opacity 0.3s;
-    z-index: 150;
-  }
-  .admin-overlay.show {
-    opacity: 1;
-    pointer-events: auto;
-  }
-  .admin-main {
-    margin-right: 0;
-  }
-  .admin-burger {
-    display: block;
-  }
+    .admin-sidebar {
+        transform: translateX(100%);
+        transition: transform .3s;
+    }
+    .admin-sidebar.open { transform: translateX(0); }
+    .admin-overlay {
+        position: fixed; inset: 0;
+        background: rgba(26,43,50,.5);
+        opacity: 0; pointer-events: none;
+        transition: opacity .3s;
+        z-index: 150;
+    }
+    .admin-overlay.show { opacity: 1; pointer-events: auto; }
+    .admin-main { margin-right: 0; }
+    .admin-burger { display: block; }
 }
