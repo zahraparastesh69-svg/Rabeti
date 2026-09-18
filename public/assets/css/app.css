@@ -250,7 +250,7 @@ img {
   justify-content: center;
   gap: 6px;
   padding: 9px 18px;
-  background: linear-gradient(135deg, var(--ink-100), var(--ink));
+  background:var(--ink);
   color: var(--ink);
   font-size: 0.85rem;
   font-weight: 800;
