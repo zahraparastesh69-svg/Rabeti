@@ -5,17 +5,21 @@ ob_start();
 
 <!-- ▂▂▂ هیرو ▂▂▂ -->
 <section class="hero">
-    <h1>محصولات تولیدی جوراب رابطی با کیفیت تضمینی و قیمت عمده</h1>
- <p>
-    خرید عمده جوراب مستقیم از تولیدکننده — کاتالوگ کامل، قیمت ویژه
-    فروشگاه‌داران و پخش‌کنندگان، ارسال به سراسر کشور
-</p>
+    <h1>محصولات تولیدی جوراب رابطی با کیفیت تضمین و قیمت عمده</h1>
+    <p>
+        خرید عمده جوراب مستقیم از تولیدکننده — کاتالوگ کامل، قیمت ویژه
+        فروشگاه‌داران و پخش‌کنندگان، ارسال به سراسر کشور
+    </p>
     <div class="hero-actions">
         <a href="/products" class="btn btn-orange">مشاهده محصولات ←</a>
         <a href="/register" class="btn btn-ghost">به‌عنوان تولیدکننده شروع کنید</a>
     </div>
-    <!-- 📷 عکس واقعی کارخانه — فعلاً Placeholder -->
-    <div class="hero-img">🧦 🏭</div>
+    <div class="hero-img">
+        <!-- 📷 وقتی عکس واقعی کارخانه را داشتید فقط این خط فعال می‌شود:
+        <img src="/assets/images/factory.jpg" alt="خط تولید کارخانه جوراب رابطی">
+        -->
+        🏭
+    </div>
 </section>
 
 <!-- ▂▂▂ دسته‌بندی محصولات ▂▂▂ -->
@@ -36,19 +40,19 @@ ob_start();
         ];
         foreach ($categories as [$icon, $name, $subs]):
         ?>
-        <div class="cat-card" role="button" tabindex="0">
-            <div class="cat-icon"><?= $icon ?></div>
-            <div class="cat-name"><?= $name ?></div>
-            <span class="cat-badge"><?= count($subs) ?> زیردسته</span>
+            <div class="cat-card" role="button" tabindex="0">
+                <div class="cat-icon"><?= $icon ?></div>
+                <div class="cat-name"><?= $name ?></div>
+                <span class="cat-badge"><?= count($subs) ?> زیردسته</span>
 
-            <div class="cat-subs">
-                <div class="cat-chips">
-                    <?php foreach ($subs as $sub): ?>
-                    <a href="/products" class="cat-chip"><?= $sub ?></a>
-                    <?php endforeach; ?>
+                <div class="cat-subs">
+                    <div class="cat-chips">
+                        <?php foreach ($subs as $sub): ?>
+                            <a href="/products" class="cat-chip"><?= $sub ?></a>
+                        <?php endforeach; ?>
+                    </div>
                 </div>
             </div>
-        </div>
         <?php endforeach; ?>
     </div>
 </section>
