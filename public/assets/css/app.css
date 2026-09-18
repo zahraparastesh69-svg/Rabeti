@@ -4,121 +4,139 @@
    ══════════════════════════════════════════════════ */
 
 :root {
-  --radius: .5rem;
-
   /* ═══════════════════════════════════════════════
-     پایه
+     🎨 DESIGN SYSTEM — رنگ‌های اصلی
      ═══════════════════════════════════════════════ */
 
-  --background: oklch(98% .005 200);
-  --foreground: oklch(24% .035 215);
+  --radius: 0.5rem;
+
+  --background: oklch(99% 0.005 106);
+  --foreground: oklch(22% 0.03 235);
 
   --card: oklch(100% 0 0);
-  --card-foreground: oklch(24% .035 215);
+  --card-foreground: oklch(22% 0.03 235);
 
   --popover: oklch(100% 0 0);
-  --popover-foreground: oklch(24% .035 215);
+  --popover-foreground: oklch(22% 0.03 235);
 
+  /* ─── Primary / Teal ─── */
+  --primary: oklch(42% 0.09 214);
+  --primary-foreground: oklch(99% 0.01 200);
+
+  /* ─── Secondary ─── */
+  --secondary: oklch(96% 0.012 220);
+  --secondary-foreground: oklch(30% 0.05 225);
+
+  /* ─── Muted ─── */
+  --muted: oklch(96.5% 0.008 220);
+  --muted-foreground: oklch(52% 0.02 235);
+
+  /* ─── Accent / Orange ─── */
+  --accent: oklch(74% 0.16 62);
+  --accent-foreground: oklch(24% 0.05 60);
+
+  /* ─── Status ─── */
+  --destructive: oklch(57.7% 0.245 27.325);
+  --destructive-foreground: oklch(98.4% 0.003 247.858);
+
+  --success: oklch(62% 0.14 155);
+  --success-foreground: oklch(99% 0.01 155);
+
+  /* ─── Border / Input ─── */
+  --border: oklch(90% 0.012 225);
+  --input: oklch(90% 0.012 225);
+  --ring: oklch(42% 0.09 214);
 
   /* ═══════════════════════════════════════════════
-     🟦 BRAND — فیروزه‌ای Amiran
+     📊 Charts
      ═══════════════════════════════════════════════ */
 
-  --primary: oklch(37% .085 215);
-  --primary-foreground: oklch(99% .005 200);
-
-  --secondary: oklch(94% .018 205);
-  --secondary-foreground: oklch(31% .055 215);
-
-  --muted: oklch(95.5% .012 205);
-  --muted-foreground: oklch(52% .025 215);
-
+  --chart-1: oklch(42% 0.09 214);
+  --chart-2: oklch(74% 0.16 62);
+  --chart-3: oklch(62% 0.14 155);
+  --chart-4: oklch(55% 0.12 275);
+  --chart-5: oklch(65% 0.18 25);
 
   /* ═══════════════════════════════════════════════
-     🟠 ACCENT — نارنجی CTA
+     🌊 Gradients
      ═══════════════════════════════════════════════ */
 
-  --accent: oklch(70% .16 62);
-  --accent-foreground: oklch(25% .045 60);
+  --gradient-hero: linear-gradient(
+    135deg,
+    oklch(30% 0.07 224),
+    oklch(46% 0.1 205)
+  );
 
-
-  /* ═══════════════════════════════════════════════
-     🚨 STATUS
-     ═══════════════════════════════════════════════ */
-
-  --destructive: oklch(57.7% .245 27.325);
-  --destructive-foreground: oklch(98.4% .003 247.858);
-
-  --success: oklch(62% .14 155);
-  --success-foreground: oklch(99% .01 155);
-
+  --gradient-accent: linear-gradient(
+    135deg,
+    oklch(78% 0.16 68),
+    oklch(68% 0.17 45)
+  );
 
   /* ═══════════════════════════════════════════════
-     📐 BORDER / INPUT
-     ═══════════════════════════════════════════════ */
-
-  --border: oklch(89% .015 205);
-  --input: oklch(89% .015 205);
-  --ring: oklch(37% .085 215);
-
-
-  /* ═══════════════════════════════════════════════
-     📊 CHARTS
-     ═══════════════════════════════════════════════ */
-
-  --chart-1: oklch(37% .085 215);
-  --chart-2: oklch(70% .16 62);
-  --chart-3: oklch(62% .14 155);
-  --chart-4: oklch(55% .12 275);
-  --chart-5: oklch(65% .18 25);
-
-
-  /* ═══════════════════════════════════════════════
-     🌊 GRADIENTS
-     ═══════════════════════════════════════════════ */
-
-  --gradient-hero:
-    linear-gradient(
-      135deg,
-      oklch(31% .075 215),
-      oklch(39% .09 210)
-    );
-
-  --gradient-accent:
-    linear-gradient(
-      135deg,
-      oklch(73% .16 65),
-      oklch(68% .17 50)
-    );
-
-
-  /* ═══════════════════════════════════════════════
-     🌑 SHADOWS
+     🌑 Shadows
      ═══════════════════════════════════════════════ */
 
   --shadow-card:
-    0 1px 3px oklch(30% .04 215 / .08),
-    0 8px 24px -12px oklch(30% .04 215 / .14);
+    0 1px 3px oklch(30% 0.04 230 / 0.08),
+    0 8px 24px -12px oklch(30% 0.04 230 / 0.14);
 
-  --shadow-elevated:
-    0 12px 40px -12px oklch(30% .06 215 / .28);
-
+  --shadow-elevated: 0 12px 40px -12px oklch(30% 0.06 230 / 0.28);
 
   /* ═══════════════════════════════════════════════
-     📁 SIDEBAR
+     📌 Sidebar
      ═══════════════════════════════════════════════ */
 
-  --sidebar: oklch(98% .006 205);
-  --sidebar-foreground: oklch(24% .035 215);
+  --sidebar: oklch(98% 0.006 220);
+  --sidebar-foreground: oklch(22% 0.03 235);
+  --sidebar-primary: oklch(42% 0.09 214);
+  --sidebar-primary-foreground: oklch(99% 0.01 200);
+  --sidebar-accent: oklch(96% 0.012 220);
+  --sidebar-accent-foreground: oklch(30% 0.05 225);
+  --sidebar-border: oklch(90% 0.012 225);
+  --sidebar-ring: oklch(42% 0.09 214);
 
-  --sidebar-primary: oklch(37% .085 215);
-  --sidebar-primary-foreground: oklch(99% .005 200);
+  /* ═══════════════════════════════════════════════
+     🔄 سازگاری با CSS فعلی هدر
+     ═══════════════════════════════════════════════ */
 
-  --sidebar-accent: oklch(94% .018 205);
-  --sidebar-accent-foreground: oklch(31% .055 215);
+  --teal-900: oklch(30% 0.07 224);
+  --teal-800: oklch(42% 0.09 214);
+  --teal-700: oklch(42% 0.09 214);
+  --teal-600: oklch(46% 0.1 205);
+  --teal-500: oklch(52% 0.08 210);
+  --teal-100: oklch(96% 0.012 220);
 
-  --sidebar-border: oklch(89% .015 205);
-  --sidebar-ring: oklch(37% .085 215);
+  --orange: oklch(74% 0.16 62);
+  --orange-dark: oklch(68% 0.17 45);
+  --orange-500: oklch(74% 0.16 62);
+  --orange-600: oklch(68% 0.17 45);
+
+  --cream: oklch(99% 0.005 106);
+  --white: oklch(100% 0 0);
+
+  --ink: oklch(22% 0.03 235);
+  --muted-text: oklch(52% 0.02 235);
+
+  --ink-100: oklch(96.5% 0.008 220);
+
+  --footer-bg: oklch(30% 0.07 224);
+  --card-border: oklch(90% 0.012 225);
+  --header-line: oklch(90% 0.012 225);
+  --footer-line: oklch(90% 0.012 225);
+
+  --on-dark: oklch(99% 0.01 200);
+
+  --danger: oklch(57.7% 0.245 27.325);
+
+  /* ═══════════════════════════════════════════════
+     ⭕ Radius
+     ═══════════════════════════════════════════════ */
+
+  --r-btn: 50px;
+  --r-card: 20px;
+  --r-card-lg: 26px;
+  --r-icon: 20px;
 }
 
 /* ════════════════════════════════════════════
@@ -268,7 +286,7 @@
   justify-content: center;
   gap: 6px;
   padding: 9px 18px;
-  background:var(--ink);
+  background: var(--ink);
   color: var(--ink-100);
   font-size: 0.85rem;
   font-weight: 800;
