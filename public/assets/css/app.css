@@ -628,7 +628,7 @@ img {
 .hero-cta-wrap {
   margin-top: 22px;
   display: flex;
-  justify-content: center;
+  justify-content: right;
 }
 
 .btn-hero {
