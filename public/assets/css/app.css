@@ -615,7 +615,7 @@
   min-height: 400px;
   /* border-radius: 22px; */
   overflow: hidden;
-  background: linear-gradient(135deg, var(--teal-800), var(--teal-700));
+  background: linear-gradient(90deg, var(--teal-900), var(--teal-700));
   display: flex;
   align-items: center;
   justify-content: center;
@@ -647,7 +647,7 @@
 
 .banner-inner-icon {
   font-size: 4.5rem;
-  filter: drop-shadow(0 8px 16px rgba(0, 0, 0, 0.3));
+  filter: drop-shadow(0 8px 16px rgba(7, 7, 7, 0.3));
   animation: floatIcon 3.5s ease-in-out infinite;
   position: relative;
   z-index: 1;
