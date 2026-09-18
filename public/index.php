@@ -2,16 +2,16 @@
 require __DIR__ . '/../config/database.php';
 
 // ─── بنر هیرو ───
- $banner = db()->query("SELECT * FROM banners WHERE position='hero' AND is_active=1 ORDER BY sort_order LIMIT 1")->fetch();
- $banner = $banner ?: [];
- $bannerImage = trim($banner['image'] ?? '');
- $bannerLink  = $banner['link'] ?? '/products';
+$banner = db()->query("SELECT * FROM banners WHERE position='hero' AND is_active=1 ORDER BY sort_order LIMIT 1")->fetch();
+$banner = $banner ?: [];
+$bannerImage = trim($banner['image'] ?? ''); // ← نام ستون تصویر را مطابق دیتابیس خود تنظیم کنید
+$bannerLink  = $banner['link'] ?? '/products';
 
 // ─── دسته‌بندی‌ها ───
- $categories = db()->query("SELECT * FROM categories WHERE is_active=1 ORDER BY sort_order")->fetchAll();
+$categories = db()->query("SELECT * FROM categories WHERE is_active=1 ORDER BY sort_order")->fetchAll();
 
 // ─── محصولات ویژه ───
- $products = db()->query("
+$products = db()->query("
     SELECT p.id, p.code, p.name, p.base_moq, pr.price, inv.qty_available
     FROM products p
     LEFT JOIN product_prices pr ON pr.product_id = p.id AND pr.customer_group='wholesale'
@@ -20,24 +20,32 @@ require __DIR__ . '/../config/database.php';
     ORDER BY p.id
     LIMIT 4
 ")->fetchAll();
-
- $pageTitle = 'تولیدی جوراب رابطی — عمده، بدون واسطه';
+?>
+<?php
+$pageTitle = 'تولیدی جوراب رابطی — عمده، بدون واسطه';
 ob_start();
 ?>
 
-<!-- ▂▂▂ هیرو (سبک B2B امیران) ▂▂▂ -->
+<!-- ▂▂▂ هیرو: بنر بزرگ بدون کادر اضافه ▂▂▂ -->
 <section class="hero-container">
-    <div class="hero-content">
-        <h1 class="hero-title">پلتفرم عمده‌فروشی مستقیم از کارخانه</h1>
-        <p class="hero-desc">خرید عمده جوراب بدون واسطه، با کیفیت تضمینی و قیمت دست اول. ما به صادراتکنندگان و عمده‌فروشان کمک می‌کنیم تا کسب‌وکار خود را گسترش دهند.</p>
-        <a href="<?= htmlspecialchars($bannerLink) ?>" class="btn-hero">مشاهده کاتالوگ <span class="arrow">←</span></a>
-    </div>
-    <div class="hero-image">
+    <div class="hero-banner">
         <?php if ($bannerImage): ?>
-            <img class="banner-img" src="<?= htmlspecialchars($bannerImage) ?>" alt="بنر اصلی" onerror="this.style.display='none';">
-        <?php else: ?>
-            <div class="hero-placeholder">🧦</div>
+            <img class="banner-img" src="<?= htmlspecialchars($bannerImage) ?>" alt="بنر اصلی"
+                onerror="this.style.display='none'; document.getElementById('bannerFallback').style.display='flex';">
         <?php endif; ?>
+
+        <div class="banner-fallback<?= $bannerImage ? '' : ' show' ?>" id="bannerFallback"
+            <?= $bannerImage ? 'style="display:none"' : '' ?>>
+            <span class="banner-inner-icon">🧦</span>
+            <h1>تولیدی جوراب رابطی</h1>
+            <p>خرید عمده بدون واسطه، مستقیم از خط تولید کارخانه</p>
+        </div>
+    </div>
+
+    <div class="hero-cta-wrap">
+        <a href="<?= htmlspecialchars($bannerLink) ?>" class="btn-hero">
+            مشاهده محصولات <span class="arrow">←</span>
+        </a>
     </div>
 </section>
 
@@ -47,28 +55,61 @@ ob_start();
         <h2 class="section-title">دسته‌بندی محصولات</h2>
         <p class="section-sub">روی دسته بزنید تا مدل‌های آن را ببینید</p>
     </div>
+
     <div class="cat-grid">
         <?php foreach ($categories as $cat): ?>
+            <?php
+            $icon = trim($cat['icon'] ?? '');
+            $iconIsImage = $icon !== '' && (
+                preg_match('~^https?://~i', $icon) ||
+                preg_match('~\.(png|jpe?g|webp|svg|gif)(\?.*)?$~i', $icon)
+            );
+            ?>
             <a href="/products?cat=<?= htmlspecialchars($cat['slug']) ?>" class="cat-card">
-                <div class="cat-icon"><?= htmlspecialchars($cat['icon'] ?? '🧦') ?></div>
+                <div class="cat-icon">
+                    <?php if ($iconIsImage): ?>
+                        <img src="<?= htmlspecialchars($icon) ?>" alt="<?= htmlspecialchars($cat['name']) ?>"
+                            loading="lazy"
+                            onerror="this.style.display='none'; this.nextElementSibling.style.display='flex';">
+                        <span class="cat-icon-fallback"><?= htmlspecialchars($cat['name']) ?></span>
+                    <?php elseif ($icon !== ''): ?>
+                        <span class="cat-emoji"><?= htmlspecialchars($icon) ?></span>
+                    <?php else: ?>
+                        <span class="cat-icon-fallback show"><?= htmlspecialchars($cat['name']) ?></span>
+                    <?php endif; ?>
+                </div>
                 <div class="cat-name"><?= htmlspecialchars($cat['name']) ?></div>
             </a>
         <?php endforeach; ?>
     </div>
 </section>
 
-<!-- ▂▂▂ مزایا (سبک سایتی که عکسش را فرستادید) ▂▂▂ -->
-<section class="features-section">
-    <div class="feature-row">
-        <div class="feature-text">
-            <h2>چرا جوراب رابطی؟</h2>
-            <p>ما به عنوان یک پلتفرم B2B، تولیدکنندگان را مستقیماً به خریداران عمده متصل می‌کنیم تا با راندمان بالاتر، محصولات درجه یک را با بهترین قیمت تهیه کنید.</p>
+<!-- ▂▂▂ چرا جوراب رابطی؟ (کارت‌های سه‌بعدی) ▂▂▂ -->
+<section class="features-3d-section">
+    <div class="section-head">
+        <h2 class="section-title">چرا جوراب رابطی؟</h2>
+        <p class="section-sub">چهار دلیل برای خرید مستقیم از کارخانه</p>
+    </div>
+    <div class="features-grid">
+        <div class="feature-card-3d">
+            <span class="feature-icon">⏱️</span>
+            <h3>ثبت سفارش ۲۴ ساعته</h3>
+            <p>سامانه اتوماتیک دریافت سفارش عمده در تمامی ساعات شبانه‌روز</p>
         </div>
-        <div class="feature-cards">
-            <div class="f-card"><span>⏱️</span><h3>ثبت سفارش ۲۴ ساعته</h3></div>
-            <div class="f-card"><span>🏷️</span><h3>برند اختصاصی شما</h3></div>
-            <div class="f-card"><span>🚀</span><h3>ارسال فوری سراسری</h3></div>
-            <div class="f-card"><span>✨</span><h3>تضمین کیفیت</h3></div>
+        <div class="feature-card-3d">
+            <span class="feature-icon">🏷️</span>
+            <h3>تولید با طرح و برند شما</h3>
+            <p>بافت سفارشی و بسته‌بندی با لیبل و برند اختصاصی شما</p>
+        </div>
+        <div class="feature-card-3d">
+            <span class="feature-icon">🚀</span>
+            <h3>تحویل فوری به سراسر کشور</h3>
+            <p>ارسال سریع بار از کارخانه به باربری و تحویل در کوتاه‌ترین زمان</p>
+        </div>
+        <div class="feature-card-3d">
+            <span class="feature-icon">✨</span>
+            <h3>تضمین کیفیت و قیمت</h3>
+            <p>استفاده از نخ و کش درجه یک با تضمین مستقیم کارخانه</p>
         </div>
     </div>
 </section>
@@ -76,9 +117,10 @@ ob_start();
 <!-- ▂▂▂ محصولات ویژه ▂▂▂ -->
 <section class="section">
     <div class="section-head">
-        <h2 class="section-title">محصولات پرفروش</h2>
-        <p class="section-sub">عمده و با قیمت کارخانه</p>
+        <h2 class="section-title">محصولات ویژه</h2>
+        <p class="section-sub">پرفروش‌های تولیدی — عمده و با قیمت کارخانه</p>
     </div>
+
     <div class="prod-grid">
         <?php foreach ($products as $p): ?>
             <a href="/products/<?= htmlspecialchars($p['slug'] ?? $p['id']) ?>" class="prod-card">
@@ -97,6 +139,6 @@ ob_start();
 </section>
 
 <?php
- $content = ob_get_clean();
+$content = ob_get_clean();
 require __DIR__ . '/../views/layouts/main.php';
 ?>
