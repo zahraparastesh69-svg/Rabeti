@@ -698,3 +698,60 @@ img {
 .prod-code { font-size: .7rem; color: var(--muted); margin-bottom: 8px; }
 .prod-price { font-weight: 800; color: var(--teal-800); font-size: .9rem; }
 .prod-moq { font-size: .7rem; color: var(--muted); margin-top: 4px; }
+/* ─── سرصفحه داخلی ─── */
+.page-head { margin-top: 24px; }
+
+/* ─── نوار فیلتر (چیپ‌های اسکرول افقی) ─── */
+.filter-bar {
+    display: flex;
+    gap: 8px;
+    overflow-x: auto;
+    padding: 16px 0 8px;
+    scrollbar-width: none;
+}
+.filter-bar::-webkit-scrollbar { display: none; }
+.filter-chip {
+    flex-shrink: 0;
+    font-size: .82rem;
+    font-weight: 600;
+    color: var(--teal-800);
+    background: #fff;
+    border: 1px solid var(--card-border);
+    border-radius: var(--r-btn);
+    padding: 8px 18px;
+    transition: .2s;
+}
+.filter-chip:hover { background: var(--teal-100); }
+.filter-chip.active {
+    background: var(--teal-800);
+    border-color: var(--teal-800);
+    color: #fff;
+}
+
+/* ─── جزئیات کارت محصول ─── */
+.prod-cat {
+    font-size: .68rem;
+    color: var(--muted);
+    margin-bottom: 4px;
+}
+.prod-row {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-top: 6px;
+}
+.prod-stock { font-size: .7rem; font-weight: 700; }
+.prod-stock.in  { color: #1a7f4b; }
+.prod-stock.out { color: #b4443c; }
+
+/* ─── حالت خالی ─── */
+.empty-state {
+    text-align: center;
+    padding: 80px 20px;
+}
+.empty-icon { font-size: 3rem; margin-bottom: 12px; }
+.empty-state h2 {
+    font-size: 1.1rem;
+    color: var(--ink);
+    margin-bottom: 20px;
+}
