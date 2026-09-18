@@ -3,68 +3,62 @@ $pageTitle = 'تولیدی جوراب رابطی — عمده، بدون واس�
 ob_start();
 ?>
 
-<!-- ▂▂▂ هیرو ▂▂▂ -->
-<section class="hero">
-    <h1>محصولات تولیدی جوراب رابطی با کیفیت تضمین و قیمت عمده</h1>
-    <p>
-        خرید عمده جوراب مستقیم از تولیدکننده — کاتالوگ کامل، قیمت ویژه
-        فروشگاه‌داران و پخش‌کنندگان، ارسال به سراسر کشور
-    </p>
-    <div class="hero-actions">
-        <a href="/products" class="btn btn-orange">مشاهده محصولات ←</a>
-    </div>
-    <div class="hero-img">
-        <!-- 📷 بعداً: <img src="/assets/images/factory.jpg" alt="خط تولید جوراب رابطی"> -->
-        🏭
+<!-- ▂▂▂ بنر اسلایدی / هیرو موبایلی ▂▂▂ -->
+<section class="hero-banner">
+    <!-- 📷 وقتی بک‌اند متصل شد: <img src="/uploads/banners/hero1.jpg" alt="تولیدی جوراب رابطی"> -->
+    <div class="hero-overlay">
+        <span class="hero-tag">تولید و پخش عمده</span>
+        <h1 class="hero-title">مستقیم از خط تولید، بدون واسطه</h1>
+        <p class="hero-subtitle">تضمین کیفیت بافت و بهترین قیمت برای بنکداران</p>
+        <a href="/products" class="hero-btn">کاتالوگ محصولات ←</a>
     </div>
 </section>
 
-<!-- ▂▂▂ دسته‌بندی محصولات ▂▂▂ -->
-<section class="section">
-    <h2 class="section-title">دسته‌بندی محصولات</h2>
-    <p class="section-sub">انواع جوراب تولیدی — عمده و با قیمت کارخانه</p>
+<!-- ▂▂▂ دسته‌بندی محصولات (گرید اپلیکیشنی تمیز) ▂▂▂ -->
+<section class="app-section">
+    <div class="section-head">
+        <h2>دسته‌بندی محصولات</h2>
+        <a href="/products">همه دسته‌ها</a>
+    </div>
 
     <div class="cat-grid">
         <?php
-        // 🔧 موقت — بعداً از جدول categories دیتابیس خوانده می‌شود
+        // 🔧 ساختار آماده برای اتصال دیتابیس (آیکون، نام، عکس و مسیر)
         $categories = [
-            ['🧦', 'مردانه',    ['نخی', 'اسپرت', 'ساق‌بلند', 'مجلسی']],
-            ['🧦', 'زنانه',     ['نازک', 'پشمی', 'ساق‌کوتاه', 'رنگارنگ']],
-            ['🧒', 'بچگانه',    ['نوزادی', 'کودکانه', 'مدرسه']],
-            ['⚽', 'ورزشی',     ['فوتبال', 'توپ‌دار', 'کوهنوردی']],
-            ['🧶', 'پشمی',      ['زمستانی', 'جیر', 'برک']],
-            ['🎁', 'ست و پک',   ['ست ۳عددی', 'پک هدیه', 'جعبه عمده']],
+            ['icon' => '🧦', 'name' => 'مردانه',   'count' => '۴ زیردسته', 'url' => '/products?cat=men'],
+            ['icon' => '🧦', 'name' => 'زنانه',    'count' => '۴ زیردسته', 'url' => '/products?cat=women'],
+            ['icon' => '🧒', 'name' => 'بچگانه',   'count' => '۳ زیردسته', 'url' => '/products?cat=kids'],
+            ['icon' => '⚽', 'name' => 'ورزشی',    'count' => '۳ زیردسته', 'url' => '/products?cat=sport'],
+            ['icon' => '🧶', 'name' => 'پشمی',     'count' => '۳ زیردسته', 'url' => '/products?cat=wool'],
+            ['icon' => '🎁', 'name' => 'ست و پک',  'count' => 'پک جعبه‌ای', 'url' => '/products?cat=packs'],
         ];
-        foreach ($categories as [$icon, $name, $subs]):
-        ?>
-            <div class="cat-card" role="button" tabindex="0">
-                <div class="cat-icon"><?= $icon ?></div>
-                <div class="cat-name"><?= $name ?></div>
-                <span class="cat-badge"><?= count($subs) ?> زیردسته</span>
 
-                <div class="cat-subs">
-                    <div class="cat-chips">
-                        <?php foreach ($subs as $sub): ?>
-                            <a href="/products" class="cat-chip"><?= $sub ?></a>
-                        <?php endforeach; ?>
-                    </div>
+        foreach ($categories as $cat):
+        ?>
+            <a href="<?= htmlspecialchars($cat['url']) ?>" class="cat-item">
+                <div class="cat-img-box">
+                    <!-- 📷 بعداً در صورت داشتن عکس: <img src="/uploads/..." alt="<?= $cat['name'] ?>"> -->
+                    <span class="cat-icon-placeholder"><?= $cat['icon'] ?></span>
                 </div>
-            </div>
+                <span class="cat-label"><?= htmlspecialchars($cat['name']) ?></span>
+                <span class="cat-sublabel"><?= htmlspecialchars($cat['count']) ?></span>
+            </a>
         <?php endforeach; ?>
     </div>
 </section>
 
-<!-- ▂▂▂ چرا جوراب رابطی؟ ▂▂▂ -->
-<section class="section">
+<!-- ▂▂▂ بنر مزیت همکاری (چرا جوراب رابطی) ▂▂▂ -->
+<section class="app-section">
     <div class="why-card">
-        <div class="why-icon">🛡️</div>
-        <h2>چرا جوراب رابطی؟</h2>
+        <div class="why-badge">🛡️ مزیت تولیدی</div>
+        <h3>چرا خرید عمده از رابطی؟</h3>
         <p>
-            چون مستقیم از خط تولید کارخانه خرید می‌کنید — بدون واسطه،
-            با قیمت عمده شفاف، کنترل کیفیت تضمینی و امکان تولید
-            با برند اختصاصی شما از ۵۰۰ جفت به بالا
+            تولید مستقیم با نخ پنبه مرغوب، قیمت رقابتی درب کارخانه، تضمین مرجوعی در صورت عدم رضایت، و سفارش اختصاصی برند از ۵۰۰ جفت به بالا.
         </p>
-        <a href="/products" class="btn btn-orange">مشاهده محصولات ←</a>
+        <div class="why-footer">
+            <a href="tel:09120000000" class="btn btn-outline">تماس با کارخانه</a>
+            <a href="/products" class="btn btn-orange">مشاهده کاتالوگ</a>
+        </div>
     </div>
 </section>
 
