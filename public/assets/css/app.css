@@ -4330,3 +4330,27 @@ body.app-body {
   width: 62%;
   height: 62%;
 }
+/* ─── ۹) گارد قطعی اسکرول افقی ─── */
+html,
+body {
+  overflow-x: hidden;
+  max-width: 100%;
+}
+body.app-body {
+  overflow-x: hidden;
+}
+
+/* عناصر شناور تزئینی — در موبایل قفل کامل داخل کادر */
+@media (max-width: 720px) {
+  .home-hero .hero-product-art {
+    max-width: 100vw;
+  }
+  .hero-orbit,
+  .art-halo {
+    display: none;
+  } /* در موبایل به‌صرفه حذف — کارت اصلی می‌ماند */
+  .footer-glow {
+    left: auto;
+    right: -130px;
+  }
+}

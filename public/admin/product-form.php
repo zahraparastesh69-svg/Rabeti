@@ -1,5 +1,6 @@
 <?php
 require __DIR__ . '/../config/database.php';
+require __DIR__ . '/../../config/upload.php';
 
  $action    = ($_GET['action'] ?? 'new') === 'edit' ? 'edit' : 'new';
  $productId = (int)($_GET['id'] ?? 0);
@@ -19,10 +20,14 @@ if ($action === 'edit' && $productId > 0) {
     $stmt = db()->prepare("SELECT qty_available FROM inventory WHERE product_id=?");
     $stmt->execute([$productId]);
     $qty = (int)($stmt->fetchColumn() ?: 0);
+
+    $stmt = db()->prepare("SELECT image_path FROM product_images WHERE product_id=? AND is_main=1 LIMIT 1");
+    $stmt->execute([$productId]);
+    $currentImage = $stmt->fetchColumn() ?: null;
 } else {
     $action = 'new';
     $product = ['code'=>'', 'name'=>'', 'slug'=>'', 'description'=>'', 'base_moq'=>'48', 'category_id'=>''];
-    $price = 0; $qty = 0;
+    $price = 0; $qty = 0; $currentImage = null;
 }
 
 /* ─── ذخیره ─── */
@@ -66,16 +71,27 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 ->execute([$categoryId, $code, $name, $slug, $description ?: null, $baseMoq, $productId]);
         }
 
-        /* قیمت — Upsert ساده */
+        /* قیمت */
         db()->prepare("DELETE FROM product_prices WHERE product_id=? AND customer_group='wholesale' AND min_qty=1")
             ->execute([$productId]);
         db()->prepare("INSERT INTO product_prices (product_id, customer_group, min_qty, price) VALUES (?, 'wholesale', 1, ?)")
             ->execute([$productId, $price]);
 
-        /* موجودی — Upsert */
+        /* موجودی */
         db()->prepare("INSERT INTO inventory (product_id, qty_available) VALUES (?, ?)
                        ON DUPLICATE KEY UPDATE qty_available = VALUES(qty_available)")
             ->execute([$productId, $qty]);
+
+        /* عکس محصول — اگر فایل جدید انتخاب شده باشد */
+        if (!empty($_FILES['image']['name'])) {
+            $imgPath = upload_image($_FILES['image'], 'products');
+            if ($imgPath) {
+                db()->prepare("UPDATE product_images SET is_main=0 WHERE product_id=?")->execute([$productId]);
+                db()->prepare("INSERT INTO product_images (product_id, image_path, is_main) VALUES (?,?,1)")
+                    ->execute([$productId, $imgPath]);
+                $currentImage = $imgPath;
+            }
+        }
 
         header('Location: /admin/products');
         exit;
@@ -99,7 +115,7 @@ ob_start();
     <a href="/admin/products" style="color:var(--teal-700);font-size:.82rem;">→ بازگشت به لیست محصولات</a>
 </div>
 
-<form method="post" class="co-form" style="max-width:100%;">
+<form method="post" class="co-form" style="max-width:100%;" enctype="multipart/form-data">
 
     <?php if ($errors): ?>
     <div class="form-alert">⚠️ خطاها را اصلاح کنید</div>
@@ -132,8 +148,7 @@ ob_start();
     <div class="form-row">
         <div class="form-field">
             <label>نامک انگلیسی (اختیاری)</label>
-            <input type="text" name="slug_en" dir="ltr" value=""
-                   placeholder="m-cotton-long" >
+            <input type="text" name="slug_en" dir="ltr" value="" placeholder="m-cotton-long">
             <span class="field-hint">اگر خالی بگذارید از کد محصول ساخته می‌شود</span>
         </div>
         <div class="form-field">
@@ -152,6 +167,17 @@ ob_start();
             <label>موجودی انبار (جفت)</label>
             <input type="number" name="qty" dir="ltr" value="<?= $qty ?>" min="0" step="10">
         </div>
+    </div>
+
+    <div class="form-field">
+        <label>عکس محصول</label>
+        <?php if ($currentImage): ?>
+            <img src="<?= htmlspecialchars($currentImage) ?>" alt="عکس فعلی"
+                 style="max-width:180px;border-radius:14px;margin-bottom:10px;display:block;border:1px solid var(--card-border);">
+            <span class="field-hint">عکس فعلی بالا است — اگر فایل جدید انتخاب کنید جایگزین می‌شود</span>
+        <?php endif; ?>
+        <input type="file" name="image" accept="image/jpeg,image/png,image/webp">
+        <span class="field-hint">JPG/PNG/WebP — حداکثر ۲ مگابایت — ترجیحاً مربعی</span>
     </div>
 
     <div class="form-field">

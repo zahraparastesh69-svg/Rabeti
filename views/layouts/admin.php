@@ -6,7 +6,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title><?= $pageTitle ?? 'پنل مدیریت' ?> | جوراب رابطی</title>
     <link href="https://cdn.jsdelivr.net/gh/rastikerdar/vazirmatn@v33.003/Vazirmatn-font-face.css" rel="stylesheet">
-    <link rel="stylesheet" href="/assets/css/app.css?v=3">
+    <link rel="stylesheet" href="/assets/css/app.css?v=4">
     <link rel="stylesheet" href="/assets/css/admin.css">
 </head>
 
@@ -28,6 +28,7 @@
             <a href="/admin/messages" class="admin-nav-link <?= ($activeMenu ?? '') === 'messages' ? 'active' : '' ?>">📨 پیام‌ها <span class="side-badge"><?= $countMessages ?? 0 ?></span></a>
             <a href="/admin/products" class="admin-nav-link <?= ($activeMenu ?? '') === 'products' ? 'active' : '' ?>">🧦 محصولات</a>
             <a href="/admin/categories" class="admin-nav-link <?= ($activeMenu ?? '') === 'categories' ? 'active' : '' ?>">📁 دسته‌بندی‌ها</a>
+            <a href="/admin/banners" class="admin-nav-link <?= ($activeMenu ?? '') === 'banners' ? 'active' : '' ?>">🖼️ بنر صفحه اصلی</a>
             <a href="/admin/customers" class="admin-nav-link <?= ($activeMenu ?? '') === 'customers' ? 'active' : '' ?>">👥 مشتریان</a>
             <hr class="admin-sep">
             <a href="/" class="admin-nav-link">🏠 مشاهده سایت</a>
