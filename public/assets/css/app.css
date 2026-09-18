@@ -4,103 +4,121 @@
    ══════════════════════════════════════════════════ */
 
 :root {
-  /* ═══════════════════════════════════════════════
-     🎨 BRAND — فیروزه‌ای / سبزآبی
-     ═══════════════════════════════════════════════ */
-
-  --teal-900: #00666b; /* عمق، سایه و بخش‌های بسیار تیره */
-  --teal-800: #00668bf6; /* رنگ اصلی Hero */
-  --teal-700: #00666be8; /* رنگ اصلی برند / هدر آیکون / عناصر برند */
-  --teal-600: #186873; /* دکمه ثانویه و Hover */
-  --teal-500: #2d7881; /* المان‌های تأکیدی و Status */
-  --teal-100: #e8f1f2; /* زمینه بسیار روشن فیروزه‌ای */
-
+  --radius: .5rem;
 
   /* ═══════════════════════════════════════════════
-     🟠 CTA — نارنجی
+     پایه
      ═══════════════════════════════════════════════ */
 
-  --orange: #f09020; /* دکمه اصلی CTA */
-  --orange-dark: #e68112; /* Hover */
-  --orange-500: #f09020;
-  --orange-600: #e68112;
+  --background: oklch(98% .005 200);
+  --foreground: oklch(24% .035 215);
+
+  --card: oklch(100% 0 0);
+  --card-foreground: oklch(24% .035 215);
+
+  --popover: oklch(100% 0 0);
+  --popover-foreground: oklch(24% .035 215);
 
 
   /* ═══════════════════════════════════════════════
-     ⚪ NEUTRAL — زمینه و متن
+     🟦 BRAND — فیروزه‌ای Amiran
      ═══════════════════════════════════════════════ */
 
-  --cream: #f8f8f8; /* زمینه Header و بخش‌های روشن */
-  --white: #ffffff;
+  --primary: oklch(37% .085 215);
+  --primary-foreground: oklch(99% .005 200);
 
-  --ink: #16343a; /* متن اصلی، لوگو و تیترهای تیره */
-  --muted: #64777b; /* متن ثانویه */
+  --secondary: oklch(94% .018 205);
+  --secondary-foreground: oklch(31% .055 215);
 
-  --ink-100: #edf3f4; /* زمینه‌های خیلی روشن */
+  --muted: oklch(95.5% .012 205);
+  --muted-foreground: oklch(52% .025 215);
 
 
   /* ═══════════════════════════════════════════════
-     🧩 UI — کارت، خط و فوتر
+     🟠 ACCENT — نارنجی CTA
      ═══════════════════════════════════════════════ */
 
-  --footer-bg: #00656B;
-  --card-border: #dce7e8;
-  --header-line: #e3ebec;
-  --footer-line: #dce6e7;
-
-
-  /* ═══════════════════════════════════════════════
-     📝 TEXT ON COLORS
-     ═══════════════════════════════════════════════ */
-
-  --on-dark: #ffffff;
-  --ink: #16343a;
+  --accent: oklch(70% .16 62);
+  --accent-foreground: oklch(25% .045 60);
 
 
   /* ═══════════════════════════════════════════════
      🚨 STATUS
      ═══════════════════════════════════════════════ */
 
-  --danger: #dc2626;
-}
+  --destructive: oklch(57.7% .245 27.325);
+  --destructive-foreground: oklch(98.4% .003 247.858);
 
-  /* ─── سیستم گوشه‌گرد ─── */
-  --r-btn: 50px;
-  --r-card: 20px;
-  --r-card-lg: 26px;
-  --r-icon: 20px;
-}
+  --success: oklch(62% .14 155);
+  --success-foreground: oklch(99% .01 155);
 
-* {
-  margin: 0;
-  padding: 0;
-  box-sizing: border-box;
-}
 
-body {
-  font-family: "Vazirmatn", Tahoma, sans-serif;
-  background: var(--cream);
-  color: var(--ink);
-  direction: rtl;
-  min-height: 100vh;
-  line-height: 1.6;
-}
+  /* ═══════════════════════════════════════════════
+     📐 BORDER / INPUT
+     ═══════════════════════════════════════════════ */
 
-a {
-  text-decoration: none;
-  color: inherit;
-}
+  --border: oklch(89% .015 205);
+  --input: oklch(89% .015 205);
+  --ring: oklch(37% .085 215);
 
-img {
-  max-width: 100%;
-  display: block;
-}
 
-.container {
-  width: 100%;
-  max-width: 1200px;
-  margin: 0 auto;
-  padding: 0 16px;
+  /* ═══════════════════════════════════════════════
+     📊 CHARTS
+     ═══════════════════════════════════════════════ */
+
+  --chart-1: oklch(37% .085 215);
+  --chart-2: oklch(70% .16 62);
+  --chart-3: oklch(62% .14 155);
+  --chart-4: oklch(55% .12 275);
+  --chart-5: oklch(65% .18 25);
+
+
+  /* ═══════════════════════════════════════════════
+     🌊 GRADIENTS
+     ═══════════════════════════════════════════════ */
+
+  --gradient-hero:
+    linear-gradient(
+      135deg,
+      oklch(31% .075 215),
+      oklch(39% .09 210)
+    );
+
+  --gradient-accent:
+    linear-gradient(
+      135deg,
+      oklch(73% .16 65),
+      oklch(68% .17 50)
+    );
+
+
+  /* ═══════════════════════════════════════════════
+     🌑 SHADOWS
+     ═══════════════════════════════════════════════ */
+
+  --shadow-card:
+    0 1px 3px oklch(30% .04 215 / .08),
+    0 8px 24px -12px oklch(30% .04 215 / .14);
+
+  --shadow-elevated:
+    0 12px 40px -12px oklch(30% .06 215 / .28);
+
+
+  /* ═══════════════════════════════════════════════
+     📁 SIDEBAR
+     ═══════════════════════════════════════════════ */
+
+  --sidebar: oklch(98% .006 205);
+  --sidebar-foreground: oklch(24% .035 215);
+
+  --sidebar-primary: oklch(37% .085 215);
+  --sidebar-primary-foreground: oklch(99% .005 200);
+
+  --sidebar-accent: oklch(94% .018 205);
+  --sidebar-accent-foreground: oklch(31% .055 215);
+
+  --sidebar-border: oklch(89% .015 205);
+  --sidebar-ring: oklch(37% .085 215);
 }
 
 /* ════════════════════════════════════════════
