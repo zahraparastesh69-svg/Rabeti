@@ -168,6 +168,79 @@ ob_start();
     </div>
 </section>
 
+<?php<?php
+ $pageTitle = 'تولیدی جوراب رابطی — عمده، بدون واسطه';
+ob_start();
+?>
+
+<!-- ▂▂▂ هیرو ▂▂▂ -->
+<section class="hero">
+    <span class="hero-badge">⚡ تولید مستقیم از کارخانه</span>
+    <h1>محصولات تولیدی جوراب رابطی<br>با کیفیت تضمینی و قیمت عمده</h1>
+    <p>
+        خرید مستقیم از تولیدکننده بدون واسطه — کاتالوگ کامل محصولات،
+        قیمت ویژه فروشگاه‌داران و پخش‌کنندگان، ارسال به سراسر کشور
+    </p>
+    <div class="hero-actions">
+        <a href="/products" class="btn btn-orange">مشاهده محصولات</a>
+        <a href="/register" class="btn btn-ghost">ثبت‌نام عمده‌فروشی</a>
+    </div>
+    <!-- 📷 تصویر کارخانه — فعلاً Placeholder -->
+    <div class="hero-img">🏭</div>
+</section>
+
+<!-- ▂▂▂ دسته‌بندی محصولات ▂▂▂ -->
+<section class="section">
+    <h2 class="section-title">دسته‌بندی محصولات</h2>
+    <p class="section-sub">روی هر دسته بزنید تا زیردسته‌ها باز شود</p>
+
+    <div class="cat-grid">
+        <?php
+        // 🔧 موقت — بعداً از دیتابیس خوانده می‌شود
+        $categories = [
+            ['🧦', 'مردانه',  ['نخی', 'اسپرت', 'ساق‌بلند', 'مجلسی']],
+            ['🩱', 'زنانه',   ['نازک', 'پشمی', 'ساق‌کوتاه', 'رنگارنگ']],
+            ['🧒', 'بچگانه',  ['نوزادی', 'کودکانه', 'مدرسه']],
+            ['⚽', 'ورزشی',   ['فوتبال', 'توپ‌دار', 'کوهنوردی']],
+            ['🧶', 'پشمی',   ['زمستانی', 'جیر', 'برک']],
+            ['🎁', 'ست و پک', ['ست ۳عددی', 'پک هدیه', 'عمده جعبه']],
+        ];
+        foreach ($categories as [$icon, $name, $subs]):
+            $count = count($subs);
+        ?>
+        <div class="cat-card" role="button" tabindex="0">
+            <div class="cat-icon"><?= $icon ?></div>
+            <div class="cat-name"><?= $name ?></div>
+            <span class="cat-badge"><?= $count ?> زیردسته</span>
+
+            <div class="cat-subs">
+                <div class="cat-chips">
+                    <?php foreach ($subs as $sub): ?>
+                    <a href="/products" class="cat-chip"><?= $sub ?></a>
+                    <?php endforeach; ?>
+                </div>
+            </div>
+        </div>
+        <?php endforeach; ?>
+    </div>
+</section>
+
+<!-- ▂▂▂ چرا جوراب رابطی؟ ▂▂▂ -->
+<section class="section">
+    <div class="why-card">
+        <div class="why-icon">🛡️</div>
+        <h2>چرا جوراب رابطی؟</h2>
+        <p>
+            چون مستقیم از خط تولید کارخانه تحویل می‌گیرید — بدون واسطه،
+            بدون حاشیه سود اضافه، با کنترل کیفیت مرحله‌به‌مرحله و امکان
+            تولید با برند اختصاصی شما از ۵۰۰ جفت به بالا
+        </p>
+        <a href="/products" class="btn btn-orange">مشاهده محصولات</a>
+    </div>
+</section>
+
 <?php
+ $content = ob_get_clean();
+require __DIR__ . '/../views/layouts/main.php';
 $content = ob_get_clean();
 require __DIR__ . '/../views/layouts/main.php';
