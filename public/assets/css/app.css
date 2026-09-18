@@ -271,60 +271,6 @@ img {
   margin-top: 6px;
 }
 
-/* ─── هیرو بنر ─── */
-.hero {
-  background: linear-gradient(160deg, var(--teal-800), var(--teal-900));
-  border-radius: var(--r-card-lg);
-  margin-top: 20px;
-  padding: 36px 28px;
-  color: #fff;
-  position: relative;
-  overflow: hidden;
-  display: flex;
-  flex-direction: column;
-}
-
-.hero h1 {
-  font-size: clamp(1.4rem, 3.5vw, 2.2rem);
-  font-weight: 900;
-  line-height: 1.6;
-  margin-bottom: 12px;
-  color: #fff;
-}
-
-.hero p {
-  color: var(--on-dark);
-  line-height: 1.9;
-  font-size: 0.95rem;
-  margin-bottom: 24px;
-  max-width: 650px;
-}
-
-.hero-actions {
-  display: flex;
-  flex-wrap: wrap;
-  align-items: center;
-  gap: 12px;
-  margin-bottom: 24px;
-}
-
-.hero-img {
-  width: 100%;
-  min-height: 160px;
-  border-radius: 18px;
-  background: linear-gradient(
-    135deg,
-    rgba(15, 54, 65, 0.7),
-    rgba(36, 89, 107, 0.7)
-  );
-  border: 1px solid rgba(255, 255, 255, 0.1);
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  font-size: 3rem;
-  overflow: hidden;
-}
-
 /* ─── گرید دسته‌بندی و آکاردئون ─── */
 .cat-grid {
   display: grid;
@@ -1229,4 +1175,261 @@ img {
 .auth-switch a {
   color: var(--teal-700);
   font-weight: 700;
+}
+:root {
+  --teal-primary: #0d4b58;
+  --teal-gradient-start: #0e4c5a;
+  --teal-gradient-end: #072a33;
+  --accent-gold: #e5a93c;
+  --accent-gold-hover: #c98e28;
+}
+
+/* ─── هدر سمت چپ (آیکون‌ها و کاربر) ─── */
+.header-inner {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  width: 100%;
+}
+
+.header-left {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+}
+
+.header-action-btn {
+  position: relative;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 40px;
+  height: 40px;
+  border-radius: 12px;
+  background: #f1f5f9;
+  color: #334155;
+  text-decoration: none;
+  transition: all 0.2s ease;
+}
+
+.header-action-btn:hover {
+  background: #e2e8f0;
+  color: #0f172a;
+}
+
+.header-action-btn .badge {
+  position: absolute;
+  top: -4px;
+  right: -4px;
+  background: #ef4444;
+  color: #fff;
+  font-size: 0.7rem;
+  font-weight: bold;
+  min-width: 18px;
+  height: 18px;
+  border-radius: 9px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0 4px;
+  border: 2px solid #fff;
+}
+
+.user-auth-section {
+  display: flex;
+  align-items: center;
+  font-size: 0.9rem;
+}
+
+.user-profile-chip {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 6px 14px;
+  background: #e0f2f1;
+  color: var(--teal-primary);
+  border-radius: 30px;
+  text-decoration: none;
+  font-weight: bold;
+  border: 1px solid rgba(13, 75, 88, 0.15);
+  transition: all 0.2s ease;
+}
+
+.user-profile-chip:hover {
+  background: #b2dfdb;
+}
+
+.auth-links {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-weight: bold;
+}
+
+.auth-links .btn-link {
+  color: #334155;
+  text-decoration: none;
+  transition: color 0.2s;
+}
+
+.auth-links .btn-link:hover {
+  color: var(--teal-primary);
+}
+
+.auth-links .divider {
+  color: #cbd5e1;
+}
+
+/* ─── هیرو بنر جدید تمام فیروزه‌ای ─── */
+.hero-container {
+  margin-top: 24px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  width: 100%;
+}
+
+.hero-banner {
+  width: 100%;
+  height: 220px;
+  background: linear-gradient(
+    145deg,
+    var(--teal-gradient-start),
+    var(--teal-gradient-end)
+  );
+  border-radius: 24px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  position: relative;
+  overflow: hidden;
+  box-shadow: 0 12px 30px rgba(7, 42, 51, 0.2);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+}
+
+/* افکت نور ملایم درون بنر */
+.hero-banner::before {
+  content: "";
+  position: absolute;
+  top: -50%;
+  left: -50%;
+  width: 200%;
+  height: 200%;
+  background: radial-gradient(
+    circle,
+    rgba(255, 255, 255, 0.08) 0%,
+    transparent 60%
+  );
+  pointer-events: none;
+}
+
+.banner-inner-icon {
+  font-size: 4.5rem;
+  filter: drop-shadow(0 8px 16px rgba(0, 0, 0, 0.3));
+  animation: floatIcon 3.5s ease-in-out infinite;
+}
+
+@keyframes floatIcon {
+  0%,
+  100% {
+    transform: translateY(0);
+  }
+  50% {
+    transform: translateY(-8px);
+  }
+}
+
+.hero-cta-wrap {
+  margin-top: 22px;
+  display: flex;
+  justify-content: center;
+}
+
+.btn-hero {
+  display: inline-flex;
+  align-items: center;
+  gap: 10px;
+  background-color: var(--accent-gold);
+  color: #2b1704;
+  font-weight: 800;
+  font-size: 1.05rem;
+  padding: 12px 36px;
+  border-radius: 14px;
+  text-decoration: none;
+  box-shadow: 0 6px 18px rgba(229, 169, 60, 0.35);
+  transition: all 0.25s ease;
+}
+
+.btn-hero:hover {
+  background-color: var(--accent-gold-hover);
+  transform: translateY(-2px);
+  box-shadow: 0 8px 22px rgba(229, 169, 60, 0.45);
+}
+
+.btn-hero .arrow {
+  transition: transform 0.2s ease;
+}
+
+.btn-hero:hover .arrow {
+  transform: translateX(-4px);
+}
+
+/* ─── کارت‌های سه‌بعدی مزایا (3D Feature Cards) ─── */
+.features-3d-section {
+  margin: 60px auto 40px auto;
+  perspective: 1000px;
+}
+
+.features-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+  gap: 24px;
+}
+
+.feature-card-3d {
+  background: #ffffff;
+  border-radius: 20px;
+  padding: 28px 20px;
+  text-align: center;
+  position: relative;
+  border: 1px solid #e2e8f0;
+  box-shadow:
+    0 10px 25px -5px rgba(0, 0, 0, 0.05),
+    0 8px 10px -6px rgba(0, 0, 0, 0.01);
+  transition:
+    transform 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275),
+    box-shadow 0.4s ease;
+  transform-style: preserve-3d;
+}
+
+.feature-card-3d:hover {
+  transform: translateY(-10px) rotateX(4deg) rotateY(-2deg);
+  box-shadow:
+    0 20px 35px -5px rgba(13, 75, 88, 0.15),
+    0 10px 10px -5px rgba(13, 75, 88, 0.04);
+  border-color: rgba(13, 75, 88, 0.2);
+}
+
+.feature-icon {
+  font-size: 2.8rem;
+  margin-bottom: 16px;
+  display: inline-block;
+  transition: transform 0.3s ease;
+}
+
+.feature-card-3d:hover .feature-icon {
+  transform: scale(1.15) translateZ(20px);
+}
+
+.feature-card-3d h3 {
+  font-size: 1.15rem;
+  font-weight: 800;
+  color: #1e293b;
+  margin-bottom: 10px;
+}
+
+.feature-card-3d p {
+  font-size: 0.88rem;
+  color: #64748b;
+  line-height: 1.6;
 }
