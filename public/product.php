@@ -132,4 +132,42 @@ ob_start();
         <div class="pd-specs">
             <div class="pd-spec"><span>حداقل سفارش (MOQ)</span><b><?= $product['base_moq'] ?> جفت</b></div>
             <div class="pd-spec"><span>دسته</span><b><?= htmlspecialchars($product['cat_name']) ?></b></div>
-            <div class="pd-spec"><span>ارسال</span><b>سراسر کشور — ۲۴ تا
+            <div class="pd-spec"><span>ارسال</span><b>سراسر کشور — ۲۴ تا ۷۲ ساعت</b></div>
+        </div>
+
+        <!-- اکشن -->
+        <div class="pd-actions">
+            <?php if ($inStock): ?>
+                <button class="btn btn-orange pd-order-btn" onclick="alert('🛒 سبد خرید در فاز بعدی فعال می‌شود')">
+                    افزودن به سبد سفارش
+                </button>
+            <?php else: ?>
+                <button class="btn pd-disabled" disabled>فعلاً ناموجود</button>
+            <?php endif; ?>
+            <a href="/custom-order" class="pd-link">درخواست تولید با برند اختصاصی ←</a>
+        </div>
+    </div>
+</section>
+
+<!-- ▂▂▂ محصولات مشابه ▂▂▂ -->
+<?php if ($related): ?>
+    <section class="section">
+        <h2 class="section-title">محصولات مشابه</h2>
+        <div class="prod-grid">
+            <?php foreach ($related as $r): ?>
+                <a href="/product/<?= $r['slug'] ?>" class="prod-card">
+                    <div class="prod-img">🧦</div>
+                    <div class="prod-info">
+                        <div class="prod-name"><?= htmlspecialchars($r['name']) ?></div>
+                        <div class="prod-code">کد: <?= $r['code'] ?></div>
+                        <div class="prod-price"><?= number_format($r['price']) ?> تومان</div>
+                    </div>
+                </a>
+            <?php endforeach; ?>
+        </div>
+    </section>
+<?php endif; ?>
+
+<?php
+$content = ob_get_clean();
+require __DIR__ . '/../views/layouts/main.php';
