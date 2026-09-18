@@ -32,12 +32,27 @@ ob_start();
     </div>
     <div class="hero-img">🧦</div>
 </section>
-
-
+<!-- ▂▂▂ دسته‌بندی‌ها ▂▂▂ -->
 <section class="section">
     <div class="section-head">
         <h2 class="section-title">دسته‌بندی محصولات</h2>
-        <p class="section-sub">انواع جوراب تولیدی — عمده و با قیمت کارخانه (برای مشاهده مدل‌ها کلیک کنید)</p>
+        <p class="section-sub">روی دسته بزنید تا مدل‌های آن را ببینید</p>
+    </div>
+
+    <div class="cat-grid">
+        <?php foreach ($categories as $cat): ?>
+            <a href="/products?cat=<?= $cat['slug'] ?>" class="cat-card">
+                <div class="cat-icon"><?= $cat['icon'] ?? '🧦' ?></div>
+                <div class="cat-name"><?= htmlspecialchars($cat['name']) ?></div>
+            </a>
+        <?php endforeach; ?>
+    </div>
+</section>
+
+<section class="section">
+    <div class="section-head">
+        <h2 class="section-title">محصولات ویژه</h2>
+        <p class="section-sub">پرفروش‌های تولیدی — عمده و با قیمت کارخانه</p>
     </div>
 
     <div class="prod-grid">
