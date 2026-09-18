@@ -129,7 +129,7 @@ $msgCount   = $msgCount ?? 0;
 
     <!-- ═════════════ محتوای صفحه ═════════════ -->
     <!-- بنر هیرو و کارت‌های مزایا به index.php منتقل شده‌اند -->
-    <main class="container">
+    <main class="container page-shell">
         <?= $content ?>
     </main>
 
