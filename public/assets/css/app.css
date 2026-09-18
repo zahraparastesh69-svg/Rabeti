@@ -43,7 +43,7 @@
      🧩 UI — کارت، خط و فوتر
      ═══════════════════════════════════════════════ */
 
-  --footer-bg: #f4f7f7;
+  --footer-bg: #00656B;
   --card-border: #dce7e8;
   --header-line: #e3ebec;
   --footer-line: #dce6e7;
@@ -54,7 +54,7 @@
      ═══════════════════════════════════════════════ */
 
   --on-dark: #ffffff;
-  --on-orange: #16343a;
+  --ink: #16343a;
 
 
   /* ═══════════════════════════════════════════════
@@ -250,8 +250,8 @@ img {
   justify-content: center;
   gap: 6px;
   padding: 9px 18px;
-  background: linear-gradient(135deg, var(--orange), var(--orange-dark));
-  color: var(--on-orange);
+  background: linear-gradient(135deg, var(--ink-100), var(--ink));
+  color: var(--ink);
   font-size: 0.85rem;
   font-weight: 800;
   border-radius: 12px;
