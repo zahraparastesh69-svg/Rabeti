@@ -5,3 +5,5 @@ RewriteRule ^products/?$ products.php [L,QSA]
 
 # /product/{slug}  →  product.php?slug={slug}
 RewriteRule ^product/([a-zA-Z0-9\-]+)/?$ product.php?slug=$1 [L,QSA]
+RewriteRule ^about/?$ about.php [L,QSA]
+RewriteRule ^contact/?$ contact.php [L,QSA]

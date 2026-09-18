@@ -1080,3 +1080,113 @@ img {
   margin-top: 14px;
   line-height: 1.9;
 }
+/* ─── درباره ما ─── */
+.about-body p {
+  color: var(--muted);
+  line-height: 2.2;
+  margin-bottom: 14px;
+  max-width: 640px;
+}
+.stats-row {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 12px;
+  margin: 28px 0;
+}
+.stat-box {
+  background: #fff;
+  border: 1px solid var(--card-border);
+  border-radius: var(--r-card);
+  padding: 20px 10px;
+  text-align: center;
+}
+.stat-num {
+  font-size: 1.5rem;
+  font-weight: 900;
+  color: var(--teal-800);
+}
+.stat-label {
+  font-size: 0.72rem;
+  color: var(--muted);
+  margin-top: 6px;
+}
+
+.steps-list {
+  margin-top: 20px;
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+}
+.step-item {
+  background: #fff;
+  border: 1px solid var(--card-border);
+  border-radius: var(--r-card);
+  padding: 18px;
+  display: flex;
+  gap: 14px;
+  align-items: flex-start;
+}
+.step-num {
+  width: 34px;
+  height: 34px;
+  flex-shrink: 0;
+  background: var(--teal-100);
+  color: var(--teal-800);
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-weight: 800;
+}
+.step-item b {
+  font-size: 0.9rem;
+}
+.step-item p {
+  font-size: 0.8rem;
+  color: var(--muted);
+  margin-top: 4px;
+  line-height: 1.9;
+}
+
+/* ─── تماس ─── */
+.contact-grid {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 20px;
+  margin-top: 20px;
+}
+@media (min-width: 900px) {
+  .contact-grid {
+    grid-template-columns: 1fr 1.4fr;
+    align-items: start;
+  }
+}
+.contact-info {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+.contact-item {
+  background: #fff;
+  border: 1px solid var(--card-border);
+  border-radius: var(--r-card);
+  padding: 16px 18px;
+  display: flex;
+  gap: 12px;
+  align-items: flex-start;
+}
+.contact-icon {
+  font-size: 1.4rem;
+}
+.contact-item b {
+  font-size: 0.85rem;
+  display: block;
+  margin-bottom: 4px;
+}
+.contact-item p {
+  font-size: 0.8rem;
+  color: var(--muted);
+}
+.ltr-num {
+  letter-spacing: 1px;
+}

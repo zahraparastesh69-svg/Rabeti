@@ -42,12 +42,14 @@
             <strong>منوی دسترسی سریع</strong>
             <button class="drawer-close" id="closeBtn" type="button" aria-label="بستن">&times;</button>
         </div>
+
         <nav class="drawer-nav">
-            <a href="/" class="drawer-link">🏠 صفحه اصلی</a>
-            <a href="/products" class="drawer-link">🛍️ کاتالوگ و قیمت عمده</a>
-            <a href="/orders" class="drawer-link">📦 پیگیری سفارشات</a>
-            <a href="/invoices" class="drawer-link">🧾 فاکتورها</a>
-            <a href="/contact" class="drawer-link">📞 تماس با کارخانه</a>
+            <a href="/" class="drawer-link">🏠 خانه</a>
+            <a href="/products" class="drawer-link">🧦 کاتالوگ محصولات</a>
+            <a href="/custom-order" class="drawer-link">🏷️ سفارش تولید اختصاصی</a>
+            <a href="/about" class="drawer-link">🏭 درباره ما</a>
+            <a href="/contact" class="drawer-link">📞 تماس با ما</a>
+            <a href="/login" class="drawer-link">👤 ورود / ثبت‌نام</a>
         </nav>
     </aside>
 
