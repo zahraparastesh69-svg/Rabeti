@@ -4190,3 +4190,70 @@ body.admin-body {
     line-height: 2;
   }
 }
+/* ─── ۵) هدر: عرض کامل + جلوگیری از بیرون‌زدگی ─── */
+.header {
+  width: 100%;
+}
+.header-inner {
+  width: 100%;
+  max-width: 1280px;
+  margin-inline: auto;
+  box-sizing: border-box;
+  padding-left: 16px;
+  padding-right: 16px;
+}
+.header-left,
+.header-right {
+  min-width: 0; /* اجازه فشرده‌شدن به بچه‌ها */
+}
+.btn-login-highlight {
+  flex-shrink: 0;
+}
+
+/* ─── ۶) گارد سراسری: هیچ عنصری صفحه را افقی نشکند ─── */
+body.app-body {
+  overflow-x: clip;
+}
+@font-face {
+  font-family: "Vazir";
+  src:
+    url("/fonts/Vazir.woff2") format("woff2"),
+    url("/fonts/Vazir.woff") format("woff");
+  font-weight: 400;
+  font-style: normal;
+  font-display: swap;
+}
+/* ─── ۷) سکشن چرا — موبایل: ۲ ستونه فشرده ─── */
+@media (max-width: 720px) {
+  .why-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+  .why-grid .why-card,
+  .why-grid .why-card:nth-child(3),
+  .why-grid .why-card:nth-child(4) {
+    border-top: 1px solid rgba(0, 102, 107, 0.08);
+    padding: 20px 14px;
+    gap: 12px;
+  }
+  .why-grid .why-card:nth-child(odd) {
+    border-left: 1px solid rgba(0, 102, 107, 0.08); /* خط جداکننده عمودی بین دو ستون */
+  }
+  .why-grid .why-card:first-child,
+  .why-grid .why-card:nth-child(2) {
+    border-top: 0;
+  }
+  .why-grid .why-icon {
+    width: 42px;
+    height: 42px;
+    flex-basis: 42px;
+    font-size: 0.62rem;
+    border-radius: 13px;
+  }
+  .why-grid .why-card h3 {
+    font-size: 0.84rem;
+  }
+  .why-grid .why-card p {
+    font-size: 0.7rem;
+    line-height: 1.85;
+  }
+}
