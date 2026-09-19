@@ -1,5 +1,10 @@
 <?php
-require_once __DIR__ . '/../config/database.php'; 
+
+require_once __DIR__ . '/../../config/database.php';
+require_once ROOT_PATH . '/config/upload.php';
+require_once ROOT_PATH . '/config/auth.php';
+
+require_admin();
 
 /* تغییر وضعیت (فاز بک‌اند با امنیت کامل می‌شود) */
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
