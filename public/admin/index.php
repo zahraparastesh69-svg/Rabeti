@@ -1,6 +1,4 @@
 <?php
-
-<?php
 // ۱. ابتدا دیتابیس را لود کنید (این تنها جایی است که نیاز به ../ دارد)
 require_once DIR . '/../config/database.php';
 
