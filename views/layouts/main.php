@@ -5,7 +5,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
     <title><?= $pageTitle ?? 'تولیدی جوراب رابطی' ?></title>
-    <link rel="stylesheet" href="/assets/css/app.css?v=4">
+    <link rel="stylesheet" href="/assets/css/app.css?v=6">
 </head>
 
 <body class="app-body">
@@ -47,7 +47,7 @@
 
                 <!-- 🔧 فاز بک‌اند: با لاگین، این بخش به user-menu تبدیل می‌شود -->
                 <div class="user-auth-section">
-                    <a href="/login" class="btn-login-highlight">ورود / ثبت‌نام</a>
+                    <button type="button" class="btn-login-highlight" data-auth-open="login">ورود / ثبت‌نام</button>
                 </div>
             </div>
         </div>
@@ -67,7 +67,7 @@
             <a href="/about" class="drawer-link">🏭 درباره ما</a>
             <a href="/contact" class="drawer-link">📞 تماس با ما</a>
             <div class="drawer-divider"></div>
-            <a href="/login" class="drawer-link">👤 ورود / ثبت‌نام</a>
+            <button type="button" class="drawer-link" data-auth-open="login" style="width:100%;background:none;border:none;cursor:pointer;font-family:inherit;">👤 ورود / ثبت‌نام</button>
         </nav>
     </aside>
 
@@ -151,7 +151,56 @@
             <span>حساب</span>
         </a>
     </nav>
+    <!-- ▂▂▂ Modal ورود / ثبت‌نام ▂▂▂ -->
+    <div class="auth-modal-overlay" id="authModalOverlay">
+        <div class="auth-modal" role="dialog" aria-modal="true">
+            <button class="auth-modal-close" id="authModalClose" aria-label="بستن">×</button>
 
+            <!-- تب‌ها -->
+            <div class="auth-tabs">
+                <button class="auth-tab active" data-tab="login">ورود</button>
+                <button class="auth-tab" data-tab="register">ثبت‌نام</button>
+                <span class="auth-tab-slider" id="authTabSlider"></span>
+            </div>
+
+            <!-- فرم ورود -->
+            <form class="auth-pane active" id="pane-login" method="post" action="/login">
+                <h3 class="auth-pane-title">ورود به حساب</h3>
+                <div class="form-field">
+                    <label>موبایل</label>
+                    <input type="tel" name="mobile" dir="ltr" placeholder="09121234567" required>
+                </div>
+                <div class="form-field">
+                    <label>رمز عبور</label>
+                    <input type="password" name="password" dir="ltr" placeholder="••••••••" required>
+                </div>
+                <button type="submit" class="btn btn-orange co-submit">ورود ←</button>
+            </form>
+
+            <!-- فرم ثبت‌نام -->
+            <form class="auth-pane" id="pane-register" method="post" action="/register">
+                <h3 class="auth-pane-title">ثبت‌نام عمده‌فروشی</h3>
+                <p class="auth-pane-note">پس از ثبت، حساب شما توسط کارشناس بررسی و فعال می‌شود.</p>
+                <div class="form-field">
+                    <label>نام و نام خانوادگی</label>
+                    <input type="text" name="full_name" placeholder="مثلاً: کاظم قوطبی" required>
+                </div>
+                <div class="form-field">
+                    <label>نام مغازه / شرکت</label>
+                    <input type="text" name="company_name" placeholder="مثلاً: پخش قوطبی" required>
+                </div>
+                <div class="form-field">
+                    <label>موبایل</label>
+                    <input type="tel" name="mobile" dir="ltr" placeholder="09121234567" required>
+                </div>
+                <div class="form-field">
+                    <label>رمز عبور</label>
+                    <input type="password" name="password" dir="ltr" placeholder="حداقل ۸ کاراکتر" required>
+                </div>
+                <button type="submit" class="btn btn-orange co-submit">ثبت درخواست عضویت ←</button>
+            </form>
+        </div>
+    </div>
     <script src="/assets/js/app.js"></script>
 </body>
 

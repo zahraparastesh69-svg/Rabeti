@@ -4473,3 +4473,121 @@ body.app-body {
     transition-duration: 0.08s;
   }
 }
+/* ══════════ AUTH MODAL ══════════ */
+.auth-modal-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 600;
+  background: rgba(3, 43, 46, 0.55);
+  backdrop-filter: blur(4px);
+  display: none;
+  align-items: center;
+  justify-content: center;
+  padding: 16px;
+}
+.auth-modal-overlay.show {
+  display: flex;
+}
+
+.auth-modal {
+  position: relative;
+  width: 100%;
+  max-width: 420px;
+  background: #fff;
+  border-radius: var(--r-card-lg);
+  box-shadow: var(--shadow-lg);
+  padding: 26px 22px 22px;
+  max-height: 92vh;
+  overflow-y: auto;
+  animation: modalUp 0.35s var(--ease-out);
+}
+@keyframes modalUp {
+  from {
+    opacity: 0;
+    transform: translateY(28px) scale(0.97);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+}
+.auth-modal-close {
+  position: absolute;
+  top: 14px;
+  left: 14px;
+  width: 34px;
+  height: 34px;
+  border: none;
+  border-radius: 11px;
+  background: var(--ink-100);
+  color: var(--muted-text);
+  font-size: 1.3rem;
+  cursor: pointer;
+  line-height: 1;
+}
+.auth-modal-close:hover {
+  background: var(--teal-100);
+  color: var(--teal-900);
+}
+
+/* تب‌ها */
+.auth-tabs {
+  position: relative;
+  display: flex;
+  background: var(--ink-100);
+  border-radius: 14px;
+  padding: 4px;
+  margin-bottom: 20px;
+}
+.auth-tab {
+  flex: 1;
+  position: relative;
+  z-index: 2;
+  border: none;
+  background: none;
+  padding: 10px;
+  border-radius: 11px;
+  font-family: inherit;
+  font-size: 0.88rem;
+  font-weight: 800;
+  color: var(--muted-text);
+  cursor: pointer;
+  transition: color 0.25s;
+}
+.auth-tab.active {
+  color: var(--teal-900);
+}
+.auth-tab-slider {
+  position: absolute;
+  z-index: 1;
+  top: 4px;
+  bottom: 4px;
+  right: 4px;
+  width: calc(50% - 4px);
+  background: #fff;
+  border-radius: 11px;
+  box-shadow: var(--shadow-xs);
+  transition: transform 0.3s var(--ease-out);
+}
+.auth-tabs.register-mode .auth-tab-slider {
+  transform: translateX(calc(-100% + 0px));
+}
+
+.auth-pane {
+  display: none;
+}
+.auth-pane.active {
+  display: block;
+  animation: modalUp 0.3s var(--ease-out);
+}
+.auth-pane-title {
+  margin: 0 0 16px;
+  font-size: 1.05rem;
+  color: var(--teal-900);
+}
+.auth-pane-note {
+  margin: -8px 0 16px;
+  font-size: 0.75rem;
+  color: var(--muted-text);
+  line-height: 1.9;
+}
