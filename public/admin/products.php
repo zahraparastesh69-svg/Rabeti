@@ -1,5 +1,7 @@
 <?php
 require __DIR__ . '/../config/database.php';
+require __DIR__ . '/../../config/auth.php';
+require_admin();
 
 /* حذف (فعلاً منطقی: is_active=0 — حذف فیزیکی نکنیم هرگز) */
 if ($_SERVER['REQUEST_METHOD'] === 'POST' && ($_POST['do'] ?? '') === 'deactivate') {

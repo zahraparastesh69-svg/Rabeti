@@ -1,5 +1,7 @@
 <?php
 require __DIR__ . '/../config/database.php';
+require __DIR__ . '/../../config/auth.php';
+require_admin();
 
 /* علامت‌گذاری به‌عنوان خوانده‌شده */
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {

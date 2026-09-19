@@ -1,5 +1,7 @@
 <?php
 require __DIR__ . '/../config/database.php';
+require __DIR__ . '/../../config/auth.php';
+require_admin();
 
  $countCustom   = (int)db()->query("SELECT COUNT(*) FROM custom_order_requests WHERE status='new'")->fetchColumn();
  $countMessages = (int)db()->query("SELECT COUNT(*) FROM contact_messages WHERE status='new'")->fetchColumn();

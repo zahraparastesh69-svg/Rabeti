@@ -1,6 +1,8 @@
 <?php
 require __DIR__ . '/../config/database.php';
 require __DIR__ . '/../../config/upload.php';
+require __DIR__ . '/../../config/auth.php';
+require_admin();
 
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     $do = $_POST['do'] ?? '';

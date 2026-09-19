@@ -1,7 +1,8 @@
 <?php
 require __DIR__ . '/../config/database.php';
 require __DIR__ . '/../../config/upload.php';
-
+require __DIR__ . '/../../config/auth.php';
+require_admin();
  $action    = ($_GET['action'] ?? 'new') === 'edit' ? 'edit' : 'new';
  $productId = (int)($_GET['id'] ?? 0);
  $errors    = [];

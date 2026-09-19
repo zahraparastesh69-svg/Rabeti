@@ -43,7 +43,7 @@
         <header class="admin-topbar">
             <button class="admin-burger" id="adminBurger">☰</button>
             <span class="admin-topbar-title"><?= $pageTitle ?? 'پنل مدیریت' ?></span>
-            <span class="admin-user">مدیر سیستم</span>
+            <span class="admin-user">👤 <?= htmlspecialchars(admin_name()) ?></span>
         </header>
 
         <div class="admin-content">
