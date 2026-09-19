@@ -1,5 +1,5 @@
 <?php
-require __DIR__ . '/../config/database.php';
+require __DIR__ . '/../../config/database.php';
 
 // ─── داده‌های صفحه اصلی ───
 $banner = db()->query("SELECT * FROM banners WHERE position='hero' AND is_active=1 ORDER BY sort_order LIMIT 1")->fetch();
