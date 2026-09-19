@@ -1,18 +1,21 @@
 <?php
-require __DIR__ . '/../config/database.php';
+require_once __DIR__ . '/../config/database.php'; 
 require __DIR__ . '/../../config/upload.php';
 require __DIR__ . '/../../config/auth.php';
 require_admin();
- $action    = ($_GET['action'] ?? 'new') === 'edit' ? 'edit' : 'new';
- $productId = (int)($_GET['id'] ?? 0);
- $errors    = [];
+$action    = ($_GET['action'] ?? 'new') === 'edit' ? 'edit' : 'new';
+$productId = (int)($_GET['id'] ?? 0);
+$errors    = [];
 
 /* ─── حالت ویرایش: خواندن داده ─── */
 if ($action === 'edit' && $productId > 0) {
     $stmt = db()->prepare("SELECT * FROM products WHERE id = ?");
     $stmt->execute([$productId]);
     $product = $stmt->fetch();
-    if (!$product) { header('Location: /admin/products'); exit; }
+    if (!$product) {
+        header('Location: /admin/products');
+        exit;
+    }
 
     $stmt = db()->prepare("SELECT price FROM product_prices WHERE product_id=? AND customer_group='wholesale' AND min_qty=1");
     $stmt->execute([$productId]);
@@ -27,8 +30,10 @@ if ($action === 'edit' && $productId > 0) {
     $currentImage = $stmt->fetchColumn() ?: null;
 } else {
     $action = 'new';
-    $product = ['code'=>'', 'name'=>'', 'slug'=>'', 'description'=>'', 'base_moq'=>'48', 'category_id'=>''];
-    $price = 0; $qty = 0; $currentImage = null;
+    $product = ['code' => '', 'name' => '', 'slug' => '', 'description' => '', 'base_moq' => '48', 'category_id' => ''];
+    $price = 0;
+    $qty = 0;
+    $currentImage = null;
 }
 
 /* ─── ذخیره ─── */
@@ -100,15 +105,19 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
     /* بازگرداندن مقادیر پس از خطا */
     $product = array_merge($product, [
-        'code'=>$code, 'name'=>$name, 'slug'=>$slug, 'description'=>$description,
-        'base_moq'=>$baseMoq, 'category_id'=>$categoryId
+        'code' => $code,
+        'name' => $name,
+        'slug' => $slug,
+        'description' => $description,
+        'base_moq' => $baseMoq,
+        'category_id' => $categoryId
     ]);
 }
 
- $categories = db()->query("SELECT id, name FROM categories WHERE is_active=1 ORDER BY sort_order")->fetchAll();
+$categories = db()->query("SELECT id, name FROM categories WHERE is_active=1 ORDER BY sort_order")->fetchAll();
 
- $activeMenu = 'products';
- $pageTitle  = ($action === 'edit' ? 'ویرایش محصول' : 'محصول جدید');
+$activeMenu = 'products';
+$pageTitle  = ($action === 'edit' ? 'ویرایش محصول' : 'محصول جدید');
 ob_start();
 ?>
 
@@ -119,7 +128,7 @@ ob_start();
 <form method="post" class="co-form" style="max-width:100%;" enctype="multipart/form-data">
 
     <?php if ($errors): ?>
-    <div class="form-alert">⚠️ خطاها را اصلاح کنید</div>
+        <div class="form-alert">⚠️ خطاها را اصلاح کنید</div>
     <?php endif; ?>
 
     <div class="form-row">
@@ -133,7 +142,7 @@ ob_start();
             <select name="category_id">
                 <option value="">— انتخاب کنید —</option>
                 <?php foreach ($categories as $c): ?>
-                <option value="<?= $c['id'] ?>" <?= $product['category_id'] == $c['id'] ? 'selected' : '' ?>><?= htmlspecialchars($c['name']) ?></option>
+                    <option value="<?= $c['id'] ?>" <?= $product['category_id'] == $c['id'] ? 'selected' : '' ?>><?= htmlspecialchars($c['name']) ?></option>
                 <?php endforeach; ?>
             </select>
             <?php if (isset($errors['category_id'])): ?><span class="field-error"><?= $errors['category_id'] ?></span><?php endif; ?>
@@ -174,7 +183,7 @@ ob_start();
         <label>عکس محصول</label>
         <?php if ($currentImage): ?>
             <img src="<?= htmlspecialchars($currentImage) ?>" alt="عکس فعلی"
-                 style="max-width:180px;border-radius:14px;margin-bottom:10px;display:block;border:1px solid var(--card-border);">
+                style="max-width:180px;border-radius:14px;margin-bottom:10px;display:block;border:1px solid var(--card-border);">
             <span class="field-hint">عکس فعلی بالا است — اگر فایل جدید انتخاب کنید جایگزین می‌شود</span>
         <?php endif; ?>
         <input type="file" name="image" accept="image/jpeg,image/png,image/webp">
@@ -192,5 +201,5 @@ ob_start();
 </form>
 
 <?php
- $content = ob_get_clean();
+$content = ob_get_clean();
 require __DIR__ . '/../../views/layouts/admin.php';

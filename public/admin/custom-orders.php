@@ -1,5 +1,5 @@
 <?php
-require __DIR__ . '/../config/database.php';
+require_once __DIR__ . '/../config/database.php'; 
 
 /* تغییر وضعیت (فاز بک‌اند با امنیت کامل می‌شود) */
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
