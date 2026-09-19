@@ -4354,3 +4354,122 @@ body.app-body {
     right: -130px;
   }
 }
+/* ═══════════════════════════════════════════════════════════════════════
+   📱 APP MODE — نوار پایین + انیمیشن ورود + لمس فیزیکی
+   ═══════════════════════════════════════════════════════════════════════ */
+
+/* ─── نوار پایین ─── */
+.bottom-nav {
+  display: none; /* دسکتاپ: نامرئی */
+}
+
+@media (max-width: 720px) {
+  .bottom-nav {
+    display: flex;
+    position: fixed;
+    bottom: 0;
+    right: 0;
+    left: 0;
+    z-index: 400;
+    height: calc(62px + env(safe-area-inset-bottom));
+    padding-bottom: env(safe-area-inset-bottom);
+    background: rgba(255, 255, 255, 0.92);
+    backdrop-filter: blur(14px);
+    -webkit-backdrop-filter: blur(14px);
+    border-top: 1px solid rgba(0, 102, 107, 0.1);
+    box-shadow: 0 -8px 30px rgba(0, 60, 64, 0.07);
+  }
+  .bn-item {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 3px;
+    text-decoration: none;
+    color: var(--muted-text);
+    transition: color 0.2s;
+    position: relative;
+    -webkit-tap-highlight-color: transparent;
+  }
+  .bn-item svg {
+    width: 23px;
+    height: 23px;
+  }
+  .bn-item span {
+    font-size: 0.62rem;
+    font-weight: 700;
+  }
+
+  /* آیتم فعال: بر اساس مسیر جاری — JS ست می‌کند */
+  .bn-item.active {
+    color: var(--teal-700);
+  }
+  .bn-item.active::before {
+    content: "";
+    position: absolute;
+    top: 0;
+    width: 34px;
+    height: 3px;
+    border-radius: 99px;
+    background: var(--teal-700);
+  }
+
+  .bn-cart-badge {
+    position: absolute;
+    top: 8px;
+    right: calc(50% - 20px);
+    background: var(--orange);
+    color: #fff;
+    font-size: 0.58rem;
+    font-weight: 900;
+    min-width: 16px;
+    height: 16px;
+    border-radius: 8px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 0 4px;
+  }
+
+  /* جا برای نوار پایین */
+  body.app-body {
+    padding-bottom: calc(74px + env(safe-area-inset-bottom)) !important;
+  }
+}
+
+/* ─── انیمیشن ورود محتوا ─── */
+@media (prefers-reduced-motion: no-preference) {
+  .page-shell {
+    animation: pageEnter 0.45s var(--ease-out) both;
+  }
+  @keyframes pageEnter {
+    from {
+      opacity: 0;
+      transform: translateY(14px);
+    }
+    to {
+      opacity: 1;
+      transform: translateY(0);
+    }
+  }
+}
+
+/* ─── لمس فیزیکی دکمه‌ها (فقط دستگاه لمسی) ─── */
+@media (hover: none) and (pointer: coarse) {
+  .btn:active,
+  .bn-item:active,
+  .filter-chip:active,
+  .premium-product-card:active,
+  .premium-cat-card:active,
+  .btn-hero-main:active,
+  .btn-login-highlight:active,
+  .admin-nav-link:active {
+    transform: scale(0.96);
+    transition-duration: 0.08s;
+  }
+  .bottom-nav .bn-item:active svg {
+    transform: scale(0.85);
+    transition-duration: 0.08s;
+  }
+}

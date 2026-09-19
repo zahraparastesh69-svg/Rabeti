@@ -51,3 +51,11 @@ document.querySelectorAll('.cat-card[role="button"]').forEach(card => {
         if (!wasOpen) card.classList.add('active');
     });
 });
+// ══════════ نوار پایین — هایلایت صفحه جاری ══════════
+document.querySelectorAll('.bottom-nav .bn-item').forEach(item => {
+    const href = item.getAttribute('href');
+    const path = window.location.pathname;
+    const isHome = href === '/' && (path === '/' || path === '/index.php');
+    const isInside = href !== '/' && path.startsWith(href);
+    if (isHome || isInside) item.classList.add('active');
+});
