@@ -68,6 +68,8 @@
             <a href="/contact" class="drawer-link">📞 تماس با ما</a>
             <div class="drawer-divider"></div>
             <button type="button" class="drawer-link" data-auth-open="login" style="width:100%;background:none;border:none;cursor:pointer;font-family:inherit;">👤 ورود / ثبت‌نام</button>
+            <div class="drawer-divider"></div>
+            <a href="/admin/login" class="drawer-link" style="font-size:.8rem;color:var(--muted);">🔒 پنل مدیریت</a>
         </nav>
     </aside>
 
