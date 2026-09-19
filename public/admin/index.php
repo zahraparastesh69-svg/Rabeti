@@ -1,10 +1,13 @@
 <?php
+
+<?php
 // ۱. ابتدا دیتابیس را لود کنید (این تنها جایی است که نیاز به ../ دارد)
-require_once __DIR__ . '/../config/database.php';
+require_once DIR . '/../config/database.php';
 
 // ۲. حالا که دیتابیس لود شده و ROOT_PATH تعریف شده، بقیه فایل‌ها را با آن آدرس‌دهی کنید
 require_once ROOT_PATH . '/config/auth.php';
 
+require_admin();
 
 require_admin();
 
