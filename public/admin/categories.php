@@ -6,129 +6,104 @@ require_once ROOT_PATH . '/config/auth.php';
 
 require_admin();
 
-$db = db();
+$pdo = db();
 
+$message = '';
 $error   = '';
-$success = '';
 
 /*
 |--------------------------------------------------------------------------
-| عملیات POST
+| عملیات فرم
 |--------------------------------------------------------------------------
 */
 
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
-    $do = $_POST['do'] ?? '';
-
+    $action = $_POST['action'] ?? '';
 
     /*
     |--------------------------------------------------------------------------
     | افزودن دسته‌بندی
     |--------------------------------------------------------------------------
     */
-
-    if ($do === 'add') {
+    if ($action === 'add') {
 
         $name = trim($_POST['name'] ?? '');
-        $icon = trim($_POST['icon'] ?? '');
+        $icon = trim($_POST['icon'] ?? '🧦');
 
-        if (mb_strlen($name) < 2) {
-
-            $error = 'نام دسته‌بندی باید حداقل ۲ حرف باشد.';
+        if ($name === '') {
+            $error = 'نام دسته‌بندی را وارد کنید.';
         } else {
 
-            /*
-             * تصویر دسته‌بندی
-             * تصویر در image_path ذخیره می‌شود.
-             */
-            $imagePath = upload_image(
+            // تصویر بزرگ
+            $largeImage = upload_image(
                 $_FILES['category_image'] ?? [],
                 'categories'
             );
 
-            /*
-             * اگر ایموجی وارد نشده باشد
-             */
-            if ($icon === '') {
-                $icon = '🧦';
-            }
+            // تصویر کوچک
+            $smallImage = upload_image(
+                $_FILES['category_small_image'] ?? [],
+                'categories'
+            );
 
-            /*
-             * ساخت slug
-             */
-            $maxId = (int)$db
-                ->query("SELECT COALESCE(MAX(id), 0) FROM categories")
-                ->fetchColumn();
-
-            $slug = 'cat-' . ($maxId + 1);
-
-            /*
-             * ذخیره
-             */
-            $stmt = $db->prepare("
+            $stmt = $pdo->prepare("
                 INSERT INTO categories
-                    (
-                        parent_id,
-                        name,
-                        slug,
-                        icon,
-                        image_path,
-                        sort_order,
-                        is_active
-                    )
+                (
+                    parent_id,
+                    name,
+                    slug,
+                    icon,
+                    image_path,
+                    small_image_path,
+                    sort_order,
+                    is_active
+                )
                 VALUES
-                    (
-                        NULL,
-                        ?,
-                        ?,
-                        ?,
-                        ?,
-                        99,
-                        1
-                    )
+                (
+                    NULL,
+                    :name,
+                    :slug,
+                    :icon,
+                    :image_path,
+                    :small_image_path,
+                    :sort_order,
+                    1
+                )
             ");
 
             $stmt->execute([
-                $name,
-                $slug,
-                $icon,
-                $imagePath ?: null
+                ':name'             => $name,
+                ':slug'             => create_slug($name),
+                ':icon'             => $icon !== '' ? $icon : '🧦',
+                ':image_path'       => $largeImage,
+                ':small_image_path' => $smallImage,
+                ':sort_order'       => (int)($_POST['sort_order'] ?? 0),
             ]);
 
-            header('Location: /admin/categories?success=added');
-            exit;
+            $message = 'دسته‌بندی با موفقیت اضافه شد.';
         }
     }
-
 
     /*
     |--------------------------------------------------------------------------
     | ویرایش دسته‌بندی
     |--------------------------------------------------------------------------
-    */
-
-    if ($do === 'edit') {
+    */ elseif ($action === 'edit') {
 
         $id   = (int)($_POST['id'] ?? 0);
         $name = trim($_POST['name'] ?? '');
-        $icon = trim($_POST['icon'] ?? '');
+        $icon = trim($_POST['icon'] ?? '🧦');
 
-        if ($id <= 0) {
-
-            $error = 'دسته‌بندی نامعتبر است.';
-        } elseif (mb_strlen($name) < 2) {
-
-            $error = 'نام دسته‌بندی باید حداقل ۲ حرف باشد.';
+        if ($id <= 0 || $name === '') {
+            $error = 'اطلاعات دسته‌بندی صحیح نیست.';
         } else {
 
-            /*
-             * دریافت اطلاعات فعلی
-             */
-            $stmt = $db->prepare("
+            $stmt = $pdo->prepare("
                 SELECT
-                    icon,
-                    image_path
+                    image_path,
+                    small_image_path,
+                    icon
                 FROM categories
                 WHERE id = ?
                 LIMIT 1
@@ -136,103 +111,110 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
             $stmt->execute([$id]);
 
-            $category = $stmt->fetch();
+            $current = $stmt->fetch();
 
-            if (!$category) {
-
+            if (!$current) {
                 $error = 'دسته‌بندی پیدا نشد.';
             } else {
 
                 /*
-                 * اگر ایموجی خالی باشد،
-                 * ایموجی قبلی حفظ می‌شود.
+                 * اگر عکس جدید آپلود نشده باشد،
+                 * عکس قبلی حفظ می‌شود.
                  */
-                if ($icon === '') {
-                    $icon = $category['icon'] ?: '🧦';
+
+                $largeImage = $current['image_path'] ?? null;
+
+                if (
+                    isset($_FILES['category_image']) &&
+                    ($_FILES['category_image']['error'] ?? UPLOAD_ERR_NO_FILE) === UPLOAD_ERR_OK
+                ) {
+                    $uploaded = upload_image(
+                        $_FILES['category_image'],
+                        'categories'
+                    );
+
+                    if ($uploaded) {
+                        $largeImage = $uploaded;
+                    }
                 }
 
-                /*
-                 * تصویر جدید
-                 */
-                $newImagePath = upload_image(
-                    $_FILES['category_image'] ?? [],
-                    'categories'
-                );
+                $smallImage = $current['small_image_path'] ?? null;
 
-                /*
-                 * اگر تصویر جدید انتخاب نشده،
-                 * تصویر قبلی حفظ می‌شود.
-                 */
-                $imagePath = $newImagePath ?: ($category['image_path'] ?: null);
+                if (
+                    isset($_FILES['category_small_image']) &&
+                    ($_FILES['category_small_image']['error'] ?? UPLOAD_ERR_NO_FILE) === UPLOAD_ERR_OK
+                ) {
+                    $uploaded = upload_image(
+                        $_FILES['category_small_image'],
+                        'categories'
+                    );
 
-                /*
-                 * بروزرسانی
-                 */
-                $stmt = $db->prepare("
+                    if ($uploaded) {
+                        $smallImage = $uploaded;
+                    }
+                }
+
+                $stmt = $pdo->prepare("
                     UPDATE categories
                     SET
-                        name = ?,
-                        icon = ?,
-                        image_path = ?
-                    WHERE id = ?
+                        name = :name,
+                        slug = :slug,
+                        icon = :icon,
+                        image_path = :image_path,
+                        small_image_path = :small_image_path,
+                        sort_order = :sort_order
+                    WHERE id = :id
                 ");
 
                 $stmt->execute([
-                    $name,
-                    $icon,
-                    $imagePath,
-                    $id
+                    ':name'             => $name,
+                    ':slug'             => create_slug($name),
+                    ':icon'             => $icon !== '' ? $icon : '🧦',
+                    ':image_path'       => $largeImage,
+                    ':small_image_path' => $smallImage,
+                    ':sort_order'       => (int)($_POST['sort_order'] ?? 0),
+                    ':id'               => $id,
                 ]);
 
-                header('Location: /admin/categories?success=edited');
-                exit;
+                $message = 'دسته‌بندی با موفقیت ویرایش شد.';
             }
         }
     }
-
 
     /*
     |--------------------------------------------------------------------------
     | فعال / غیرفعال
     |--------------------------------------------------------------------------
-    */
-
-    if ($do === 'toggle') {
+    */ elseif ($action === 'toggle') {
 
         $id = (int)($_POST['id'] ?? 0);
 
         if ($id > 0) {
 
-            $stmt = $db->prepare("
+            $stmt = $pdo->prepare("
                 UPDATE categories
-                SET is_active = 1 - is_active
+                SET is_active = IF(is_active = 1, 0, 1)
                 WHERE id = ?
             ");
 
             $stmt->execute([$id]);
 
-            header('Location: /admin/categories?success=toggle');
-            exit;
+            $message = 'وضعیت دسته‌بندی تغییر کرد.';
         }
     }
 
-
     /*
     |--------------------------------------------------------------------------
-    | حذف دسته‌بندی
+    | حذف
     |--------------------------------------------------------------------------
-    */
-
-    if ($do === 'delete') {
+    */ elseif ($action === 'delete') {
 
         $id = (int)($_POST['id'] ?? 0);
 
         if ($id > 0) {
 
-            /*
-             * اگر محصول داشته باشد حذف نمی‌شود.
-             */
-            $stmt = $db->prepare("
+            // بررسی اینکه محصولی به این دسته متصل نباشد
+            $stmt = $pdo->prepare("
                 SELECT COUNT(*)
                 FROM products
                 WHERE category_id = ?
@@ -244,55 +226,38 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
             if ($productCount > 0) {
 
-                $error =
-                    'این دسته‌بندی دارای ' .
-                    number_format($productCount) .
-                    ' محصول است و فعلاً قابل حذف نیست. ابتدا محصولات آن را جابه‌جا کنید.';
+                $error = 'این دسته‌بندی دارای محصول است و امکان حذف آن وجود ندارد.';
             } else {
 
-                $stmt = $db->prepare("
+                $stmt = $pdo->prepare("
                     DELETE FROM categories
                     WHERE id = ?
                 ");
 
                 $stmt->execute([$id]);
 
-                header('Location: /admin/categories?success=deleted');
-                exit;
+                $message = 'دسته‌بندی حذف شد.';
             }
         }
     }
 }
 
-
 /*
 |--------------------------------------------------------------------------
-| پیام موفقیت
+| ساخت Slug
 |--------------------------------------------------------------------------
 */
 
-if (isset($_GET['success'])) {
+function create_slug(string $text): string
+{
+    $slug = trim($text);
 
-    switch ($_GET['success']) {
+    $slug = preg_replace('/\s+/u', '-', $slug);
+    $slug = preg_replace('/[^\p{L}\p{N}\-_]+/u', '', $slug);
+    $slug = trim($slug, '-');
 
-        case 'added':
-            $success = 'دسته‌بندی با موفقیت اضافه شد.';
-            break;
-
-        case 'edited':
-            $success = 'دسته‌بندی با موفقیت ویرایش شد.';
-            break;
-
-        case 'deleted':
-            $success = 'دسته‌بندی با موفقیت حذف شد.';
-            break;
-
-        case 'toggle':
-            $success = 'وضعیت دسته‌بندی تغییر کرد.';
-            break;
-    }
+    return strtolower($slug);
 }
-
 
 /*
 |--------------------------------------------------------------------------
@@ -300,703 +265,1121 @@ if (isset($_GET['success'])) {
 |--------------------------------------------------------------------------
 */
 
-$categories = $db->query("
+$categories = $pdo->query("
     SELECT
-        c.*,
-        (
-            SELECT COUNT(*)
-            FROM products p
-            WHERE p.category_id = c.id
-        ) AS product_count
-    FROM categories c
-    ORDER BY c.sort_order ASC, c.id ASC
+        id,
+        parent_id,
+        name,
+        slug,
+        icon,
+        image_path,
+        small_image_path,
+        sort_order,
+        is_active
+    FROM categories
+    ORDER BY sort_order ASC, id ASC
 ")->fetchAll();
 
-
-$activeMenu = 'categories';
-$pageTitle  = 'دسته‌بندی‌ها';
-
-ob_start();
-
 ?>
-
-
-<!-- =========================================================
-     پیام‌ها
-========================================================= -->
-
-<?php if ($error): ?>
-
-    <div
-        class="form-alert error"
-        style="display:block;margin-bottom:18px;">
-        <?= htmlspecialchars($error) ?>
-    </div>
-
-<?php endif; ?>
-
-
-<?php if ($success): ?>
-
-    <div
-        class="form-alert"
-        style="
-            display:block;
-            margin-bottom:18px;
-            background:#e8f7f3;
-            color:var(--teal-800);
-        ">
-        <?= htmlspecialchars($success) ?>
-    </div>
-
-<?php endif; ?>
-
-
-<!-- =========================================================
-     افزودن دسته‌بندی
-========================================================= -->
-
-<div
-    class="admin-card"
-    style="
-        padding:18px;
-        margin-bottom:22px;
-    ">
-
-    <h2
-        class="section-title"
-        style="
-            font-size:1rem;
-            margin-bottom:14px;
-        ">
-        افزودن دسته‌بندی جدید
-    </h2>
-
-
-    <form
-        method="post"
-        enctype="multipart/form-data"
-        style="
-            display:grid;
-            grid-template-columns:minmax(180px,1fr) 90px minmax(180px,1fr) auto;
-            gap:10px;
-            align-items:center;
-        ">
-
-        <input
-            type="hidden"
-            name="do"
-            value="add">
-
-
-        <!-- نام -->
-
-        <input
-            type="text"
-            name="name"
-            placeholder="نام دسته‌بندی"
-            required
-            style="
-                padding:10px 14px;
-                border:1px solid var(--card-border);
-                border-radius:12px;
-                font-family:inherit;
-            ">
-
-
-        <!-- ایموجی -->
-
-        <input
-            type="text"
-            name="icon"
-            placeholder="🧦"
-            title="ایموجی جایگزین تصویر"
-            style="
-                width:90px;
-                text-align:center;
-                padding:10px;
-                border:1px solid var(--card-border);
-                border-radius:12px;
-                font-size:1.1rem;
-            ">
-
-
-        <!-- تصویر -->
-
-        <input
-            type="file"
-            name="category_image"
-            accept="image/jpeg,image/png,image/webp"
-            title="تصویر دسته‌بندی"
-            style="font-size:.78rem;">
-
-
-        <!-- افزودن -->
-
-        <button
-            type="submit"
-            class="btn btn-orange"
-            style="
-                padding:10px 22px;
-                font-size:.82rem;
-            ">
-            + افزودن
-        </button>
-
-    </form>
-
-</div>
-
-
-<!-- =========================================================
-     لیست دسته‌بندی‌ها
-========================================================= -->
-
-<div class="admin-table-wrap">
-
-    <table class="admin-table">
-
-        <thead>
-
-            <tr>
-
-                <th>تصویر</th>
-
-                <th>نام دسته</th>
-
-                <th>تعداد محصول</th>
-
-                <th>وضعیت</th>
-
-                <th style="min-width:250px;">
-                    عملیات
-                </th>
-
-            </tr>
-
-        </thead>
-
-
-        <tbody>
-
-            <?php if ($categories): ?>
-
-                <?php foreach ($categories as $c): ?>
-
-                    <?php
-
-                    $imagePath = trim($c['image_path'] ?? '');
-                    $icon      = trim($c['icon'] ?? '');
-
-                    ?>
-
-
-                    <tr>
-
-
-                        <!-- =================================================
-                             تصویر
-                        ================================================== -->
-
-                        <td>
-
-                            <?php if ($imagePath): ?>
-
-                                <img
-                                    src="<?= htmlspecialchars($imagePath) ?>"
-                                    alt="<?= htmlspecialchars($c['name']) ?>"
-                                    style="
-                                        width:52px;
-                                        height:52px;
-                                        object-fit:cover;
-                                        border-radius:12px;
-                                        border:1px solid var(--card-border);
-                                        display:block;
-                                    ">
-
-                            <?php else: ?>
-
-                                <span
-                                    style="
-                                        font-size:1.7rem;
-                                        display:inline-block;
-                                        width:52px;
-                                        text-align:center;
-                                    ">
-                                    <?= htmlspecialchars($icon ?: '🧦') ?>
-                                </span>
-
-                            <?php endif; ?>
-
-                        </td>
-
-
-                        <!-- =================================================
-                             نام
-                        ================================================== -->
-
-                        <td>
-
-                            <b>
-                                <?= htmlspecialchars($c['name']) ?>
-                            </b>
-
-                        </td>
-
-
-                        <!-- =================================================
-                             تعداد محصولات
-                        ================================================== -->
-
-                        <td>
-
-                            <?= number_format((int)$c['product_count']) ?>
-
-                        </td>
-
-
-                        <!-- =================================================
-                             وضعیت
-                        ================================================== -->
-
-                        <td>
-
-                            <span
-                                class="st-badge <?= $c['is_active']
-                                                    ? 'st-converted'
-                                                    : 'st-rejected'
-                                                ?>">
-                                <?= $c['is_active']
-                                    ? 'فعال'
-                                    : 'غیرفعال'
-                                ?>
-                            </span>
-
-                        </td>
-
-
-                        <!-- =================================================
-                             عملیات
-                        ================================================== -->
-
-                        <td>
-
-                            <div
-                                style="
-                                    display:flex;
-                                    gap:6px;
-                                    flex-wrap:wrap;
-                                    align-items:center;
-                                ">
-
-
-                                <!-- ویرایش -->
-
-                                <button
-                                    type="button"
-                                    class="btn"
-                                    onclick="openEditCategory(
-                                        <?= (int)$c['id'] ?>,
-                                        <?= htmlspecialchars(
-                                            json_encode(
-                                                $c['name'],
-                                                JSON_UNESCAPED_UNICODE
-                                            ),
-                                            ENT_QUOTES,
-                                            'UTF-8'
-                                        ) ?>,
-                                        <?= htmlspecialchars(
-                                            json_encode(
-                                                $c['icon'] ?? '',
-                                                JSON_UNESCAPED_UNICODE
-                                            ),
-                                            ENT_QUOTES,
-                                            'UTF-8'
-                                        ) ?>,
-                                        <?= htmlspecialchars(
-                                            json_encode(
-                                                $c['image_path'] ?? '',
-                                                JSON_UNESCAPED_UNICODE
-                                            ),
-                                            ENT_QUOTES,
-                                            'UTF-8'
-                                        ) ?>
-                                    )"
-                                    style="
-                                        padding:6px 12px;
-                                        font-size:.72rem;
-                                        background:var(--teal-100);
-                                        color:var(--teal-800);
-                                    ">
-                                    ✏️ ویرایش
-                                </button>
-
-
-                                <!-- فعال / غیرفعال -->
-
-                                <form
-                                    method="post"
-                                    style="display:inline;">
-
-                                    <input
-                                        type="hidden"
-                                        name="do"
-                                        value="toggle">
-
-                                    <input
-                                        type="hidden"
-                                        name="id"
-                                        value="<?= (int)$c['id'] ?>">
-
-                                    <button
-                                        type="submit"
-                                        class="btn"
-                                        style="
-                                            padding:6px 12px;
-                                            font-size:.72rem;
-                                        ">
-                                        <?= $c['is_active']
-                                            ? 'غیرفعال'
-                                            : 'فعال'
-                                        ?>
-                                    </button>
-
-                                </form>
-
-
-                                <!-- حذف -->
-
-                                <form
-                                    method="post"
-                                    style="display:inline;"
-                                    onsubmit="return confirm(
-                                        'آیا از حذف این دسته‌بندی مطمئن هستید؟'
-                                    );">
-
-                                    <input
-                                        type="hidden"
-                                        name="do"
-                                        value="delete">
-
-                                    <input
-                                        type="hidden"
-                                        name="id"
-                                        value="<?= (int)$c['id'] ?>">
-
-                                    <button
-                                        type="submit"
-                                        class="btn"
-                                        style="
-                                            padding:6px 12px;
-                                            font-size:.72rem;
-                                            background:#fff0f0;
-                                            color:#c62828;
-                                        ">
-                                        🗑️ حذف
-                                    </button>
-
-                                </form>
-
+<!DOCTYPE html>
+<html lang="fa" dir="rtl">
+
+<head>
+
+    <meta charset="UTF-8">
+
+    <meta
+        name="viewport"
+        content="width=device-width, initial-scale=1.0">
+
+    <title>مدیریت دسته‌بندی‌ها</title>
+
+    <style>
+        * {
+            box-sizing: border-box;
+        }
+
+        body {
+            margin: 0;
+            background: #f4f8f8;
+            color: #16363a;
+            font-family:
+                Tahoma,
+                Arial,
+                sans-serif;
+        }
+
+        .page {
+            max-width: 1250px;
+            margin: 0 auto;
+            padding: 30px 20px 60px;
+        }
+
+        .page-header {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            gap: 20px;
+            margin-bottom: 25px;
+        }
+
+        .page-title h1 {
+            margin: 0 0 8px;
+            font-size: 26px;
+            color: #00666b;
+        }
+
+        .page-title p {
+            margin: 0;
+            color: #718285;
+            font-size: 14px;
+        }
+
+        .panel {
+            background: #fff;
+            border-radius: 22px;
+            padding: 25px;
+            box-shadow:
+                0 10px 35px rgba(0, 70, 75, .08);
+            border: 1px solid #e5eeee;
+            margin-bottom: 25px;
+        }
+
+        .panel-title {
+            margin: 0 0 20px;
+            color: #00666b;
+            font-size: 19px;
+        }
+
+        .form-grid {
+            display: grid;
+            grid-template-columns:
+                repeat(2, minmax(0, 1fr));
+            gap: 18px;
+        }
+
+        .field {
+            display: flex;
+            flex-direction: column;
+            gap: 8px;
+        }
+
+        .field.full {
+            grid-column: 1 / -1;
+        }
+
+        .field label {
+            font-size: 13px;
+            font-weight: 700;
+            color: #456165;
+        }
+
+        .field input {
+            width: 100%;
+            height: 46px;
+            border: 1px solid #d6e3e4;
+            border-radius: 12px;
+            padding: 0 13px;
+            font-family: inherit;
+            outline: none;
+            background: #fbfdfd;
+        }
+
+        .field input:focus {
+            border-color: #00666b;
+            box-shadow:
+                0 0 0 3px rgba(0, 102, 107, .08);
+        }
+
+        .upload-box {
+            border: 1px dashed #aac8ca;
+            border-radius: 15px;
+            padding: 15px;
+            background: #f8fbfb;
+        }
+
+        .upload-box input {
+            height: auto;
+            padding: 10px;
+            background: #fff;
+        }
+
+        .upload-help {
+            margin-top: 7px;
+            font-size: 11px;
+            color: #839294;
+        }
+
+        .btn {
+            border: 0;
+            border-radius: 12px;
+            padding: 11px 20px;
+            cursor: pointer;
+            font-family: inherit;
+            font-weight: 700;
+        }
+
+        .btn-primary {
+            background: #00666b;
+            color: #fff;
+        }
+
+        .btn-primary:hover {
+            background: #00565a;
+        }
+
+        .btn-orange {
+            background: #f28c28;
+            color: #fff;
+        }
+
+        .btn-light {
+            background: #edf4f4;
+            color: #31575b;
+        }
+
+        .btn-danger {
+            background: #fff0f0;
+            color: #b42318;
+        }
+
+        .form-actions {
+            margin-top: 20px;
+            display: flex;
+            justify-content: flex-start;
+            gap: 10px;
+        }
+
+        .alert {
+            border-radius: 13px;
+            padding: 13px 16px;
+            margin-bottom: 20px;
+            font-size: 14px;
+        }
+
+        .alert-success {
+            background: #eaf8f1;
+            color: #147344;
+            border: 1px solid #c9ecd9;
+        }
+
+        .alert-error {
+            background: #fff0f0;
+            color: #b42318;
+            border: 1px solid #f4cccc;
+        }
+
+        .table-wrap {
+            overflow-x: auto;
+        }
+
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            min-width: 850px;
+        }
+
+        th,
+        td {
+            padding: 14px 10px;
+            text-align: right;
+            border-bottom: 1px solid #edf2f2;
+            vertical-align: middle;
+        }
+
+        th {
+            color: #527073;
+            font-size: 12px;
+            background: #f7fafa;
+        }
+
+        td {
+            font-size: 13px;
+        }
+
+        .status {
+            display: inline-flex;
+            align-items: center;
+            padding: 5px 10px;
+            border-radius: 30px;
+            font-size: 11px;
+            font-weight: 700;
+        }
+
+        .status-active {
+            background: #e9f8f0;
+            color: #147344;
+        }
+
+        .status-inactive {
+            background: #f3f4f4;
+            color: #6b7779;
+        }
+
+        .category-images {
+            display: flex;
+            align-items: center;
+            gap: 9px;
+        }
+
+        .large-thumb {
+            width: 82px;
+            height: 58px;
+            border-radius: 12px;
+            overflow: hidden;
+            background: #edf4f4;
+            border: 1px solid #dce8e9;
+        }
+
+        .large-thumb img {
+            width: 100%;
+            height: 100%;
+            display: block;
+            object-fit: cover;
+        }
+
+        .small-thumb {
+            width: 46px;
+            height: 46px;
+            border-radius: 11px;
+            overflow: hidden;
+            background: #fff;
+            border: 2px solid #dce8e9;
+            display: grid;
+            place-items: center;
+            font-size: 21px;
+        }
+
+        .small-thumb img {
+            width: 100%;
+            height: 100%;
+            display: block;
+            object-fit: cover;
+        }
+
+        .actions {
+            display: flex;
+            gap: 7px;
+            flex-wrap: wrap;
+        }
+
+        .actions form {
+            margin: 0;
+        }
+
+        .modal {
+            position: fixed;
+            inset: 0;
+            background: rgba(5, 35, 38, .58);
+            display: none;
+            align-items: center;
+            justify-content: center;
+            padding: 20px;
+            z-index: 1000;
+        }
+
+        .modal.active {
+            display: flex;
+        }
+
+        .modal-box {
+            width: min(700px, 100%);
+            max-height: 92vh;
+            overflow-y: auto;
+            background: #fff;
+            border-radius: 24px;
+            padding: 25px;
+            box-shadow: 0 25px 80px rgba(0, 0, 0, .2);
+        }
+
+        .modal-header {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            margin-bottom: 22px;
+        }
+
+        .modal-header h2 {
+            margin: 0;
+            color: #00666b;
+            font-size: 20px;
+        }
+
+        .close-modal {
+            width: 38px;
+            height: 38px;
+            border: 0;
+            border-radius: 50%;
+            background: #eef5f5;
+            color: #416164;
+            cursor: pointer;
+            font-size: 20px;
+        }
+
+        .current-images {
+            display: flex;
+            gap: 18px;
+            margin-top: 10px;
+            margin-bottom: 5px;
+        }
+
+        .current-image-box {
+            display: flex;
+            flex-direction: column;
+            gap: 7px;
+            color: #708083;
+            font-size: 11px;
+        }
+
+        .current-large {
+            width: 130px;
+            height: 90px;
+            border-radius: 13px;
+            object-fit: cover;
+            border: 1px solid #dce7e8;
+        }
+
+        .current-small {
+            width: 75px;
+            height: 75px;
+            border-radius: 13px;
+            object-fit: cover;
+            border: 1px solid #dce7e8;
+        }
+
+        @media (max-width: 700px) {
+
+            .page {
+                padding: 18px 12px 40px;
+            }
+
+            .page-header {
+                align-items: flex-start;
+                flex-direction: column;
+            }
+
+            .form-grid {
+                grid-template-columns: 1fr;
+            }
+
+            .field.full {
+                grid-column: auto;
+            }
+
+            .panel {
+                padding: 17px;
+                border-radius: 18px;
+            }
+
+            .form-actions {
+                flex-direction: column;
+            }
+
+            .form-actions .btn {
+                width: 100%;
+            }
+
+            .modal-box {
+                padding: 18px;
+                border-radius: 19px;
+            }
+        }
+    </style>
+
+</head>
+
+<body>
+
+    <div class="page">
+
+        <div class="page-header">
+
+            <div class="page-title">
+
+                <h1>مدیریت دسته‌بندی‌ها</h1>
+
+                <p>
+                    مدیریت تصویر بزرگ، تصویر کوچک و آیکون دسته‌بندی‌ها
+                </p>
+
+            </div>
+
+        </div>
+
+
+        <?php if ($message): ?>
+
+            <div class="alert alert-success">
+                <?= htmlspecialchars($message, ENT_QUOTES, 'UTF-8') ?>
+            </div>
+
+        <?php endif; ?>
+
+
+        <?php if ($error): ?>
+
+            <div class="alert alert-error">
+                <?= htmlspecialchars($error, ENT_QUOTES, 'UTF-8') ?>
+            </div>
+
+        <?php endif; ?>
+
+
+        <!-- افزودن دسته‌بندی -->
+
+        <section class="panel">
+
+            <h2 class="panel-title">
+                افزودن دسته‌بندی جدید
+            </h2>
+
+            <form
+                method="post"
+                enctype="multipart/form-data">
+
+                <input
+                    type="hidden"
+                    name="action"
+                    value="add">
+
+                <div class="form-grid">
+
+                    <div class="field">
+
+                        <label>
+                            نام دسته‌بندی
+                        </label>
+
+                        <input
+                            type="text"
+                            name="name"
+                            placeholder="مثلاً مردانه"
+                            required>
+
+                    </div>
+
+
+                    <div class="field">
+
+                        <label>
+                            ایموجی جایگزین
+                        </label>
+
+                        <input
+                            type="text"
+                            name="icon"
+                            value="🧦"
+                            placeholder="🧦">
+
+                    </div>
+
+
+                    <div class="field">
+
+                        <label>
+                            تصویر بزرگ دسته‌بندی
+                        </label>
+
+                        <div class="upload-box">
+
+                            <input
+                                type="file"
+                                name="category_image"
+                                accept="image/jpeg,image/png,image/webp">
+
+                            <div class="upload-help">
+                                این تصویر پس‌زمینه و تصویر اصلی کارت خواهد بود.
                             </div>
 
-                        </td>
+                        </div>
 
-                    </tr>
-
-                <?php endforeach; ?>
-
-            <?php else: ?>
-
-                <tr>
-
-                    <td
-                        colspan="5"
-                        style="
-                            text-align:center;
-                            color:var(--muted);
-                            padding:30px;
-                        ">
-                        هنوز دسته‌بندی‌ای ثبت نشده است.
-                    </td>
-
-                </tr>
-
-            <?php endif; ?>
-
-        </tbody>
-
-    </table>
-
-</div>
+                    </div>
 
 
-<!-- =========================================================
-     Modal ویرایش
-========================================================= -->
+                    <div class="field">
 
-<div
-    id="editCategoryModal"
-    style="
-        display:none;
-        position:fixed;
-        inset:0;
-        background:rgba(0,0,0,.45);
-        z-index:9999;
-        align-items:center;
-        justify-content:center;
-        padding:20px;
-    ">
+                        <label>
+                            تصویر کوچک دسته‌بندی
+                        </label>
+
+                        <div class="upload-box">
+
+                            <input
+                                type="file"
+                                name="category_small_image"
+                                accept="image/jpeg,image/png,image/webp">
+
+                            <div class="upload-help">
+                                این تصویر داخل قاب کوچک روی کارت نمایش داده می‌شود.
+                            </div>
+
+                        </div>
+
+                    </div>
+
+
+                    <div class="field">
+
+                        <label>
+                            ترتیب نمایش
+                        </label>
+
+                        <input
+                            type="number"
+                            name="sort_order"
+                            value="0">
+
+                    </div>
+
+                </div>
+
+
+                <div class="form-actions">
+
+                    <button
+                        type="submit"
+                        class="btn btn-primary">
+                        افزودن دسته‌بندی
+                    </button>
+
+                </div>
+
+            </form>
+
+        </section>
+
+
+        <!-- لیست -->
+
+        <section class="panel">
+
+            <h2 class="panel-title">
+                دسته‌بندی‌های موجود
+            </h2>
+
+
+            <div class="table-wrap">
+
+                <table>
+
+                    <thead>
+
+                        <tr>
+
+                            <th>تصاویر</th>
+
+                            <th>نام</th>
+
+                            <th>Slug</th>
+
+                            <th>ترتیب</th>
+
+                            <th>وضعیت</th>
+
+                            <th>عملیات</th>
+
+                        </tr>
+
+                    </thead>
+
+
+                    <tbody>
+
+                        <?php foreach ($categories as $c): ?>
+
+                            <?php
+
+                            $largeImage = trim(
+                                $c['image_path'] ?? ''
+                            );
+
+                            $smallImage = trim(
+                                $c['small_image_path'] ?? ''
+                            );
+
+                            $icon = trim(
+                                $c['icon'] ?? '🧦'
+                            );
+
+                            ?>
+
+                            <tr>
+
+                                <td>
+
+                                    <div class="category-images">
+
+                                        <div class="large-thumb">
+
+                                            <?php if ($largeImage): ?>
+
+                                                <img
+                                                    src="<?= htmlspecialchars($largeImage, ENT_QUOTES, 'UTF-8') ?>"
+                                                    alt="">
+
+                                            <?php else: ?>
+
+                                                <?= htmlspecialchars($icon, ENT_QUOTES, 'UTF-8') ?>
+
+                                            <?php endif; ?>
+
+                                        </div>
+
+
+                                        <div class="small-thumb">
+
+                                            <?php if ($smallImage): ?>
+
+                                                <img
+                                                    src="<?= htmlspecialchars($smallImage, ENT_QUOTES, 'UTF-8') ?>"
+                                                    alt="">
+
+                                            <?php else: ?>
+
+                                                <?= htmlspecialchars($icon, ENT_QUOTES, 'UTF-8') ?>
+
+                                            <?php endif; ?>
+
+                                        </div>
+
+                                    </div>
+
+                                </td>
+
+
+                                <td>
+
+                                    <strong>
+                                        <?= htmlspecialchars($c['name'], ENT_QUOTES, 'UTF-8') ?>
+                                    </strong>
+
+                                </td>
+
+
+                                <td>
+
+                                    <?= htmlspecialchars($c['slug'], ENT_QUOTES, 'UTF-8') ?>
+
+                                </td>
+
+
+                                <td>
+
+                                    <?= (int)$c['sort_order'] ?>
+
+                                </td>
+
+
+                                <td>
+
+                                    <?php if ((int)$c['is_active'] === 1): ?>
+
+                                        <span class="status status-active">
+                                            فعال
+                                        </span>
+
+                                    <?php else: ?>
+
+                                        <span class="status status-inactive">
+                                            غیرفعال
+                                        </span>
+
+                                    <?php endif; ?>
+
+                                </td>
+
+
+                                <td>
+
+                                    <div class="actions">
+
+                                        <button
+                                            type="button"
+                                            class="btn btn-light"
+                                            onclick='openEditCategory(
+                                        <?= (int)$c['id'] ?>,
+                                        <?= json_encode($c['name'], JSON_UNESCAPED_UNICODE) ?>,
+                                        <?= json_encode($icon, JSON_UNESCAPED_UNICODE) ?>,
+                                        <?= json_encode($largeImage, JSON_UNESCAPED_UNICODE) ?>,
+                                        <?= json_encode($smallImage, JSON_UNESCAPED_UNICODE) ?>,
+                                        <?= (int)$c['sort_order'] ?>
+                                    )'>
+                                            ویرایش
+                                        </button>
+
+
+                                        <form method="post">
+
+                                            <input
+                                                type="hidden"
+                                                name="action"
+                                                value="toggle">
+
+                                            <input
+                                                type="hidden"
+                                                name="id"
+                                                value="<?= (int)$c['id'] ?>">
+
+                                            <button
+                                                type="submit"
+                                                class="btn btn-orange">
+                                                <?= (int)$c['is_active'] === 1
+                                                    ? 'غیرفعال'
+                                                    : 'فعال'
+                                                ?>
+                                            </button>
+
+                                        </form>
+
+
+                                        <form
+                                            method="post"
+                                            onsubmit="return confirm('آیا از حذف این دسته‌بندی مطمئن هستید؟');">
+
+                                            <input
+                                                type="hidden"
+                                                name="action"
+                                                value="delete">
+
+                                            <input
+                                                type="hidden"
+                                                name="id"
+                                                value="<?= (int)$c['id'] ?>">
+
+                                            <button
+                                                type="submit"
+                                                class="btn btn-danger">
+                                                حذف
+                                            </button>
+
+                                        </form>
+
+                                    </div>
+
+                                </td>
+
+                            </tr>
+
+                        <?php endforeach; ?>
+
+
+                        <?php if (!$categories): ?>
+
+                            <tr>
+
+                                <td
+                                    colspan="6"
+                                    style="text-align:center;padding:35px;color:#839294;">
+                                    هنوز دسته‌بندی‌ای ثبت نشده است.
+                                </td>
+
+                            </tr>
+
+                        <?php endif; ?>
+
+                    </tbody>
+
+                </table>
+
+            </div>
+
+        </section>
+
+    </div>
+
+
+    <!-- Modal ویرایش -->
 
     <div
-        style="
-            width:min(500px,100%);
-            background:var(--card-bg,#fff);
-            border-radius:18px;
-            padding:22px;
-            box-shadow:0 20px 60px rgba(0,0,0,.2);
-        ">
+        class="modal"
+        id="editModal">
 
-        <h3
-            style="
-                margin:0 0 18px;
-            ">
-            ویرایش دسته‌بندی
-        </h3>
+        <div class="modal-box">
 
+            <div class="modal-header">
 
-        <form
-            method="post"
-            enctype="multipart/form-data">
-
-            <input
-                type="hidden"
-                name="do"
-                value="edit">
-
-            <input
-                type="hidden"
-                name="id"
-                id="edit_category_id">
-
-
-            <!-- نام -->
-
-            <div class="form-field">
-
-                <label>
-                    نام دسته‌بندی
-                </label>
-
-                <input
-                    type="text"
-                    name="name"
-                    id="edit_category_name"
-                    required>
-
-            </div>
-
-
-            <!-- ایموجی -->
-
-            <div class="form-field">
-
-                <label>
-                    ایموجی
-                </label>
-
-                <input
-                    type="text"
-                    name="icon"
-                    id="edit_category_icon"
-                    placeholder="🧦">
-
-            </div>
-
-
-            <!-- تصویر فعلی -->
-
-            <div
-                id="currentCategoryImage"
-                style="
-                    display:none;
-                    margin:12px 0;
-                ">
-
-                <label
-                    style="
-                        display:block;
-                        margin-bottom:8px;
-                    ">
-                    تصویر فعلی
-                </label>
-
-                <img
-                    id="currentCategoryImagePreview"
-                    src=""
-                    alt=""
-                    style="
-                        width:90px;
-                        height:90px;
-                        object-fit:cover;
-                        border-radius:14px;
-                        border:1px solid var(--card-border);
-                    ">
-
-            </div>
-
-
-            <!-- تصویر جدید -->
-
-            <div class="form-field">
-
-                <label>
-                    تغییر تصویر
-                </label>
-
-                <input
-                    type="file"
-                    name="category_image"
-                    accept="image/jpeg,image/png,image/webp">
-
-                <small
-                    style="
-                        display:block;
-                        margin-top:6px;
-                        color:var(--muted);
-                    ">
-                    اگر تصویر جدید انتخاب کنید، تصویر فعلی جایگزین می‌شود.
-                </small>
-
-            </div>
-
-
-            <!-- دکمه‌ها -->
-
-            <div
-                style="
-                    display:flex;
-                    gap:8px;
-                    justify-content:flex-end;
-                    margin-top:18px;
-                ">
+                <h2>
+                    ویرایش دسته‌بندی
+                </h2>
 
                 <button
                     type="button"
-                    class="btn"
-                    onclick="closeEditCategory()">
-                    انصراف
-                </button>
-
-                <button
-                    type="submit"
-                    class="btn btn-orange">
-                    ذخیره تغییرات
+                    class="close-modal"
+                    onclick="closeEditModal()">
+                    ×
                 </button>
 
             </div>
 
-        </form>
+
+            <form
+                method="post"
+                enctype="multipart/form-data">
+
+                <input
+                    type="hidden"
+                    name="action"
+                    value="edit">
+
+                <input
+                    type="hidden"
+                    name="id"
+                    id="edit_id">
+
+
+                <div class="form-grid">
+
+                    <div class="field">
+
+                        <label>
+                            نام دسته‌بندی
+                        </label>
+
+                        <input
+                            type="text"
+                            name="name"
+                            id="edit_name"
+                            required>
+
+                    </div>
+
+
+                    <div class="field">
+
+                        <label>
+                            ایموجی جایگزین
+                        </label>
+
+                        <input
+                            type="text"
+                            name="icon"
+                            id="edit_icon">
+
+                    </div>
+
+
+                    <div class="field full">
+
+                        <label>
+                            تصاویر فعلی
+                        </label>
+
+                        <div
+                            class="current-images"
+                            id="currentImages">
+                        </div>
+
+                    </div>
+
+
+                    <div class="field">
+
+                        <label>
+                            تغییر تصویر بزرگ
+                        </label>
+
+                        <div class="upload-box">
+
+                            <input
+                                type="file"
+                                name="category_image"
+                                accept="image/jpeg,image/png,image/webp">
+
+                            <div class="upload-help">
+                                در صورت انتخاب، تصویر بزرگ قبلی جایگزین می‌شود.
+                            </div>
+
+                        </div>
+
+                    </div>
+
+
+                    <div class="field">
+
+                        <label>
+                            تغییر تصویر کوچک
+                        </label>
+
+                        <div class="upload-box">
+
+                            <input
+                                type="file"
+                                name="category_small_image"
+                                accept="image/jpeg,image/png,image/webp">
+
+                            <div class="upload-help">
+                                در صورت انتخاب، تصویر کوچک قبلی جایگزین می‌شود.
+                            </div>
+
+                        </div>
+
+                    </div>
+
+
+                    <div class="field">
+
+                        <label>
+                            ترتیب نمایش
+                        </label>
+
+                        <input
+                            type="number"
+                            name="sort_order"
+                            id="edit_sort_order"
+                            value="0">
+
+                    </div>
+
+                </div>
+
+
+                <div class="form-actions">
+
+                    <button
+                        type="submit"
+                        class="btn btn-primary">
+                        ذخیره تغییرات
+                    </button>
+
+                    <button
+                        type="button"
+                        class="btn btn-light"
+                        onclick="closeEditModal()">
+                        انصراف
+                    </button>
+
+                </div>
+
+            </form>
+
+        </div>
 
     </div>
 
-</div>
+
+    <script>
+        function openEditCategory(
+            id,
+            name,
+            icon,
+            imagePath,
+            smallImagePath,
+            sortOrder
+        ) {
+
+            document.getElementById('edit_id').value = id;
+
+            document.getElementById('edit_name').value = name;
+
+            document.getElementById('edit_icon').value = icon;
+
+            document.getElementById('edit_sort_order').value = sortOrder;
 
 
-<script>
-    function openEditCategory(id, name, icon, imagePath) {
-
-        document.getElementById('edit_category_id').value = id;
-
-        document.getElementById('edit_category_name').value = name;
-
-        document.getElementById('edit_category_icon').value = icon || '';
+            const currentImages =
+                document.getElementById('currentImages');
 
 
-        const imageBox = document.getElementById(
-            'currentCategoryImage'
-        );
-
-        const imagePreview = document.getElementById(
-            'currentCategoryImagePreview'
-        );
+            let html = '';
 
 
-        /*
-         * نمایش تصویر فعلی
-         */
+            if (imagePath) {
 
-        if (imagePath) {
+                html += `
+            <div class="current-image-box">
 
-            imagePreview.src = imagePath;
+                <span>
+                    تصویر بزرگ
+                </span>
 
-            imagePreview.alt = name;
+                <img
+                    class="current-large"
+                    src="${escapeHtml(imagePath)}"
+                    alt=""
+                >
 
-            imageBox.style.display = 'block';
-
-        } else {
-
-            imagePreview.src = '';
-
-            imageBox.style.display = 'none';
-
-        }
-
-
-        /*
-         * باز کردن Modal
-         */
-
-        document.getElementById(
-            'editCategoryModal'
-        ).style.display = 'flex';
-
-    }
-
-
-    function closeEditCategory() {
-
-        document.getElementById(
-            'editCategoryModal'
-        ).style.display = 'none';
-
-    }
-
-
-    /*
-     * کلیک روی فضای بیرون Modal
-     */
-
-    document
-        .getElementById('editCategoryModal')
-        .addEventListener('click', function(event) {
-
-            if (event.target === this) {
-
-                closeEditCategory();
+            </div>
+        `;
 
             }
 
-        });
+
+            if (smallImagePath) {
+
+                html += `
+            <div class="current-image-box">
+
+                <span>
+                    تصویر کوچک
+                </span>
+
+                <img
+                    class="current-small"
+                    src="${escapeHtml(smallImagePath)}"
+                    alt=""
+                >
+
+            </div>
+        `;
+
+            }
 
 
-    /*
-     * بستن Modal با کلید Escape
-     */
+            if (!html) {
 
-    document.addEventListener('keydown', function(event) {
+                html = `
+            <div
+                style="
+                    color:#839294;
+                    font-size:13px;
+                "
+            >
+                تصویری برای این دسته‌بندی ثبت نشده است.
+            </div>
+        `;
 
-        if (event.key === 'Escape') {
+            }
 
-            closeEditCategory();
 
+            currentImages.innerHTML = html;
+
+
+            document
+                .getElementById('editModal')
+                .classList.add('active');
         }
 
-    });
-</script>
+
+        function closeEditModal() {
+
+            document
+                .getElementById('editModal')
+                .classList.remove('active');
+        }
 
 
-<?php
+        document
+            .getElementById('editModal')
+            .addEventListener('click', function(event) {
 
-$content = ob_get_clean();
+                if (event.target === this) {
+                    closeEditModal();
+                }
 
-require ROOT_PATH . '/views/layouts/admin.php';
+            });
+
+
+        function escapeHtml(value) {
+
+            return String(value)
+                .replace(/&/g, '&amp;')
+                .replace(/</g, '&lt;')
+                .replace(/>/g, '&gt;')
+                .replace(/"/g, '&quot;')
+                .replace(/'/g, '&#039;');
+        }
+    </script>
+
+</body>
+
+</html>

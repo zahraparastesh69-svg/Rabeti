@@ -1,34 +1,61 @@
 <?php
 
-// ═══════════════════════════════════════════════════════════════
-// اتصال به دیتابیس
-// ═══════════════════════════════════════════════════════════════
 require_once __DIR__ . '/../config/database.php';
 
+$pdo = db();
 
-// ═══════════════════════════════════════════════════════════════
-// داده‌های صفحه اصلی
-// ═══════════════════════════════════════════════════════════════
+/*
+|--------------------------------------------------------------------------
+| Helper
+|--------------------------------------------------------------------------
+*/
 
-// ─── بنر اصلی ───
-$banner = db()->query("
+$h = static function ($value): string {
+    return htmlspecialchars(
+        (string)$value,
+        ENT_QUOTES,
+        'UTF-8'
+    );
+};
+
+
+/*
+|--------------------------------------------------------------------------
+| Banner
+|--------------------------------------------------------------------------
+*/
+
+$banner = $pdo->query("
     SELECT *
     FROM banners
     WHERE position = 'hero'
       AND is_active = 1
-    ORDER BY sort_order
+    ORDER BY sort_order ASC, id DESC
     LIMIT 1
 ")->fetch();
 
 $banner = $banner ?: [];
 
-$bannerImage = trim($banner['image_path'] ?? '');
-$bannerLink  = $banner['link'] ?? '/products';
+$bannerImage = trim(
+    $banner['image_path'] ?? ''
+);
+
+$bannerLink = trim(
+    $banner['link'] ?? '/products'
+);
+
+if ($bannerLink === '') {
+    $bannerLink = '/products';
+}
 
 
-// ─── دسته‌بندی‌ها ───
-// فقط دسته‌های فعال
-$categories = db()->query("
+/*
+|--------------------------------------------------------------------------
+| Categories
+|--------------------------------------------------------------------------
+*/
+
+$categories = $pdo->query("
     SELECT
         id,
         parent_id,
@@ -36,6 +63,7 @@ $categories = db()->query("
         slug,
         icon,
         image_path,
+        small_image_path,
         sort_order,
         is_active
     FROM categories
@@ -44,8 +72,13 @@ $categories = db()->query("
 ")->fetchAll();
 
 
-// ─── محصولات ویژه ───
-$products = db()->query("
+/*
+|--------------------------------------------------------------------------
+| Products
+|--------------------------------------------------------------------------
+*/
+
+$products = $pdo->query("
     SELECT
         p.id,
         p.slug,
@@ -65,193 +98,162 @@ $products = db()->query("
 
     WHERE p.is_active = 1
 
-    ORDER BY p.id
+    ORDER BY p.id DESC
 
     LIMIT 4
 ")->fetchAll();
 
 
-// ═══════════════════════════════════════════════════════════════
-// Helper
-// ═══════════════════════════════════════════════════════════════
+/*
+|--------------------------------------------------------------------------
+| Page
+|--------------------------------------------------------------------------
+*/
 
-$h = static fn($value) =>
-htmlspecialchars((string)$value, ENT_QUOTES, 'UTF-8');
-
-$productCount = count($products);
-$categoryCount = count($categories);
-
-
-// ═══════════════════════════════════════════════════════════════
-// عنوان صفحه
-// ═══════════════════════════════════════════════════════════════
-
-$pageTitle = 'تولیدی جوراب رابطی — خرید عمده مستقیم از تولیدی';
+$pageTitle = 'بازار عمده جوراب | جوراب‌لند B2B';
 
 ob_start();
 
 ?>
 
-<!-- ═══════════════════════════════════════════════════════════════
-     HERO / بخش اول صفحه
-     ═══════════════════════════════════════════════════════════════ -->
+<!-- =========================================================
+     HERO
+========================================================= -->
 
-<section class="home-hero">
+<section class="hero-section">
 
-    <div class="hero-orbit hero-orbit-one" aria-hidden="true"></div>
-    <div class="hero-orbit hero-orbit-two" aria-hidden="true"></div>
-    <div class="hero-noise" aria-hidden="true"></div>
+    <?php if ($bannerImage): ?>
 
-
-    <div class="hero-media">
-
-        <?php if ($bannerImage): ?>
+        <a
+            href="<?= $h($bannerLink) ?>"
+            class="hero-banner">
 
             <img
-                class="banner-img"
                 src="<?= $h($bannerImage) ?>"
-                alt="تولیدی جوراب رابطی"
-                onerror="this.style.display='none'; document.getElementById('bannerFallback').classList.add('show');">
+                alt="<?= $h($banner['title'] ?? 'بازار عمده جوراب') ?>"
+                class="hero-banner-image">
 
-        <?php endif; ?>
+            <div class="hero-banner-overlay"></div>
 
-        <div class="hero-image-overlay" aria-hidden="true"></div>
+            <div class="hero-banner-content">
 
-    </div>
+                <?php if (!empty($banner['eyebrow'])): ?>
+
+                    <span class="hero-eyebrow">
+                        <?= $h($banner['eyebrow']) ?>
+                    </span>
+
+                <?php endif; ?>
 
 
-    <div
-        class="banner-fallback<?= $bannerImage ? '' : ' show' ?>"
-        id="bannerFallback">
+                <?php if (!empty($banner['title'])): ?>
 
-        <div class="hero-content">
+                    <h1>
+                        <?= $h($banner['title']) ?>
+                    </h1>
 
-            <div class="hero-kicker">
-                <span></span>
-                تولید مستقیم از کارخانه
+                <?php else: ?>
+
+                    <h1>
+                        بازار عمده جوراب
+                    </h1>
+
+                <?php endif; ?>
+
+
+                <?php if (!empty($banner['subtitle'])): ?>
+
+                    <p>
+                        <?= $h($banner['subtitle']) ?>
+                    </p>
+
+                <?php else: ?>
+
+                    <p>
+                        خرید مستقیم جوراب از تولیدکننده
+                        با شرایط ویژه همکاری
+                    </p>
+
+                <?php endif; ?>
+
+
+                <span class="hero-button">
+                    مشاهده محصولات
+                    <b>←</b>
+                </span>
+
             </div>
 
-            <h1>جوراب رابطی</h1>
+        </a>
 
-            <p class="hero-lead">
-                خرید عمده، مستقیم از تولیدی؛
-                <br>
-                <strong>ساده، سریع و بدون واسطه.</strong>
-            </p>
+    <?php else: ?>
 
-            <p class="hero-description">
-                مدل‌های متنوع جوراب برای بنکداران و فروشگاه‌ها،
-                با امکان تولید اختصاصی برای برند شما.
-            </p>
+        <div class="hero-banner hero-banner-empty">
 
-            <div class="hero-actions">
+            <div class="hero-banner-overlay"></div>
+
+            <div class="hero-banner-content">
+
+                <span class="hero-eyebrow">
+                    بازار B2B جوراب
+                </span>
+
+                <h1>
+                    خرید عمده جوراب
+                    از تولیدکننده
+                </h1>
+
+                <p>
+                    انتخاب مدل، ثبت سفارش و همکاری
+                    مستقیم با تولیدکننده
+                </p>
 
                 <a
-                    href="<?= $h($bannerLink) ?>"
-                    class="btn-hero-main">
-                    مشاهده کاتالوگ
-                    <span class="hero-arrow">←</span>
-                </a>
-
-                <a
-                    href="/custom-order"
-                    class="btn-hero-secondary">
-                    تولید اختصاصی
+                    href="/products"
+                    class="hero-button">
+                    مشاهده محصولات
+                    <b>←</b>
                 </a>
 
             </div>
 
         </div>
 
-
-        <div class="hero-product-art" aria-hidden="true">
-
-            <div class="art-halo"></div>
-
-            <div class="art-card art-card-back"></div>
-
-            <div class="art-card art-card-front">
-
-                <div class="art-label">
-                    RABETI
-                </div>
-
-                <div class="art-sock">
-                    🧦
-                </div>
-
-                <div class="art-lines">
-                    <i></i>
-                    <i></i>
-                    <i></i>
-                </div>
-
-            </div>
-
-            <span class="art-dot dot-a"></span>
-            <span class="art-dot dot-b"></span>
-            <span class="art-dot dot-c"></span>
-
-        </div>
-
-    </div>
-
-
-    <div class="hero-bottom">
-
-        <div class="hero-stat">
-            <strong>مستقیم</strong>
-            <span>از تولیدی</span>
-        </div>
-
-        <div class="hero-stat-divider"></div>
-
-        <div class="hero-stat">
-            <strong>عمده</strong>
-            <span>برای فروشگاه‌ها</span>
-        </div>
-
-        <div class="hero-stat-divider"></div>
-
-        <div class="hero-stat">
-            <strong>اختصاصی</strong>
-            <span>با برند شما</span>
-        </div>
-
-    </div>
+    <?php endif; ?>
 
 </section>
 
 
-<!-- ═══════════════════════════════════════════════════════════════
-     دسته‌بندی‌ها
-     ═══════════════════════════════════════════════════════════════ -->
+<!-- =========================================================
+     CATEGORY SECTION
+========================================================= -->
 
-<section class="home-section categories-section">
+<section class="premium-categories">
 
-    <div class="home-section-head">
+    <div class="section-heading">
 
         <div>
 
-            <span class="eyebrow">
-                CATALOG
+            <span class="section-eyebrow">
+                دسته‌بندی محصولات
             </span>
 
             <h2>
-                دسته‌بندی محصولات
+                جوراب مناسب هر سلیقه
             </h2>
 
-            <p>
-                مدل موردنظر خود را انتخاب کنید و وارد کاتالوگ شوید.
-            </p>
-
         </div>
+
 
         <a
             href="/products"
             class="section-more">
             مشاهده همه
-            <span>←</span>
+
+            <span>
+                ←
+            </span>
+
         </a>
 
     </div>
@@ -259,103 +261,117 @@ ob_start();
 
     <?php if ($categories): ?>
 
-        <div class="premium-cat-grid">
+        <div class="premium-category-grid">
 
             <?php foreach ($categories as $index => $cat): ?>
 
                 <?php
 
-                // ═══════════════════════════════════════════════
-                // تصویر دسته‌بندی
-                // ═══════════════════════════════════════════════
+                /*
+                 * تصویر بزرگ
+                 */
 
-                $imagePath = trim($cat['image_path'] ?? '');
+                $largeImage = trim(
+                    $cat['image_path'] ?? ''
+                );
 
-                $icon = trim($cat['icon'] ?? '');
+
+                /*
+                 * تصویر کوچک
+                 */
+
+                $smallImage = trim(
+                    $cat['small_image_path'] ?? ''
+                );
 
 
-                // اگر image_path خالی بود،
-                // بررسی می‌کنیم آیا icon قبلاً مسیر عکس بوده است یا نه.
+                /*
+                 * ایموجی
+                 */
 
-                if ($imagePath === '' && $icon !== '') {
+                $icon = trim(
+                    $cat['icon'] ?? ''
+                );
 
-                    $iconLooksLikeImage =
-                        preg_match('~^https?://~i', $icon) ||
-                        preg_match(
-                            '~\.(png|jpe?g|webp|svg|gif)(\?.*)?$~i',
-                            $icon
-                        );
-
-                    if ($iconLooksLikeImage) {
-                        $imagePath = $icon;
-                    }
+                if ($icon === '') {
+                    $icon = '🧦';
                 }
 
 
-                // آیا مسیر نهایی یک عکس است؟
-                $hasImage = $imagePath !== '';
+                /*
+                 * شماره کارت
+                 */
 
-
-                // اگر image_path و icon هر دو مسیر نسبی باشند،
-                // فقط مسیرهای معتبر تصویری را نمایش می‌دهیم.
-
-                if ($hasImage) {
-
-                    $imageExtensionValid = preg_match(
-                        '~\.(png|jpe?g|webp|svg|gif)(\?.*)?$~i',
-                        $imagePath
-                    );
-
-                    if (
-                        !$imageExtensionValid &&
-                        !preg_match('~^https?://~i', $imagePath)
-                    ) {
-                        $hasImage = false;
-                    }
-                }
-
-
-                // اگر عکس نداریم، icon را به عنوان ایموجی استفاده می‌کنیم.
-                $displayIcon = $icon !== '' ? $icon : '🧦';
+                $number = str_pad(
+                    (string)($index + 1),
+                    2,
+                    '0',
+                    STR_PAD_LEFT
+                );
 
                 ?>
 
                 <a
-                    href="/products?cat=<?= $h($cat['slug']) ?>"
+                    href="/products?cat=<?= urlencode($cat['slug']) ?>"
                     class="premium-cat-card">
 
-                    <span class="cat-number">
-                        <?= str_pad((string)($index + 1), 2, '0', STR_PAD_LEFT) ?>
-                    </span>
+                    <!-- تصویر بزرگ -->
 
+                    <div class="cat-large-media">
 
-                    <div class="premium-cat-icon">
-
-                        <?php if ($hasImage): ?>
+                        <?php if ($largeImage): ?>
 
                             <img
-                                src="<?= $h($imagePath) ?>"
+                                src="<?= $h($largeImage) ?>"
                                 alt="<?= $h($cat['name']) ?>"
-                                loading="lazy"
-                                onerror="this.style.display='none'; this.nextElementSibling.style.display='flex';">
-
-                            <!-- fallback در صورت خراب بودن تصویر -->
-                            <span
-                                style="display:none;"
-                                aria-hidden="true">
-                                🧦
-                            </span>
+                                class="cat-large-image"
+                                loading="lazy">
 
                         <?php else: ?>
 
-                            <span>
-                                <?= $h($displayIcon) ?>
+                            <div class="cat-no-image">
+                                <?= $h($icon) ?>
+                            </div>
+
+                        <?php endif; ?>
+
+
+                        <div class="cat-large-overlay"></div>
+
+                    </div>
+
+
+                    <!-- شماره -->
+
+                    <span class="cat-number">
+                        <?= $number ?>
+                    </span>
+
+
+                    <!-- تصویر کوچک -->
+
+                    <div class="premium-cat-icon">
+
+                        <?php if ($smallImage): ?>
+
+                            <img
+                                src="<?= $h($smallImage) ?>"
+                                alt=""
+                                class="cat-small-image"
+                                loading="lazy">
+
+                        <?php else: ?>
+
+                            <span class="cat-emoji">
+                                <?= $h($icon) ?>
                             </span>
 
                         <?php endif; ?>
 
                     </div>
 
+
+                    <!-- متن دسته -->
 
                     <div class="premium-cat-copy">
 
@@ -364,16 +380,19 @@ ob_start();
                         </strong>
 
                         <span>
+
                             مشاهده مدل‌ها
-                            <b>←</b>
+
+                            <b>
+                                ←
+                            </b>
+
                         </span>
 
                     </div>
 
 
-                    <span
-                        class="cat-card-glow"
-                        aria-hidden="true"></span>
+                    <span class="cat-card-glow"></span>
 
                 </a>
 
@@ -384,7 +403,9 @@ ob_start();
     <?php else: ?>
 
         <div class="empty-state">
-            در حال حاضر دسته‌بندی فعالی ثبت نشده است.
+
+            هنوز دسته‌بندی فعالی ثبت نشده است.
+
         </div>
 
     <?php endif; ?>
@@ -392,35 +413,36 @@ ob_start();
 </section>
 
 
-<!-- ═══════════════════════════════════════════════════════════════
-     محصولات ویژه
-     ═══════════════════════════════════════════════════════════════ -->
+<!-- =========================================================
+     PRODUCTS
+========================================================= -->
 
-<section class="home-section products-section">
+<section class="products-section">
 
-    <div class="home-section-head">
+    <div class="section-heading">
 
         <div>
 
-            <span class="eyebrow">
-                SELECTED PRODUCTS
+            <span class="section-eyebrow">
+                محصولات
             </span>
 
             <h2>
-                محصولات ویژه
+                جدیدترین محصولات
             </h2>
 
-            <p>
-                چند انتخاب از محصولات تولیدی رابطی با شرایط عمده.
-            </p>
-
         </div>
+
 
         <a
             href="/products"
             class="section-more">
-            کاتالوگ کامل
-            <span>←</span>
+            مشاهده همه
+
+            <span>
+                ←
+            </span>
+
         </a>
 
     </div>
@@ -428,55 +450,76 @@ ob_start();
 
     <?php if ($products): ?>
 
-        <div class="premium-product-grid">
+        <div class="products-grid">
 
-            <?php foreach ($products as $index => $p): ?>
+            <?php foreach ($products as $product): ?>
 
                 <?php
-                $stock = (int)($p['qty_available'] ?? 0);
+
+                $price = $product['price'] !== null
+                    ? (float)$product['price']
+                    : 0;
+
+                $moq = (int)(
+                    $product['base_moq'] ?? 0
+                );
+
+                $stock = (int)(
+                    $product['qty_available'] ?? 0
+                );
+
                 ?>
 
-                <a
-                    href="/product/<?= $h($p['slug'] ?? $p['id']) ?>"
-                    class="premium-product-card">
+                <article class="product-card">
 
-                    <div class="product-visual">
+                    <!-- تصویر / آیکون محصول -->
 
-                        <span class="product-index">
-                            <?= str_pad((string)($index + 1), 2, '0', STR_PAD_LEFT) ?>
-                        </span>
-
-                        <span class="product-badge">
-                            عمده
-                        </span>
-
-                        <div class="product-surface"></div>
+                    <div class="product-media">
 
                         <div class="product-sock">
                             🧦
                         </div>
 
-                        <div class="product-shadow"></div>
-
-                        <span class="product-open">
-                            ↗
-                        </span>
-
                     </div>
 
 
-                    <div class="premium-product-info">
+                    <!-- اطلاعات محصول -->
 
-                        <div class="product-meta-line">
+                    <div class="product-content">
 
-                            <span>
-                                کد <?= $h($p['code']) ?>
+                        <?php if (!empty($product['code'])): ?>
+
+                            <span class="product-code">
+                                <?= $h($product['code']) ?>
                             </span>
+
+                        <?php endif; ?>
+
+
+                        <h3 class="product-title">
+
+                            <?= $h($product['name']) ?>
+
+                        </h3>
+
+
+                        <div class="product-meta">
+
+                            <?php if ($moq > 0): ?>
+
+                                <span>
+                                    حداقل سفارش:
+                                    <?= number_format($moq) ?>
+                                </span>
+
+                            <?php endif; ?>
+
 
                             <?php if ($stock > 0): ?>
 
-                                <span class="stock-dot">
-                                    موجود
+                                <span>
+                                    موجودی:
+                                    <?= number_format($stock) ?>
                                 </span>
 
                             <?php endif; ?>
@@ -484,40 +527,42 @@ ob_start();
                         </div>
 
 
-                        <h3>
-                            <?= $h($p['name']) ?>
-                        </h3>
+                        <div class="product-bottom">
 
+                            <div class="product-price">
 
-                        <div class="product-bottom-line">
+                                <?php if ($price > 0): ?>
 
-                            <div>
+                                    <strong>
+                                        <?= number_format($price) ?>
+                                    </strong>
 
-                                <small>
-                                    قیمت همکاری
-                                </small>
+                                    <span>
+                                        تومان
+                                    </span>
 
-                                <strong>
+                                <?php else: ?>
 
-                                    <?= $p['price'] !== null
-                                        ? number_format((float)$p['price']) . ' تومان'
-                                        : 'استعلام قیمت'
-                                    ?>
+                                    <span>
+                                        استعلام قیمت
+                                    </span>
 
-                                </strong>
+                                <?php endif; ?>
 
                             </div>
 
 
-                            <span class="product-moq">
-                                حداقل <?= (int)$p['base_moq'] ?> جفت
-                            </span>
+                            <a
+                                href="/products/<?= urlencode($product['slug']) ?>"
+                                class="product-button">
+                                مشاهده
+                            </a>
 
                         </div>
 
                     </div>
 
-                </a>
+                </article>
 
             <?php endforeach; ?>
 
@@ -526,7 +571,9 @@ ob_start();
     <?php else: ?>
 
         <div class="empty-state">
-            محصول فعالی برای نمایش وجود ندارد.
+
+            هنوز محصول فعالی ثبت نشده است.
+
         </div>
 
     <?php endif; ?>
@@ -534,223 +581,42 @@ ob_start();
 </section>
 
 
-<!-- ═══════════════════════════════════════════════════════════════
-     سفارش اختصاصی
-     ═══════════════════════════════════════════════════════════════ -->
+<!-- =========================================================
+     B2B CTA
+========================================================= -->
 
-<section class="custom-order-panel">
+<section class="b2b-cta">
 
-    <div class="custom-order-grid">
+    <div class="b2b-cta-content">
 
-        <div class="custom-order-copy">
-
-            <span class="eyebrow eyebrow-light">
-                PRIVATE LABEL
-            </span>
-
-            <h2>
-                طرح شما، تولید ما.
-            </h2>
-
-            <p>
-                اگر سازمان، فروشگاه یا برند شما به جوراب اختصاصی
-                با طرح و نام خودش نیاز دارد، سفارش تولید اختصاصی ثبت کنید.
-            </p>
-
-            <a
-                href="/custom-order"
-                class="custom-order-btn">
-                شروع سفارش اختصاصی
-                <span>←</span>
-            </a>
-
-        </div>
-
-
-        <div
-            class="custom-order-art"
-            aria-hidden="true">
-
-            <div class="custom-ring ring-one"></div>
-            <div class="custom-ring ring-two"></div>
-
-            <div class="custom-card">
-
-                <span>
-                    YOUR BRAND
-                </span>
-
-                <b>
-                    🧦
-                </b>
-
-                <small>
-                    MADE BY RABETI
-                </small>
-
-            </div>
-
-        </div>
-
-    </div>
-
-</section>
-
-
-<!-- ═══════════════════════════════════════════════════════════════
-     چرا رابطی؟
-     ═══════════════════════════════════════════════════════════════ -->
-
-<section class="home-section why-section">
-
-    <div class="home-section-head centered-head">
-
-        <div>
-
-            <span class="eyebrow">
-                WHY RABETI
-            </span>
-
-            <h2>
-                تجربه خرید عمده، ساده‌تر از همیشه
-            </h2>
-
-            <p>
-                پلتفرم رابطی برای اینکه سفارش از تولیدی تا فروشگاه،
-                شفاف و سریع پیش برود.
-            </p>
-
-        </div>
-
-    </div>
-
-
-    <div class="why-grid">
-
-        <article class="why-card">
-
-            <div class="why-icon">
-                01
-            </div>
-
-            <div>
-
-                <h3>
-                    مستقیم از تولیدی
-                </h3>
-
-                <p>
-                    بدون زنجیره واسطه؛ ارتباط مستقیم با تولید و فروش عمده.
-                </p>
-
-            </div>
-
-        </article>
-
-
-        <article class="why-card">
-
-            <div class="why-icon">
-                02
-            </div>
-
-            <div>
-
-                <h3>
-                    قیمت همکاری
-                </h3>
-
-                <p>
-                    نمایش شرایط خرید عمده و حداقل تعداد سفارش برای هر محصول.
-                </p>
-
-            </div>
-
-        </article>
-
-
-        <article class="why-card">
-
-            <div class="why-icon">
-                03
-            </div>
-
-            <div>
-
-                <h3>
-                    سفارش اختصاصی
-                </h3>
-
-                <p>
-                    تولید با طرح، نام یا هویت بصری اختصاصی مجموعه شما.
-                </p>
-
-            </div>
-
-        </article>
-
-
-        <article class="why-card">
-
-            <div class="why-icon">
-                04
-            </div>
-
-            <div>
-
-                <h3>
-                    پیگیری آنلاین
-                </h3>
-
-                <p>
-                    از ثبت سفارش تا پیگیری، اطلاعات در یک پلتفرم در دسترس شماست.
-                </p>
-
-            </div>
-
-        </article>
-
-    </div>
-
-</section>
-
-
-<!-- ═══════════════════════════════════════════════════════════════
-     نوار پایانی
-     ═══════════════════════════════════════════════════════════════ -->
-
-<section class="home-final-cta">
-
-    <div>
-
-        <span class="eyebrow">
-            READY TO ORDER?
+        <span class="section-eyebrow">
+            همکاری عمده
         </span>
 
         <h2>
-            برای سفارش عمده آماده‌اید؟
+            برای خرید عمده آماده همکاری هستیم
         </h2>
 
         <p>
-            کاتالوگ را ببینید یا برای تولید اختصاصی با ما شروع کنید.
+            اگر فروشگاه، بنکداری یا مجموعه پخش دارید،
+            محصولات موردنظر خود را انتخاب کرده و سفارش خود را ثبت کنید.
         </p>
 
-    </div>
+        <div class="b2b-cta-actions">
 
+            <a
+                href="/products"
+                class="btn-orange">
+                مشاهده محصولات
+            </a>
 
-    <div class="final-cta-actions">
+            <a
+                href="/register"
+                class="btn-outline-light">
+                ثبت‌نام مشتری
+            </a>
 
-        <a
-            href="/products"
-            class="btn-final-primary">
-            مشاهده محصولات
-        </a>
-
-        <a
-            href="/contact"
-            class="btn-final-secondary">
-            ارتباط با ما
-        </a>
+        </div>
 
     </div>
 
@@ -761,6 +627,11 @@ ob_start();
 
 $content = ob_get_clean();
 
-require __DIR__ . '/../views/layouts/main.php';
 
-?>
+/*
+|--------------------------------------------------------------------------
+| Layout
+|--------------------------------------------------------------------------
+*/
+
+require ROOT_PATH . '/views/layouts/main.php';
