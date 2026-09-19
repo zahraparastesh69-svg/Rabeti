@@ -17,3 +17,6 @@ RewriteRule ^register/?$ register.php [L,QSA]
 # پنل مدیریت
 RewriteRule ^admin/?$ admin/index.php [L,QSA]
 RewriteRule ^admin/([a-z\-]+)/?$ admin/$1.php [L,QSA]
+
+RewriteRule ^admin/login/?$ admin/login.php [L,QSA]
+RewriteRule ^admin/logout/?$ admin/logout.php [L,QSA]
