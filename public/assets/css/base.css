@@ -1,0 +1,278 @@
+/* ═══════════════════════════════════════════════════════════════
+   RABETI — base.css
+   توکن‌های v6 + فونت لوکال + پایه + دکمه‌ها + فرم‌ها + توست
+   منبع واحد رنگ: هیچ فایل دیگری رنگ جدید تعریف نمی‌کند
+   ═══════════════════════════════════════════════════════════════ */
+
+/* ─── ۱. فونت لوکال ─── */
+@font-face {
+  font-family: 'Vazir';
+  src: url('/fonts/Vazir.woff2') format('woff2'),
+       url('/fonts/Vazir.woff') format('woff');
+  font-weight: 400; font-style: normal; font-display: swap;
+}
+@font-face {
+  font-family: 'Vazir';
+  src: url('/fonts/Vazir-Light.woff2') format('woff2'),
+       url('/fonts/Vazir-Light.woff') format('woff');
+  font-weight: 300; font-style: normal; font-display: swap;
+}
+@font-face {
+  font-family: 'Vazir';
+  src: url('/fonts/Vazir-Medium.woff2') format('woff2'),
+       url('/fonts/Vazir-Medium.woff') format('woff');
+  font-weight: 500; font-style: normal; font-display: swap;
+}
+@font-face {
+  font-family: 'Vazir';
+  src: url('/fonts/Vazir-Bold.woff2') format('woff2'),
+       url('/fonts/Vazir-Bold.woff') format('woff');
+  font-weight: 600 700 800 900; font-style: normal; font-display: swap;
+}
+
+/* ─── ۲. توکن‌ها — منبع واحد ─── */
+:root {
+  /* برند */
+  --c-brand:  #2A5F78;
+  --c-dark:   #1F4A5E;
+  --c-deep:   #1B3F50;
+  --c-cream:  #F5EFE4;
+  --c-white:  #FCFCFA;
+
+  /* متن */
+  --c-text:   #23303A;
+  --c-mut:    #7A868C;
+
+  /* خطوط */
+  --c-line:   #E6E2D8;
+
+  /* وضعیت */
+  --c-ok:     #2E8B57;
+  --c-danger: #B4443C;
+
+  /* CTA */
+  --c-cta:    #E58A24;
+  --c-cta-d:  #C96F12;
+
+  /* سایه و فوتر */
+  --c-footer: #1C242B;
+  --shadow-soft: 0 10px 26px rgba(31, 74, 94, .10);
+
+  /* گوشه‌ها — فقط سه اندازه */
+  --r-s: 8px;
+  --r-m: 12px;
+  --r-l: 16px;
+
+  /* حرکت */
+  --ease: cubic-bezier(.22, 1, .36, 1);
+}
+
+/* ─── ۳. پایه ─── */
+*, *::before, *::after { margin: 0; padding: 0; box-sizing: border-box; }
+
+html { scroll-behavior: smooth; background: var(--c-white); }
+
+body {
+  font-family: 'Vazir', Tahoma, sans-serif;
+  background: var(--c-white);
+  color: var(--c-text);
+  direction: rtl;
+  min-height: 100vh;
+  overflow-x: hidden;
+}
+
+a { color: inherit; }
+img { max-width: 100%; display: block; }
+button { font-family: inherit; }
+
+.container {
+  max-width: 1280px;
+  margin-inline: auto;
+  padding-inline: 20px;
+}
+.page-shell { min-height: 60vh; }
+
+/* ─── ۴. دکمه‌ها — فقط v6 ─── */
+.r-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 9px;
+  min-height: 46px;
+  padding: 12px 26px;
+  border-radius: var(--r-m);
+  font-size: .88rem;
+  font-weight: 700;
+  text-decoration: none;
+  border: none;
+  cursor: pointer;
+  transition: .2s;
+}
+.r-btn:active { transform: scale(.97); }
+.r-btn-primary { background: var(--c-brand); color: #fff; }
+.r-btn-primary:hover { background: var(--c-dark); }
+.r-btn-outline { background: transparent; color: var(--c-brand); border: 1.5px solid var(--c-brand); }
+.r-btn-outline:hover { background: rgba(42, 95, 120, .06); }
+.r-btn-accent { background: var(--c-cta); color: #fff; }
+.r-btn-accent:hover { background: var(--c-cta-d); }
+.r-btn-white { background: #fff; color: var(--c-brand); }
+.r6-arrow { transition: transform .2s; }
+.r-btn:hover .r6-arrow { transform: translateX(-4px); }
+
+/* ─── ۵. فرم‌ها ─── */
+.form-field { margin-bottom: 16px; }
+.form-field label {
+  display: block;
+  font-size: .82rem;
+  font-weight: 700;
+  color: var(--c-text);
+  margin-bottom: 7px;
+}
+.form-field label i { color: var(--c-danger); font-style: normal; }
+.form-field input,
+.form-field select,
+.form-field textarea {
+  width: 100%;
+  padding: 12px 14px;
+  border: 1.5px solid var(--c-line);
+  border-radius: var(--r-m);
+  font-family: inherit;
+  font-size: 16px;              /* جلوگیری از زوم iOS */
+  color: var(--c-text);
+  background: var(--c-white);
+  transition: border-color .2s, box-shadow .2s;
+  outline: none;
+}
+.form-field input:focus,
+.form-field select:focus,
+.form-field textarea:focus {
+  border-color: var(--c-brand);
+  box-shadow: 0 0 0 3px rgba(42, 95, 120, .10);
+}
+.form-field textarea { resize: vertical; min-height: 110px; line-height: 1.9; }
+
+.field-hint { display: block; font-size: .70rem; color: var(--c-mut); margin-top: 6px; }
+.field-error { display: block; font-size: .74rem; color: var(--c-danger); font-weight: 600; margin-top: 6px; }
+
+.form-row { display: grid; grid-template-columns: 1fr; gap: 0; }
+@media (min-width: 700px) { .form-row { grid-template-columns: 1fr 1fr; gap: 14px; } }
+
+.form-alert {
+  padding: 13px 16px;
+  border-radius: var(--r-m);
+  font-size: .85rem;
+  font-weight: 600;
+  margin-bottom: 16px;
+}
+.form-alert.error { background: #fdeeee; color: var(--c-danger); border: 1px solid #f3c6c3; }
+
+/* ─── ۶. ساختار سکشن‌های مشترک ─── */
+.r-section { margin: 52px 0; }
+.r-sec-head {
+  display: flex;
+  align-items: flex-end;
+  justify-content: space-between;
+  gap: 14px;
+  margin-bottom: 18px;
+}
+.r-sec-head h2 { margin: 0 0 4px; font-size: 1.18rem; font-weight: 700; color: var(--c-text); }
+.r-sec-head p { margin: 0; font-size: .8rem; color: var(--c-mut); }
+.r-sec-link {
+  font-size: .8rem;
+  font-weight: 700;
+  color: var(--c-brand);
+  text-decoration: none;
+  white-space: nowrap;
+}
+.r-sec-link:hover { text-decoration: underline; }
+.r6-eyebrow {
+  display: block;
+  color: var(--c-brand);
+  font-size: .74rem;
+  font-weight: 800;
+  margin-bottom: 10px;
+}
+.r6-eyebrow-light {
+  display: block;
+  color: rgba(255, 255, 255, .65);
+  font-size: .74rem;
+  font-weight: 700;
+  margin-bottom: 10px;
+}
+
+/* ─── ۷. حالت خالی ─── */
+.empty-state { text-align: center; padding: 60px 20px; }
+.empty-icon { font-size: 2.6rem; margin-bottom: 12px; }
+.empty-state h2 { font-size: 1.05rem; color: var(--c-text); margin-bottom: 18px; }
+
+/* ─── ۸. مسیر راهنما ─── */
+.breadcrumb { font-size: .76rem; color: var(--c-mut); margin: 18px 0 4px; }
+.breadcrumb a { color: var(--c-brand); text-decoration: none; }
+.breadcrumb a:hover { text-decoration: underline; }
+.breadcrumb span { color: var(--c-text); font-weight: 600; }
+
+/* ─── ۹. توست ─── */
+.toast {
+  position: fixed;
+  bottom: 24px;
+  right: 50%;
+  transform: translate(50%, 130%);
+  background: var(--c-deep);
+  color: #fff;
+  padding: 14px 22px;
+  border-radius: var(--r-m);
+  font-size: .86rem;
+  font-weight: 600;
+  box-shadow: 0 12px 30px rgba(0, 0, 0, .25);
+  transition: transform .35s var(--ease);
+  z-index: 500;
+  max-width: 90vw;
+  text-align: center;
+}
+.toast.show { transform: translate(50%, 0); }
+
+/* ─── ۱۰. بازگشت به بالا ─── */
+.back-to-top {
+  position: fixed;
+  bottom: 20px;
+  left: 20px;
+  width: 44px;
+  height: 44px;
+  background: var(--c-brand);
+  color: #fff;
+  border: none;
+  border-radius: var(--r-m);
+  font-size: 1.1rem;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  box-shadow: 0 8px 20px rgba(31, 74, 94, .3);
+  opacity: 0;
+  visibility: hidden;
+  transform: translateY(10px);
+  transition: all .3s ease;
+  z-index: 150;
+}
+.back-to-top.show { opacity: 1; visibility: visible; transform: translateY(0); }
+.back-to-top:hover { background: var(--c-dark); }
+
+/* ─── ۱۱. دسترسی ─── */
+.sr-only {
+  position: absolute;
+  width: 1px; height: 1px;
+  padding: 0; margin: -1px;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  white-space: nowrap;
+  border: 0;
+}
+.hidden { display: none !important; }
+
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after {
+    animation-duration: .01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: .01ms !important;
+  }
+}
