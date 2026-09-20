@@ -2265,7 +2265,7 @@ body.app-body {
   color: #f4c995;
 }
 .r6-hero h1 {
-  font-size: clamp(2.7rem, 6vw, 5.2rem);
+  font-size: Clamp(2rem, 7vw, 3.2rem);
 }
 .r6-hero p {
   color: rgba(255, 255, 255, 0.72);
@@ -2889,7 +2889,7 @@ body.app-body {
     padding: 55px 0 105px;
   }
   .hero-content h1 {
-    font-size: clamp(2.6rem, 14vw, 3.6rem);
+    font-size: clamp(1.8rem, 6vw, 2.4rem);
   }
   .hero-lead {
     font-size: 15px;
@@ -3151,7 +3151,7 @@ body.app-body {
 }
 .r6-hero-content h1 {
   margin: 0 0 10px;
-  font-size: clamp(2rem, 7vw, 3.2rem);
+  font-size: clamp(1.8rem, 6vw, 2.4rem);
   font-weight: 800;
   color: var(--r6-text);
   line-height: 1.4;
