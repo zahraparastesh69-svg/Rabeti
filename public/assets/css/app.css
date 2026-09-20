@@ -4591,3 +4591,398 @@ body.app-body {
   color: var(--muted-text);
   line-height: 1.9;
 }
+
+/* ═══════════════════════════════════════════════════════════════
+   RABETI V5 — Premium B2B Fashion Ecommerce
+   #00658B · Cream #F5EFE4 · CTA نارنجی گرم · Radius 8/12/16
+   ═══════════════════════════════════════════════════════════════ */
+
+:root {
+  --r5-brand:   #00658B;
+  --r5-dark:    #004E68;
+  --r5-light:   #0A7898;
+  --r5-cream:   #F5EFE4;
+  --r5-white:   #FCFCFA;
+  --r5-text:    #2B3134;
+  --r5-text-2:  #6E787C;
+  --r5-line:    #E8E6DF;
+  --r5-cta:     #E58A24;
+  --r5-cta-d:   #C96F12;
+  --r5-ok:      #2E8B57;
+  --r5-no:      #B4443C;
+  --r5-r1: 8px;  --r5-r2: 12px;  --r5-r3: 16px;
+}
+
+/* ─── Hero Editorial — کوتاه، عکس یک‌سو متن یک‌سو ─── */
+.r-hero {
+  display: grid;
+  grid-template-columns: 1.1fr .9fr;
+  align-items: center;
+  gap: 24px;
+  margin-top: 22px;
+  padding: 34px 36px;
+  background: var(--r5-cream);
+  border-radius: var(--r5-r3);
+}
+.r-hero-text h1 {
+  margin: 0 0 12px;
+  font-size: clamp(1.35rem, 2.6vw, 2rem);
+  font-weight: 700;               /* SemiBold — نه Black */
+  color: var(--r5-dark);
+  line-height: 1.55;
+}
+.r-hero-text p {
+  margin: 0 0 20px;
+  color: var(--r5-text-2);
+  font-size: .92rem;
+  line-height: 1.9;
+  max-width: 420px;
+}
+.r-hero-cta { display: flex; gap: 10px; flex-wrap: wrap; }
+.r-hero-img-slot {
+  aspect-ratio: 4/3;
+  background: linear-gradient(150deg, #fff, var(--r5-cream));
+  border: 1px solid var(--r5-line);
+  border-radius: var(--r5-r3);
+  display: grid;
+  place-items: center;
+  font-size: 4rem;
+  box-shadow: 0 2px 12px rgba(0,78,104,.06);
+}
+
+/* ─── دکمه‌ها v5 ─── */
+.r-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 42px;
+  padding: 10px 22px;
+  border-radius: var(--r5-r2);
+  font-size: .88rem;
+  font-weight: 700;
+  text-decoration: none;
+  border: none;
+  cursor: pointer;
+  transition: transform .18s ease, box-shadow .18s ease, background .18s;
+}
+.r-btn:active { transform: scale(.97); }
+.r-btn-primary {
+  background: var(--r5-brand);
+  color: #fff;
+  box-shadow: 0 4px 14px rgba(0,101,139,.20);
+}
+.r-btn-primary:hover { background: var(--r5-dark); transform: translateY(-1px); }
+.r-btn-soft {
+  background: #fff;
+  color: var(--r5-brand);
+  border: 1px solid var(--r5-line);
+}
+.r-btn-soft:hover { border-color: var(--r5-brand); }
+.r-btn-accent {
+  background: var(--r5-cta);
+  color: #fff;
+  box-shadow: 0 4px 14px rgba(229,138,36,.25);
+}
+.r-btn-accent:hover { background: var(--r5-cta-d); transform: translateY(-1px); }
+
+/* ─── ساختار سکشن‌ها ─── */
+.r-section { margin: 52px 0; }
+.r-sec-head {
+  display: flex;
+  align-items: flex-end;
+  justify-content: space-between;
+  gap: 14px;
+  margin-bottom: 18px;
+}
+.r-sec-head h2 {
+  margin: 0 0 4px;
+  font-size: 1.18rem;
+  font-weight: 700;
+  color: var(--r5-text);
+}
+.r-sec-head p {
+  margin: 0;
+  font-size: .8rem;
+  color: var(--r5-text-2);
+}
+.r-sec-link {
+  font-size: .8rem;
+  font-weight: 700;
+  color: var(--r5-brand);
+  text-decoration: none;
+  white-space: nowrap;
+}
+.r-sec-link:hover { text-decoration: underline; }
+
+/* ─── دسته‌ها — اسکرول افقی Compact ─── */
+.r-cat-row {
+  display: flex;
+  gap: 10px;
+  overflow-x: auto;
+  padding: 4px 2px 10px;
+  scrollbar-width: none;
+}
+.r-cat-row::-webkit-scrollbar { display: none; }
+.r-cat {
+  flex: 0 0 auto;
+  width: 86px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 8px;
+  text-decoration: none;
+  padding: 12px 6px;
+  background: #fff;
+  border: 1px solid var(--r5-line);
+  border-radius: var(--r5-r2);
+  transition: transform .2s ease, border-color .2s;
+}
+.r-cat:hover { transform: translateY(-3px); border-color: var(--r5-brand); }
+.r-cat-ic {
+  width: 46px; height: 46px;
+  display: grid;
+  place-items: center;
+  font-size: 1.35rem;
+  background: var(--r5-cream);
+  border-radius: var(--r5-r2);
+}
+.r-cat-name { font-size: .74rem; font-weight: 600; color: var(--r5-text); }
+
+/* ─── گرید محصولات ─── */
+.r-grid {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0,1fr));
+  gap: 14px;
+}
+
+/* ─── کارت محصول — Compact، عکس قهرمان ─── */
+.r-card {
+  background: #fff;
+  border: 1px solid var(--r5-line);
+  border-radius: var(--r5-r3);
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+  transition: transform .22s ease, box-shadow .22s ease;
+}
+.r-card:hover {
+  transform: translateY(-3px);
+  box-shadow: 0 10px 26px rgba(0,78,104,.10);
+}
+.r-card-img {
+  position: relative;
+  aspect-ratio: 1;
+  display: grid;
+  place-items: center;
+  font-size: 3.4rem;
+  background: linear-gradient(160deg, var(--r5-cream), #fff);
+  text-decoration: none;
+}
+.r-badge {
+  position: absolute;
+  top: 10px;
+  right: 10px;
+  font-size: .62rem;
+  font-weight: 700;
+  padding: 3px 9px;
+  border-radius: var(--r5-r1);
+  background: #fff;
+  border: 1px solid var(--r5-line);
+  color: var(--r5-text-2);
+}
+.r-badge-ok { color: var(--r5-ok); border-color: rgba(46,139,87,.25); }
+.r-badge-no { color: var(--r5-no); border-color: rgba(180,68,60,.25); }
+.r-card-body {
+  padding: 12px 14px 14px;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  flex: 1;
+}
+.r-card-body h3 {
+  margin: 0;
+  font-size: .86rem;
+  font-weight: 600;
+  line-height: 1.6;
+}
+.r-card-body h3 a { color: var(--r5-text); text-decoration: none; }
+.r-card-body h3 a:hover { color: var(--r5-brand); }
+.r-card-attr { font-size: .68rem; color: var(--r5-text-2); }
+.r-card-foot {
+  margin-top: auto;
+  display: flex;
+  align-items: flex-end;
+  justify-content: space-between;
+  gap: 8px;
+}
+.r-price small {
+  display: block;
+  font-size: .62rem;
+  color: var(--r5-text-2);
+  margin-bottom: 2px;
+}
+.r-price b {
+  font-size: .88rem;
+  font-weight: 700;
+  color: var(--r5-cta-d);          /* قیمت = نارنجی گرم، طبق بریفی */
+}
+.r-price i { font-style: normal; font-size: .64rem; font-weight: 400; color: var(--r5-text-2); }
+.r-quick-add {
+  border: 1px solid var(--r5-brand);
+  background: #fff;
+  color: var(--r5-brand);
+  font-family: inherit;
+  font-size: .68rem;
+  font-weight: 700;
+  padding: 7px 12px;
+  border-radius: var(--r5-r1);
+  cursor: pointer;
+  transition: background .18s, color .18s, transform .12s;
+  white-space: nowrap;
+}
+.r-quick-add:hover { background: var(--r5-brand); color: #fff; }
+.r-quick-add:active { transform: scale(.94); }
+
+/* ─── Rail تازه‌ها ─── */
+.r-rail {
+  display: flex;
+  gap: 12px;
+  overflow-x: auto;
+  padding: 2px 2px 12px;
+  scroll-snap-type: x mandatory;
+  scrollbar-width: none;
+}
+.r-rail::-webkit-scrollbar { display: none; }
+.r-card-rail {
+  flex: 0 0 172px;
+  scroll-snap-align: start;
+}
+
+/* ─── چرا رابطی — ظریف، بدون آیکون بزرگ ─── */
+.r-why {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  border-block: 1px solid var(--r5-line);
+  padding: 22px 0;
+}
+.r-why-item {
+  display: flex;
+  gap: 10px;
+  align-items: flex-start;
+  padding: 0 14px;
+}
+.r-why-item + .r-why-item { border-right: 1px solid var(--r5-line); }
+.r-why-ic { color: var(--r5-brand); font-size: .95rem; line-height: 1.7; }
+.r-why-item b { display: block; font-size: .82rem; font-weight: 700; color: var(--r5-text); }
+.r-why-item span { font-size: .70rem; color: var(--r5-text-2); line-height: 1.7; }
+
+/* ─── سبدهای پیشنهادی ─── */
+.r-baskets {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 12px;
+}
+.r-basket {
+  padding: 20px 18px;
+  background: #fff;
+  border: 1px solid var(--r5-line);
+  border-radius: var(--r5-r3);
+  text-decoration: none;
+  transition: transform .2s ease, border-color .2s;
+}
+.r-basket:hover { transform: translateY(-3px); border-color: var(--r5-brand); }
+.r-basket b { display: block; font-size: .92rem; font-weight: 700; color: var(--r5-text); margin-bottom: 5px; }
+.r-basket span { display: block; font-size: .74rem; color: var(--r5-text-2); line-height: 1.8; margin-bottom: 10px; }
+.r-basket em {
+  font-style: normal;
+  font-size: .66rem;
+  font-weight: 700;
+  color: var(--r5-brand);
+  background: rgba(0,101,139,.07);
+  padding: 3px 10px;
+  border-radius: var(--r5-r1);
+}
+.r-basket-hot { border-color: rgba(229,138,36,.4); }
+.r-basket-hot em { color: var(--r5-cta-d); background: rgba(229,138,36,.08); }
+
+/* ─── بنر قیمت پلکانی — کوچک ═══ */
+.r-promo {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 18px;
+  flex-wrap: wrap;
+  padding: 22px 26px;
+  background: var(--r5-cream);
+  border-radius: var(--r5-r3);
+}
+.r-promo b { display: block; font-size: .98rem; font-weight: 700; color: var(--r5-dark); margin-bottom: 3px; }
+.r-promo span { font-size: .78rem; color: var(--r5-text-2); }
+
+/* ─── برند استوری ─── */
+.r-story {
+  text-align: center;
+  padding: 10px 0;
+}
+.r-story b { display: block; font-size: 1rem; font-weight: 700; color: var(--r5-text); margin-bottom: 6px; }
+.r-story p { margin: 0 0 10px; font-size: .82rem; color: var(--r5-text-2); }
+
+/* ─── CTA نهایی ─── */
+.r-final {
+  text-align: center;
+  padding: 36px 20px;
+  background: var(--r5-dark);
+  border-radius: var(--r5-r3);
+  margin: 64px 0 20px;
+}
+.r-final p { margin: 0 0 16px; color: rgba(255,255,255,.85); font-size: .92rem; }
+
+/* ═══════════ MOBILE — مستقل و فکرشده ═══════════ */
+@media (max-width: 760px) {
+
+  .r-hero {
+    grid-template-columns: 1fr;
+    gap: 16px;
+    padding: 22px 18px;
+    margin-top: 14px;
+  }
+  .r-hero-text h1 { font-size: 1.25rem; line-height: 1.6; }
+  .r-hero-text p { font-size: .82rem; margin-bottom: 14px; }
+  .r-hero-cta .r-btn { flex: 1; }
+  .r-hero-img-slot {
+    aspect-ratio: 16/9;         /* کوتاه — هیرو کل صفحه را نمی‌گیرد */
+    font-size: 2.6rem;
+  }
+
+  .r-section { margin: 38px 0; }
+  .r-sec-head { margin-bottom: 14px; }
+  .r-sec-head h2 { font-size: 1.02rem; }
+  .r-sec-head p { font-size: .72rem; }
+
+  .r-grid { grid-template-columns: repeat(2, minmax(0,1fr)); gap: 10px; }
+  .r-card-img { font-size: 2.6rem; }
+  .r-card-body { padding: 10px 11px 12px; gap: 4px; }
+  .r-card-body h3 { font-size: .76rem; }
+  .r-card-attr { font-size: .60rem; }
+  .r-price b { font-size: .80rem; }
+  .r-quick-add { padding: 6px 9px; font-size: .62rem; }
+
+  .r-rail { gap: 9px; }
+  .r-card-rail { flex: 0 0 148px; }
+
+  .r-why { grid-template-columns: 1fr 1fr; row-gap: 16px; padding: 18px 0; }
+  .r-why-item:nth-child(3) { border-right: 0; }
+  .r-why-item { padding: 0 10px; }
+  .r-why-item:nth-child(even) { border-right: 0; border-left: 1px solid var(--r5-line); padding-right: 12px; }
+  .r-why-item:nth-child(n+3) { border-top: 0; }
+
+  .r-baskets { grid-template-columns: 1fr; gap: 10px; }
+  .r-basket { padding: 16px; }
+  .r-promo { padding: 18px; }
+  .r-promo .r-btn { width: 100%; }
+  .r-final { margin: 44px 0 16px; padding: 28px 16px; }
+}
+@media (max-width: 380px) {
+  .r-cat { width: 78px; }
+  .r-cat-ic { width: 40px; height: 40px; font-size: 1.1rem; }
+}

@@ -5,7 +5,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
     <title><?= $pageTitle ?? 'تولیدی جوراب رابطی' ?></title>
-    <link rel="stylesheet" href="/assets/css/app.css?v=6">
+    <link rel="stylesheet" href="/assets/css/app.css?v=7">
 </head>
 
 <body class="app-body">
@@ -127,32 +127,23 @@
 
     <!-- ▂▂▂ نوار پایین اپ‌مانند (فقط موبایل) ▂▂▂ -->
     <nav class="bottom-nav" aria-label="ناوبری اصلی">
-        <a href="/" class="bn-item">
-            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9">
+        <a href="/" class="bn-item"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9">
                 <path stroke-linecap="round" stroke-linejoin="round" d="M2.25 12l8.95-8.95a1.5 1.5 0 012.1 0L22.25 12M4.5 9.75v10.5h6v-6h3v6h6V9.75" />
-            </svg>
-            <span>خانه</span>
-        </a>
-        <a href="/products" class="bn-item">
-            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9">
+            </svg><span>خانه</span></a>
+        <a href="/products" class="bn-item"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9">
                 <path stroke-linecap="round" stroke-linejoin="round" d="M3.75 6A2.25 2.25 0 016 3.75h2.25A2.25 2.25 0 0110.5 6v2.25a2.25 2.25 0 01-2.25 2.25H6a2.25 2.25 0 01-2.25-2.25V6zM13.5 15.75a2.25 2.25 0 012.25-2.25H18a2.25 2.25 0 012.25 2.25V18A2.25 2.25 0 0118 20.25h-2.25A2.25 2.25 0 0113.5 18v-2.25z" />
-            </svg>
-            <span>محصولات</span>
-        </a>
-        <a href="#" class="bn-item bn-cart">
-            <span class="bn-cart-badge" id="bnCartBadge" style="display:none;">۰</span>
-            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9">
+            </svg><span>دسته‌بندی</span></a>
+        <a href="/products" class="bn-item"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9">
+                <path stroke-linecap="round" stroke-linejoin="round" d="M21 21l-5.2-5.2M16.8 10.4a6.4 6.4 0 11-12.8 0 6.4 6.4 0 0112.8 0z" />
+            </svg><span>جستجو</span></a>
+        <a href="#" class="bn-item"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9">
                 <path stroke-linecap="round" stroke-linejoin="round" d="M2.25 3h1.4l1.6 12.3a2 2 0 002 1.7h9.7a2 2 0 002-1.6l1.3-6.4H5.2M9 21a.75.75 0 100-1.5.75.75 0 000 1.5zm8 0a.75.75 0 100-1.5.75.75 0 000 1.5z" />
-            </svg>
-            <span>سبد</span>
-        </a>
-        <a href="/login" class="bn-item">
-            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9">
+            </svg><span>سفارش</span></a>
+        <a href="/login" class="bn-item"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9">
                 <path stroke-linecap="round" stroke-linejoin="round" d="M15.75 6a3.75 3.75 0 11-7.5 0 3.75 3.75 0 017.5 0zM4.5 20.25a8.25 8.25 0 0115 0" />
-            </svg>
-            <span>حساب</span>
-        </a>
+            </svg><span>حساب</span></a>
     </nav>
+
     <!-- ▂▂▂ Modal ورود / ثبت‌نام ▂▂▂ -->
     <div class="auth-modal-overlay" id="authModalOverlay">
         <div class="auth-modal" role="dialog" aria-modal="true">

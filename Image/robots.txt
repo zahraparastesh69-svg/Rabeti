@@ -1,0 +1,6 @@
+User-agent: *
+Allow: /
+Disallow: /admin
+
+# Sitemap — پس از خرید دامنه در P7 آدرس واقعی بگذارید:
+# Sitemap: https://YOUR-DOMAIN.ir/sitemap.xml
