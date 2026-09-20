@@ -112,3 +112,23 @@ document.addEventListener("keydown", (e) => {
 authTabs?.forEach((t) =>
   t.addEventListener("click", () => switchAuthTab(t.dataset.tab)),
 );
+// ══════════ Stepper تعداد (کارت محصول v6) ══════════
+const faToEn = (s) => s.replace(/[۰-۹]/g, (d) => "۰۱۲۳۴۵۶۷۸۹".indexOf(d));
+const enToFa = (n) => String(n).replace(/\d/g, (d) => "۰۱۲۳۴۵۶۷۸۹"[d]);
+
+document.querySelectorAll(".r6-stepper").forEach((st) => {
+  const num = st.querySelector(".r6-num");
+  const min = parseInt(st.dataset.min || "1", 10);
+  let val = Math.max(min, parseInt(faToEn(num.textContent), 10) || min);
+
+  st.querySelector(".plus").addEventListener("click", () => {
+    val++;
+    num.textContent = enToFa(val);
+  });
+  st.querySelector(".minus").addEventListener("click", () => {
+    if (val > min) {
+      val--;
+      num.textContent = enToFa(val);
+    }
+  });
+});

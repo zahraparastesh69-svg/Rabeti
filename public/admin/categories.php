@@ -1,3 +1,4 @@
+
 <?php
 
 require_once __DIR__ . '/../../config/database.php';
@@ -34,39 +35,53 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         if (mb_strlen($name) < 2) {
 
             $error = 'نام دسته‌بندی باید حداقل ۲ حرف باشد.';
+
         } else {
 
             /*
-             * اگر عکس آپلود شده باشد، عکس اولویت دارد.
-             * در غیر این صورت ایموجی استفاده می‌شود.
+             * اگر عکس آپلود شده باشد،
+             * مسیر عکس در image_path ذخیره می‌شود.
              */
-            $iconFile = upload_image($_FILES['icon_img'] ?? [], 'icons');
+            $imagePath = upload_image(
+                $_FILES['icon_img'] ?? [],
+                'categories'
+            );
 
-            if ($iconFile) {
-                $icon = $iconFile;
-            }
-
+            /*
+             * اگر ایموجی خالی باشد،
+             * مقدار پیش‌فرض قرار می‌دهیم.
+             */
             if ($icon === '') {
                 $icon = '🧦';
             }
 
+            /*
+             * ساخت slug
+             */
             $maxId = (int)$db
                 ->query("SELECT COALESCE(MAX(id), 0) FROM categories")
                 ->fetchColumn();
 
             $slug = 'cat-' . ($maxId + 1);
 
+            /*
+             * ذخیره دسته‌بندی
+             *
+             * icon       = ایموجی
+             * image_path = مسیر واقعی تصویر
+             */
             $stmt = $db->prepare("
                 INSERT INTO categories
-                    (name, slug, icon, sort_order, is_active)
+                    (name, slug, icon, image_path, sort_order, is_active)
                 VALUES
-                    (?, ?, ?, 99, 1)
+                    (?, ?, ?, ?, 99, 1)
             ");
 
             $stmt->execute([
                 $name,
                 $slug,
-                $icon
+                $icon,
+                $imagePath
             ]);
 
             header('Location: /admin/categories?success=added');
@@ -89,16 +104,18 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         if ($id <= 0) {
 
             $error = 'دسته‌بندی نامعتبر است.';
+
         } elseif (mb_strlen($name) < 2) {
 
             $error = 'نام دسته‌بندی باید حداقل ۲ حرف باشد.';
+
         } else {
 
             /*
-             * دسته فعلی را پیدا می‌کنیم
+             * دریافت اطلاعات فعلی دسته
              */
             $stmt = $db->prepare("
-                SELECT icon
+                SELECT icon, image_path
                 FROM categories
                 WHERE id = ?
                 LIMIT 1
@@ -111,29 +128,64 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             if (!$category) {
 
                 $error = 'دسته‌بندی پیدا نشد.';
+
             } else {
 
                 /*
-                 * اگر عکس جدید آپلود شده باشد،
-                 * عکس جدید جایگزین عکس قبلی می‌شود.
+                 * عکس فعلی
                  */
-                $iconFile = upload_image($_FILES['icon_img'] ?? [], 'icons');
+                $imagePath = trim($category['image_path'] ?? '');
 
-                if ($iconFile) {
-                    $icon = $iconFile;
-                } elseif ($icon === '') {
-                    $icon = $category['icon'] ?: '🧦';
+                /*
+                 * اگر عکس جدید انتخاب شده باشد،
+                 * عکس جدید در image_path ذخیره می‌شود.
+                 */
+                $newImagePath = upload_image(
+                    $_FILES['icon_img'] ?? [],
+                    'categories'
+                );
+
+                if ($newImagePath) {
+                    $imagePath = $newImagePath;
                 }
 
+                /*
+                 * اگر ایموجی وارد نشده باشد،
+                 * ایموجی قبلی حفظ می‌شود.
+                 *
+                 * اگر مقدار قبلی به اشتباه مسیر /uploads/... باشد،
+                 * آن را به ایموجی پیش‌فرض برمی‌گردانیم.
+                 */
+                if ($icon === '') {
+
+                    $oldIcon = trim($category['icon'] ?? '');
+
+                    if (
+                        $oldIcon === '' ||
+                        str_starts_with($oldIcon, '/uploads/')
+                    ) {
+                        $icon = '🧦';
+                    } else {
+                        $icon = $oldIcon;
+                    }
+                }
+
+                /*
+                 * بروزرسانی
+                 */
                 $stmt = $db->prepare("
                     UPDATE categories
-                    SET name = ?, icon = ?
+                    SET
+                        name = ?,
+                        icon = ?,
+                        image_path = ?
                     WHERE id = ?
                 ");
 
                 $stmt->execute([
                     $name,
                     $icon,
+                    $imagePath !== '' ? $imagePath : null,
                     $id
                 ]);
 
@@ -198,6 +250,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 $error = 'این دسته‌بندی دارای ' .
                     number_format($productCount) .
                     ' محصول است و فعلاً قابل حذف نیست. ابتدا محصولات آن را جابه‌جا کنید.';
+
             } else {
 
                 $stmt = $db->prepare("
@@ -393,17 +446,29 @@ ob_start();
 
                     <?php
 
+                    /*
+                     * تصویر واقعی از image_path خوانده می‌شود.
+                     */
+                    $imagePath = trim($c['image_path'] ?? '');
+
+                    /*
+                     * ایموجی از icon خوانده می‌شود.
+                     */
                     $iconVal = trim($c['icon'] ?? '');
 
-                    $isImg =
-                        $iconVal !== '' &&
-                        (
-                            preg_match('~^https?://~i', $iconVal) ||
-                            preg_match(
-                                '~\.(png|jpe?g|webp|svg|gif)(\?.*)?$~i',
-                                $iconVal
-                            )
-                        );
+                    /*
+                     * اگر image_path وجود داشته باشد،
+                     * تصویر محسوب می‌شود.
+                     */
+                    $isImg = $imagePath !== '';
+
+                    /*
+                     * اگر icon به اشتباه هنوز مسیر آپلود باشد،
+                     * آن را به‌عنوان ایموجی نمایش نمی‌دهیم.
+                     */
+                    if (str_starts_with($iconVal, '/uploads/')) {
+                        $iconVal = '🧦';
+                    }
 
                     ?>
 
@@ -416,8 +481,8 @@ ob_start();
                             <?php if ($isImg): ?>
 
                                 <img
-                                    src="<?= htmlspecialchars($iconVal) ?>"
-                                    alt="<?= htmlspecialchars($c['name']) ?>"
+                                    src="<?= htmlspecialchars($imagePath, ENT_QUOTES, 'UTF-8') ?>"
+                                    alt="<?= htmlspecialchars($c['name'], ENT_QUOTES, 'UTF-8') ?>"
                                     style="
                                     width:52px;
                                     height:52px;
@@ -429,7 +494,7 @@ ob_start();
                             <?php else: ?>
 
                                 <span style="font-size:1.7rem;">
-                                    <?= htmlspecialchars($iconVal ?: '🧦') ?>
+                                    <?= htmlspecialchars($iconVal ?: '🧦', ENT_QUOTES, 'UTF-8') ?>
                                 </span>
 
                             <?php endif; ?>
@@ -442,7 +507,7 @@ ob_start();
                         <td>
 
                             <b>
-                                <?= htmlspecialchars($c['name']) ?>
+                                <?= htmlspecialchars($c['name'], ENT_QUOTES, 'UTF-8') ?>
                             </b>
 
                         </td>
@@ -496,7 +561,12 @@ ob_start();
                                     onclick="openEditCategory(
                                     <?= (int)$c['id'] ?>,
                                     <?= htmlspecialchars(json_encode($c['name'], JSON_UNESCAPED_UNICODE), ENT_QUOTES, 'UTF-8') ?>,
-                                    <?= htmlspecialchars(json_encode($c['icon'] ?? '', JSON_UNESCAPED_UNICODE), ENT_QUOTES, 'UTF-8') ?>
+                                    <?= htmlspecialchars(json_encode(
+                                        str_starts_with(trim($c['icon'] ?? ''), '/uploads/')
+                                            ? ''
+                                            : ($c['icon'] ?? ''),
+                                        JSON_UNESCAPED_UNICODE
+                                    ), ENT_QUOTES, 'UTF-8') ?>
                                 )"
                                     style="
                                     padding:6px 12px;
