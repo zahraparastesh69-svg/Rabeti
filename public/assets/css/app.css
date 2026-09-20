@@ -6,7 +6,7 @@
  * where they may still be used by inner/content pages.
  */
 
-/* :root { */
+:root {
   --teal-900: #004f53;
   --teal-800: #005a5e;
   --teal-700: #00666b;
