@@ -237,6 +237,7 @@ img {
   font-weight: 900;
   line-height: 1;
   letter-spacing: -1px;
+  gap: 4px;
 }
 .r6-logo-en {
   font-size: 9px;
@@ -244,6 +245,7 @@ img {
   color: var(--r6-mut);
   font-weight: 700;
   margin-top: 12px;
+  gap: 4px;
 }
 .hamburger {
   width: 40px;
