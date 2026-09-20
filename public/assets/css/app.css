@@ -5825,3 +5825,53 @@ body.app-body {
     padding: 20px 18px;
   }
 }
+
+/* ─── دسته‌ها v6 — چیپ‌های مربعی آیکون‌دار (مطابق تصویر ۸) ─── */
+.r6-cats {
+  display: flex;
+  gap: 10px;
+  overflow-x: auto;
+  padding: 2px 2px 8px;
+  scrollbar-width: none;
+}
+.r6-cats::-webkit-scrollbar {
+  display: none;
+}
+.r6-cat {
+  flex: 0 0 auto;
+  width: 96px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 12px;
+  padding: 20px 8px 16px;
+  background: #fff;
+  border: 1px solid var(--r6-line);
+  border-radius: 12px;
+  text-decoration: none;
+  transition:
+    border-color 0.2s,
+    background 0.2s,
+    transform 0.2s;
+}
+.r6-cat:hover {
+  border-color: var(--r6-brand);
+  transform: translateY(-2px);
+}
+.r6-cat img {
+  width: 34px;
+  height: 34px;
+  object-fit: cover;
+  border-radius: 8px;
+  display: block;
+}
+.r6-cat-fallback {
+  font-size: 1.5rem;
+  line-height: 1;
+}
+.r6-cat > span:last-child {
+  font-size: 0.8rem;
+  font-weight: 600;
+  color: var(--r6-text);
+}

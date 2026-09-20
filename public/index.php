@@ -50,6 +50,27 @@ ob_start();
         </div>
     </div>
 </section>
+<!-- ═══ ۲. دسته‌ها — «چه جورابی می‌خواهید؟» ═══ -->
+<section class="r-section">
+    <div class="r-sec-head">
+        <div>
+            <h2>چه جورابی می‌خواهید؟</h2>
+        </div>
+        <a href="/products" class="r-sec-link">همه محصولات ←</a>
+    </div>
+    <div class="r6-cats">
+        <?php foreach ($categories as $cat): ?>
+        <a href="/products?cat=<?= $h($cat['slug']) ?>" class="r6-cat">
+            <?php if (!empty($cat['image_path'])): ?>
+                <img src="<?= $h($cat['image_path']) ?>" alt="<?= $h($cat['name']) ?>">
+            <?php else: ?>
+                <span class="r6-cat-fallback"><?= $h(trim($cat['icon'] ?? '') ?: '🧦') ?></span>
+            <?php endif; ?>
+            <span><?= $h($cat['name']) ?></span>
+        </a>
+        <?php endforeach; ?>
+    </div>
+</section>
 
 <!-- ═══ ۲. پرفروش‌ها — PRODUCT FIRST ═══ -->
 <section class="r-section">
