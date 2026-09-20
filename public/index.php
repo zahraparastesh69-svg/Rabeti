@@ -1,11 +1,22 @@
 <?php
 require __DIR__ . '/../config/database.php';
 
-/* ─── داده‌ها (مطابق ساختار فعلی DB) ─── */
- $categories = db()->query("SELECT * FROM categories WHERE is_active=1 ORDER BY sort_order")->fetchAll();
+$h = static fn($v) => htmlspecialchars((string)$v, ENT_QUOTES, 'UTF-8');
 
- $bestSellers = db()->query("
-    SELECT p.id, p.slug, p.code, p.name, p.base_moq, pr.price, inv.qty_available
+/* ═══════════════════════════════════════════════════════
+   داده‌های صفحه اصلی — همه از دیتابیس
+   عکس‌ها از product_images (زیرکوئری، is_main اولویت)
+   ═══════════════════════════════════════════════════════ */
+
+/* دسته‌بندی‌ها */
+$categories = db()->query("SELECT * FROM categories WHERE is_active=1 ORDER BY sort_order")->fetchAll();
+
+/* پرفروش‌ها — عکس از product_images */
+$bestSellers = db()->query("
+    SELECT p.id, p.slug, p.code, p.name, p.base_moq, pr.price, inv.qty_available,
+           (SELECT image_path FROM product_images pi
+            WHERE pi.product_id = p.id
+            ORDER BY pi.is_main DESC, pi.sort_order ASC LIMIT 1) AS img
     FROM products p
     LEFT JOIN product_prices pr ON pr.product_id = p.id AND pr.customer_group='wholesale'
     LEFT JOIN inventory inv ON inv.product_id = p.id
@@ -14,8 +25,12 @@ require __DIR__ . '/../config/database.php';
     LIMIT 8
 ")->fetchAll();
 
- $newArrivals = db()->query("
-    SELECT p.id, p.slug, p.code, p.name, p.base_moq, pr.price, inv.qty_available
+/* تازه‌ها — عکس از product_images */
+$newArrivals = db()->query("
+    SELECT p.id, p.slug, p.code, p.name, p.base_moq, pr.price, inv.qty_available,
+           (SELECT image_path FROM product_images pi
+            WHERE pi.product_id = p.id
+            ORDER BY pi.is_main DESC, pi.sort_order ASC LIMIT 1) AS img
     FROM products p
     LEFT JOIN product_prices pr ON pr.product_id = p.id AND pr.customer_group='wholesale'
     LEFT JOIN inventory inv ON inv.product_id = p.id
@@ -24,13 +39,11 @@ require __DIR__ . '/../config/database.php';
     LIMIT 8
 ")->fetchAll();
 
- $h = static fn($v) => htmlspecialchars((string)$v, ENT_QUOTES, 'UTF-8');
-
- $pageTitle = 'رابطی — خرید عمده جوراب مستقیم از تولیدکننده';
+$pageTitle = 'رابطی — خرید عمده جوراب مستقیم از تولیدکننده';
 ob_start();
 ?>
 
-<!-- ═══════════ ۱. HERO — Editorial، کوتاه ═══════════ -->
+<!-- ═══════════ ۱. HERO — Editorial کوتاه ═══════════ -->
 <section class="r-hero">
     <div class="r-hero-text">
         <h1>جوراب‌هایی که فروش می‌روند.</h1>
@@ -41,7 +54,6 @@ ob_start();
         </div>
     </div>
     <div class="r-hero-visual">
-        <!-- عکس واقعی: بعداً از پنل بنر آپلود می‌شود؛ فعلاً جایگاه -->
         <div class="r-hero-img-slot">
             <span>🧦</span>
         </div>
@@ -57,15 +69,15 @@ ob_start();
     </div>
     <div class="r-cat-row">
         <?php foreach ($categories as $cat): ?>
-        <a href="/products?cat=<?= $h($cat['slug']) ?>" class="r-cat">
-            <span class="r-cat-ic"><?= $h(trim($cat['icon'] ?? '') ?: '🧦') ?></span>
-            <span class="r-cat-name"><?= $h($cat['name']) ?></span>
-        </a>
+            <a href="/products?cat=<?= $h($cat['slug']) ?>" class="r-cat">
+                <span class="r-cat-ic"><?= $h(trim($cat['icon'] ?? '') ?: '🧦') ?></span>
+                <span class="r-cat-name"><?= $h($cat['name']) ?></span>
+            </a>
         <?php endforeach; ?>
     </div>
 </section>
 
-<!-- ═══════════ ۳. پرفروش‌ها ═══════════ -->
+<!-- ═══════════ ۳. پرفروش‌های این هفته ═══════════ -->
 <section class="r-section">
     <div class="r-sec-head">
         <div>
@@ -77,39 +89,43 @@ ob_start();
 
     <div class="r-grid">
         <?php foreach ($bestSellers as $p): ?>
-        <?php $stock = (int)($p['qty_available'] ?? 0); ?>
-        <article class="r-card">
-            <a href="/product/<?= $h($p['slug']) ?>" class="r-card-img">
-                <?php if ($stock > 0): ?>
-                    <span class="r-badge r-badge-ok">موجود</span>
-                <?php else: ?>
-                    <span class="r-badge r-badge-no">ناموجود</span>
-                <?php endif; ?>
-                <span>🧦</span>
-            </a>
-            <div class="r-card-body">
-                <h3><a href="/product/<?= $h($p['slug']) ?>"><?= $h($p['name']) ?></a></h3>
-                <span class="r-card-attr">کد <?= $h($p['code']) ?> · حداقل <?= (int)$p['base_moq'] ?> جفت</span>
-                <div class="r-card-foot">
-                    <div class="r-price">
-                        <small>قیمت همکاری</small>
-                        <b><?= $p['price'] !== null ? number_format((float)$p['price']) : 'استعلام' ?><i> تومان</i></b>
-                    </div>
+            <?php $stock = (int)($p['qty_available'] ?? 0); ?>
+            <article class="r-card">
+                <a href="/product/<?= $h($p['slug']) ?>" class="r-card-img">
                     <?php if ($stock > 0): ?>
-                    <button type="button" class="r-quick-add"
-                            data-code="<?= $h($p['code']) ?>"
-                            onclick="showToast('✓ به سبد اضافه شد — سبد در فاز بعد فعال می‌شود')">
-                        افزودن سریع
-                    </button>
+                        <span class="r-badge r-badge-ok">موجود</span>
+                    <?php else: ?>
+                        <span class="r-badge r-badge-no">ناموجود</span>
                     <?php endif; ?>
+                    <?php if (!empty($p['img'])): ?>
+                        <img src="<?= $h($p['img']) ?>" alt="<?= $h($p['name']) ?>" loading="lazy">
+                    <?php else: ?>
+                        <span>🧦</span>
+                    <?php endif; ?>
+                </a>
+                <div class="r-card-body">
+                    <h3><a href="/product/<?= $h($p['slug']) ?>"><?= $h($p['name']) ?></a></h3>
+                    <span class="r-card-attr">کد <?= $h($p['code']) ?> · حداقل <?= (int)$p['base_moq'] ?> جفت</span>
+                    <div class="r-card-foot">
+                        <div class="r-price">
+                            <small>قیمت همکاری</small>
+                            <b><?= $p['price'] !== null ? number_format((float)$p['price']) : 'استعلام' ?><i> تومان</i></b>
+                        </div>
+                        <?php if ($stock > 0): ?>
+                            <button type="button" class="r-quick-add"
+                                data-code="<?= $h($p['code']) ?>"
+                                onclick="showToast('✓ به سبد اضافه شد — سبد در فاز بعد فعال می‌شود')">
+                                افزودن سریع
+                            </button>
+                        <?php endif; ?>
+                    </div>
                 </div>
-            </div>
-        </article>
+            </article>
         <?php endforeach; ?>
     </div>
 </section>
 
-<!-- ═══════════ ۴. تازه‌ها — Horizontal Rail ═══════════ -->
+<!-- ═══════════ ۴. تازه‌های رابطی — Rail ═══════════ -->
 <section class="r-section">
     <div class="r-sec-head">
         <div>
@@ -121,16 +137,22 @@ ob_start();
 
     <div class="r-rail">
         <?php foreach ($newArrivals as $p): ?>
-        <a href="/product/<?= $h($p['slug']) ?>" class="r-card r-card-rail">
-            <div class="r-card-img"><span>🧦</span></div>
-            <div class="r-card-body">
-                <h3><?= $h($p['name']) ?></h3>
-                <span class="r-card-attr">کد <?= $h($p['code']) ?></span>
-                <div class="r-price">
-                    <b><?= $p['price'] !== null ? number_format((float)$p['price']) : 'استعلام' ?><i> تومان</i></b>
+            <a href="/product/<?= $h($p['slug']) ?>" class="r-card r-card-rail">
+                <div class="r-card-img">
+                    <?php if (!empty($p['img'])): ?>
+                        <img src="<?= $h($p['img']) ?>" alt="<?= $h($p['name']) ?>" loading="lazy">
+                    <?php else: ?>
+                        <span>🧦</span>
+                    <?php endif; ?>
                 </div>
-            </div>
-        </a>
+                <div class="r-card-body">
+                    <h3><?= $h($p['name']) ?></h3>
+                    <span class="r-card-attr">کد <?= $h($p['code']) ?></span>
+                    <div class="r-price">
+                        <b><?= $p['price'] !== null ? number_format((float)$p['price']) : 'استعلام' ?><i> تومان</i></b>
+                    </div>
+                </div>
+            </a>
         <?php endforeach; ?>
     </div>
 </section>
@@ -195,7 +217,7 @@ ob_start();
     </div>
 </section>
 
-<!-- ═══════════ ۸. برند استوری — فقط ۲ خط ═══════════ -->
+<!-- ═══════════ ۸. برند استوری — فقط دو خط ═══════════ -->
 <section class="r-section">
     <div class="r-story">
         <b>مستقیم از کارگاه رابطی</b>
@@ -211,5 +233,5 @@ ob_start();
 </section>
 
 <?php
- $content = ob_get_clean();
+$content = ob_get_clean();
 require __DIR__ . '/../views/layouts/main.php';

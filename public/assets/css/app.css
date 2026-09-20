@@ -4986,3 +4986,10 @@ body.app-body {
   .r-cat { width: 78px; }
   .r-cat-ic { width: 40px; height: 40px; font-size: 1.1rem; }
 }
+/* ─── عکس واقعی در کارت v5 ─── */
+.r-card-img img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;       /* عکس کل کادر مربع را پر می‌کند */
+  display: block;
+}

@@ -5,7 +5,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
     <title><?= $pageTitle ?? 'تولیدی جوراب رابطی' ?></title>
-    <link rel="stylesheet" href="/assets/css/app.css?v=7">
+    <link rel="stylesheet" href="/assets/css/app.css?v=8">
 </head>
 
 <body class="app-body">
