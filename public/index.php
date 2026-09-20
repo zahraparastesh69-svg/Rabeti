@@ -11,6 +11,17 @@ $h = static fn($v) => htmlspecialchars((string)$v, ENT_QUOTES, 'UTF-8');
 /* دسته‌بندی‌ها */
 $categories = db()->query("SELECT * FROM categories WHERE is_active=1 ORDER BY sort_order")->fetchAll();
 
+
+/* بنر فعال هیرو */
+$heroBanner = db()->query("
+    SELECT title, subtitle, image_path, link
+    FROM banners
+    WHERE position = 'hero'
+      AND is_active = 1
+    ORDER BY id DESC
+    LIMIT 1
+")->fetch();
+
 /* پرفروش‌ها — عکس از product_images */
 $bestSellers = db()->query("
     SELECT p.id, p.slug, p.code, p.name, p.base_moq, pr.price, inv.qty_available,
@@ -46,16 +57,32 @@ ob_start();
 <!-- ═══════════ ۱. HERO — Editorial کوتاه ═══════════ -->
 <section class="r-hero">
     <div class="r-hero-text">
-        <h1>جوراب‌هایی که فروش می‌روند.</h1>
-        <p>تأمین مستقیم از تولیدکننده — قیمت همکاری، موجودی واقعی و سفارش سریع</p>
+        <h1><?= $h($heroBanner['title'] ?? 'جوراب‌هایی که فروش می‌روند.') ?></h1>
+
+        <p>
+            <?= $h($heroBanner['subtitle'] ?? 'تأمین مستقیم از تولیدکننده — قیمت همکاری، موجودی واقعی و سفارش سریع') ?>
+        </p>
+
         <div class="r-hero-cta">
-            <a href="/products" class="r-btn r-btn-primary">مشاهده محصولات</a>
-            <a href="/register" class="r-btn r-btn-soft">خرید عمده</a>
+            <a href="<?= $h($heroBanner['link'] ?? '/products') ?>" class="r-btn r-btn-primary">
+                مشاهده محصولات
+            </a>
+            <a href="/register" class="r-btn r-btn-soft">
+                خرید عمده
+            </a>
         </div>
     </div>
+
     <div class="r-hero-visual">
         <div class="r-hero-img-slot">
-            <span>🧦</span>
+            <?php if (!empty($heroBanner['image_path'])): ?>
+                <img
+                    src="<?= $h($heroBanner['image_path']) ?>"
+                    alt="<?= $h($heroBanner['title'] ?? 'بنر رابطی') ?>"
+                    style="width:100%;height:100%;object-fit:cover;border-radius:inherit;display:block;">
+            <?php else: ?>
+                <span>🧦</span>
+            <?php endif; ?>
         </div>
     </div>
 </section>
