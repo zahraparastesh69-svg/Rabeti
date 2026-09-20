@@ -1,3 +1,10 @@
+<?php
+/* وضعیت ادمین برای منوی کشویی — require_once از تعریف دوباره جلوگیری می‌کند */
+require_once __DIR__ . '/../config/database.php';
+require_once __DIR__ . '/../config/auth.php';
+$isAdmin = !empty($_SESSION['admin_id']);
+?>
+
 <!DOCTYPE html>
 <html lang="fa" dir="rtl">
 
@@ -41,7 +48,7 @@
         </div>
     </header>
 
-    <!-- ▂▂▂ کشوی منو ▂▂▂ -->
+       <!-- ▂▂▂ کشوی منو ▂▂▂ -->
     <div class="overlay" id="overlay"></div>
     <aside class="drawer r6-drawer" id="drawer">
         <div class="drawer-head">
@@ -52,6 +59,11 @@
             </a>
         </div>
         <nav class="drawer-nav">
+            <?php if ($isAdmin): ?>
+            <a href="/admin" class="r6-drawer-link" style="color:var(--r6-brand);font-weight:800;">
+                پنل مدیریت
+            </a>
+            <?php endif; ?>
             <a href="/products" class="r6-drawer-link">محصولات</a>
             <a href="/products" class="r6-drawer-link">پرفروش‌ها</a>
             <a href="/products" class="r6-drawer-link">جدیدها</a>
@@ -62,7 +74,7 @@
             <button type="button" class="r-btn r-btn-outline" data-auth-open="login">ورود / ثبت‌نام</button>
         </div>
     </aside>
-
+    
     <!-- ▂▂▂ محتوا ▂▂▂ -->
     <main class="container page-shell">
         <?= $content ?? '' ?>
