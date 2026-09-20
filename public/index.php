@@ -97,7 +97,21 @@ ob_start();
     <div class="r-cat-row">
         <?php foreach ($categories as $cat): ?>
             <a href="/products?cat=<?= $h($cat['slug']) ?>" class="r-cat">
-                <span class="r-cat-ic"><?= $h(trim($cat['icon'] ?? '') ?: '🧦') ?></span>
+                <span class="r-cat-ic">
+                    <?php
+                    $catIcon = trim($cat['icon'] ?? '');
+
+                    if ($catIcon && str_starts_with($catIcon, '/uploads/')):
+                    ?>
+                        <img
+                            src="<?= $h($catIcon) ?>"
+                            alt="<?= $h($cat['name']) ?>"
+                            style="width:100%;height:100%;object-fit:cover;border-radius:inherit;display:block;">
+                    <?php else: ?>
+                        <?= $h($catIcon ?: '🧦') ?>
+                    <?php endif; ?>
+                </span>
+
                 <span class="r-cat-name"><?= $h($cat['name']) ?></span>
             </a>
         <?php endforeach; ?>
