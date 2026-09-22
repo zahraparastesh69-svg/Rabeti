@@ -19,6 +19,13 @@ if (!isset($countMessages)) {
         WHERE status = 'new'
     ")->fetchColumn();
 }
+if (!isset($countPendingCustomers)) {
+    $countPendingCustomers = (int)db()->query("
+        SELECT COUNT(*)
+        FROM companies
+        WHERE status = 'pending'
+    ")->fetchColumn();
+}
 
 $adminPageTitle =
     $pageTitle ?? 'پنل مدیریت';
@@ -66,8 +73,10 @@ $menu = [
         'key'   => 'customers',
         'label' => 'مشتریان',
         'href'  => '/admin/customers',
-        'icon'  => 'customers'
+        'icon'  => 'customers',
+        'badge' => $countPendingCustomers
     ],
+
 ];
 
 function admin_icon(string $name): string
