@@ -10,17 +10,12 @@ $userName = $isAdmin
     ? ($_SESSION['admin_name'] ?? 'مدیر')
     : ($_SESSION['customer_name'] ?? 'کاربر');
 ?>
-
 <!DOCTYPE html>
 <html lang="fa" dir="rtl">
 
 <head>
-
     <meta charset="UTF-8">
-
-    <meta
-        name="viewport"
-        content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
 
     <title>
         <?= htmlspecialchars(
@@ -32,8 +27,299 @@ $userName = $isAdmin
 
     <link
         rel="stylesheet"
-        href="/assets/css/app.css?v=18">
+        href="/assets/css/app.css?v=20">
 
+    <style>
+        /* ══════════ Auth Modal ══════════ */
+
+        .auth-modal-overlay {
+            position: fixed;
+            inset: 0;
+            z-index: 9999;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: 18px;
+            background: rgba(18, 32, 38, .56);
+            opacity: 0;
+            visibility: hidden;
+            pointer-events: none;
+            transition: opacity .22s ease, visibility .22s ease;
+        }
+
+        .auth-modal-overlay.show {
+            opacity: 1;
+            visibility: visible;
+            pointer-events: auto;
+        }
+
+        .auth-modal {
+            position: relative;
+            width: min(430px, 100%);
+            max-height: calc(100svh - 36px);
+            overflow: hidden;
+            border: 1px solid #e6e0d8;
+            border-radius: 22px;
+            background: #fff;
+            box-shadow: 0 25px 80px rgba(18, 35, 42, .18);
+        }
+
+        .auth-modal-close {
+            position: absolute;
+            top: 12px;
+            left: 12px;
+            z-index: 5;
+            width: 32px;
+            height: 32px;
+            display: grid;
+            place-items: center;
+            border: 1px solid #e4e8e9;
+            border-radius: 10px;
+            background: #fff;
+            color: #637179;
+            font-family: inherit;
+            font-size: 22px;
+            line-height: 1;
+            cursor: pointer;
+        }
+
+        .auth-tabs {
+            position: relative;
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            margin: 20px 20px 0;
+            padding: 4px;
+            border-radius: 12px;
+            background: #f2f5f5;
+        }
+
+        .auth-tab {
+            position: relative;
+            z-index: 2;
+            height: 40px;
+            border: 0;
+            border-radius: 9px;
+            background: transparent;
+            color: #809097;
+            font-family: inherit;
+            font-size: 12px;
+            font-weight: 800;
+            cursor: pointer;
+        }
+
+        .auth-tab.active {
+            color: #24434e;
+        }
+
+        .auth-tab-slider {
+            position: absolute;
+            top: 4px;
+            right: 4px;
+            width: calc(50% - 4px);
+            height: 40px;
+            border-radius: 9px;
+            background: #fff;
+            box-shadow: 0 2px 10px rgba(22, 42, 49, .07);
+            transition: transform .22s ease;
+        }
+
+        .auth-tabs.register-mode .auth-tab-slider {
+            transform: translateX(-100%);
+        }
+
+        .auth-modal .auth-pane {
+            display: none;
+            padding: 20px 24px 24px;
+            overflow-y: auto;
+            max-height: calc(100svh - 125px);
+        }
+
+        .auth-modal .auth-pane.active {
+            display: block;
+        }
+
+        .auth-pane-top {
+            margin-bottom: 16px;
+            padding-left: 30px;
+        }
+
+        .auth-pane-kicker {
+            display: block;
+            margin-bottom: 5px;
+            color: #87959a;
+            font-size: 9px;
+            font-weight: 800;
+        }
+
+        .auth-pane-title {
+            margin: 0 0 6px;
+            color: #263d45;
+            font-size: 21px;
+            font-weight: 900;
+        }
+
+        .auth-pane-note {
+            margin: 0;
+            color: #8a969b;
+            font-size: 10px;
+            line-height: 1.8;
+        }
+
+        .auth-modal .form-field {
+            margin-bottom: 12px;
+        }
+
+        .auth-modal .form-field label {
+            display: block;
+            margin-bottom: 6px;
+            color: #3a4d54;
+            font-size: 11px;
+            font-weight: 800;
+        }
+
+        .auth-modal .form-field input {
+            width: 100%;
+            height: 44px;
+            padding: 0 12px;
+            box-sizing: border-box;
+            border: 1px solid #dce3e6;
+            border-radius: 11px;
+            background: #fbfcfc;
+            color: #243840;
+            font-family: inherit;
+            font-size: 13px;
+            outline: none;
+            transition: .18s ease;
+        }
+
+        .auth-modal .form-field input:focus {
+            background: #fff;
+            border-color: #6d9aa6;
+            box-shadow: 0 0 0 4px rgba(109, 154, 166, .10);
+        }
+
+        .auth-modal .r-btn {
+            width: 100%;
+            min-height: 44px;
+        }
+
+        .auth-modal .form-error {
+            display: none;
+            margin-bottom: 12px;
+            padding: 9px 11px;
+            border: 1px solid #edd0cb;
+            border-radius: 10px;
+            background: #fff6f4;
+            color: #b04c43;
+            font-size: 10px;
+            line-height: 1.8;
+        }
+
+        .auth-trigger {
+            border: 0;
+            cursor: pointer;
+            font-family: inherit;
+        }
+
+        .header-account {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .header-account-btn {
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            min-height: 38px;
+            padding: 0 13px;
+            border: 1px solid #dce4e6;
+            border-radius: 10px;
+            background: #fff;
+            color: #466b76;
+            text-decoration: none;
+            font-size: 10px;
+            font-weight: 800;
+        }
+
+        .header-account-logout {
+            color: #9c6963;
+            text-decoration: none;
+            font-size: 10px;
+            font-weight: 800;
+        }
+
+        .header-account-name {
+            color: #445860;
+            font-size: 10px;
+            font-weight: 800;
+            max-width: 120px;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            white-space: nowrap;
+        }
+
+        .header-user-state {
+            display: inline-flex;
+            align-items: center;
+            gap: 7px;
+            color: #728289;
+            font-size: 10px;
+            font-weight: 700;
+        }
+
+        .header-user-state.admin {
+            color: #496d78;
+        }
+
+        .header-user-dot {
+            width: 7px;
+            height: 7px;
+            border-radius: 50%;
+            background: #5e9a87;
+        }
+
+        /* موبایل */
+
+        @media (max-width: 760px) {
+
+            .header-center {
+                display: none;
+            }
+
+            .header-account-name,
+            .header-account-logout,
+            .header-account-btn {
+                display: none;
+            }
+
+            .header-account .auth-trigger {
+                min-height: 36px;
+                padding: 0 11px;
+                font-size: 10px;
+            }
+
+            .auth-modal-overlay {
+                align-items: flex-end;
+                padding: 0;
+            }
+
+            .auth-modal {
+                width: 100%;
+                border-radius: 20px 20px 0 0;
+                max-height: 90svh;
+            }
+
+            .auth-modal .auth-pane {
+                max-height: calc(90svh - 110px);
+                padding: 18px 18px 22px;
+            }
+
+            .auth-tabs {
+                margin: 14px 14px 0;
+            }
+        }
+    </style>
 </head>
 
 <body class="app-body">
@@ -52,8 +338,6 @@ $userName = $isAdmin
 
         <div class="header-inner">
 
-            <!-- راست -->
-
             <div class="header-right">
 
                 <button
@@ -69,18 +353,11 @@ $userName = $isAdmin
                 <a
                     href="/"
                     class="brand r6-brand">
-                    <span class="r6-logo">
-                        رابطی
-                    </span>
-
-                    <span class="r6-logo-en">
-                        RABETI
-                    </span>
+                    <span class="r6-logo">رابطی</span>
+                    <span class="r6-logo-en">RABETI</span>
                 </a>
 
             </div>
-
-            <!-- مرکز -->
 
             <div class="header-center">
 
@@ -95,7 +372,6 @@ $userName = $isAdmin
 
                     <div class="header-user-state">
                         <span class="header-user-dot"></span>
-
                         <span>
                             خوش آمدید،
                             <?= htmlspecialchars(
@@ -110,8 +386,6 @@ $userName = $isAdmin
 
             </div>
 
-            <!-- چپ -->
-
             <div class="header-left">
 
                 <a
@@ -119,14 +393,13 @@ $userName = $isAdmin
                     class="header-action-btn"
                     title="سبد خرید"
                     aria-label="سبد خرید">
-
                     <svg
                         width="19"
                         height="19"
-                        viewBox="0 0 24 24"
                         fill="none"
                         stroke="currentColor"
-                        stroke-width="1.8">
+                        stroke-width="1.8"
+                        viewBox="0 0 24 24">
                         <path
                             stroke-linecap="round"
                             stroke-linejoin="round"
@@ -139,12 +412,9 @@ $userName = $isAdmin
                         style="display:none;">
                         ۰
                     </span>
-
                 </a>
 
-                <div
-                    class="header-account"
-                    id="headerAccount">
+                <div class="header-account">
 
                     <?php if ($isAdmin): ?>
 
@@ -180,7 +450,7 @@ $userName = $isAdmin
 
                         <button
                             type="button"
-                            class="r-btn r-btn-outline"
+                            class="r-btn r-btn-outline auth-trigger"
                             data-auth-open="login">
                             ورود / ثبت‌نام
                         </button>
@@ -218,23 +488,20 @@ $userName = $isAdmin
             <a
                 href="/"
                 class="brand r6-brand">
-                <span class="r6-logo">
-                    رابطی
-                </span>
-
-                <span class="r6-logo-en">
-                    RABETI
-                </span>
+                <span class="r6-logo">رابطی</span>
+                <span class="r6-logo-en">RABETI</span>
             </a>
 
         </div>
 
-        <div class="drawer-user-box">
+        <?php if ($isLoggedIn): ?>
 
-            <?php if ($isAdmin): ?>
+            <div class="drawer-user-box">
 
-                <span class="drawer-user-label">
-                    حساب مدیریت
+                <span>
+                    <?= $isAdmin
+                        ? 'حساب مدیریت'
+                        : 'حساب شما' ?>
                 </span>
 
                 <strong>
@@ -245,33 +512,9 @@ $userName = $isAdmin
                     ) ?>
                 </strong>
 
-            <?php elseif ($isCustomer): ?>
+            </div>
 
-                <span class="drawer-user-label">
-                    حساب شما
-                </span>
-
-                <strong>
-                    <?= htmlspecialchars(
-                        $userName,
-                        ENT_QUOTES,
-                        'UTF-8'
-                    ) ?>
-                </strong>
-
-            <?php else: ?>
-
-                <span class="drawer-user-label">
-                    خوش آمدید
-                </span>
-
-                <strong>
-                    به فروشگاه رابطی
-                </strong>
-
-            <?php endif; ?>
-
-        </div>
+        <?php endif; ?>
 
         <nav class="drawer-nav">
 
@@ -279,7 +522,7 @@ $userName = $isAdmin
 
                 <a
                     href="/admin"
-                    class="r6-drawer-link drawer-admin-link">
+                    class="r6-drawer-link">
                     پنل مدیریت
                 </a>
 
@@ -324,19 +567,12 @@ $userName = $isAdmin
             <?php if ($isLoggedIn): ?>
 
                 <a
-                    href="<?= $isAdmin ? '/admin/logout' : '/api/logout' ?>"
-                    class="r6-drawer-link drawer-logout-link">
+                    href="<?= $isAdmin
+                                ? '/admin/logout'
+                                : '/api/logout' ?>"
+                    class="r6-drawer-link">
                     خروج از حساب
                 </a>
-
-            <?php else: ?>
-
-                <button
-                    type="button"
-                    class="r6-drawer-link drawer-login-button"
-                    data-auth-open="login">
-                    ورود / ثبت‌نام
-                </button>
 
             <?php endif; ?>
 
@@ -360,13 +596,8 @@ $userName = $isAdmin
 
                 <div class="r6-footer-brand">
 
-                    <span class="r6-logo">
-                        رابطی
-                    </span>
-
-                    <span class="r6-logo-en">
-                        RABETI
-                    </span>
+                    <span class="r6-logo">رابطی</span>
+                    <span class="r6-logo-en">RABETI</span>
 
                     <p>
                         تولید و پخش عمده جوراب با قیمت همکاری،
@@ -426,71 +657,19 @@ $userName = $isAdmin
         class="bottom-nav"
         aria-label="ناوبری اصلی">
 
-        <a
-            href="/"
-            class="bn-item">
-            <svg
-                viewBox="0 0 24 24"
-                fill="none"
-                stroke="currentColor"
-                stroke-width="1.9">
-                <path
-                    stroke-linecap="round"
-                    stroke-linejoin="round"
-                    d="M2.25 12l8.95-8.95a1.5 1.5 0 012.1 0L22.25 12M4.5 9.75v10.5h6v-6h3v6h6V9.75" />
-            </svg>
-
+        <a href="/" class="bn-item">
             <span>خانه</span>
         </a>
 
-        <a
-            href="/products"
-            class="bn-item">
-            <svg
-                viewBox="0 0 24 24"
-                fill="none"
-                stroke="currentColor"
-                stroke-width="1.9">
-                <path
-                    stroke-linecap="round"
-                    stroke-linejoin="round"
-                    d="M3.75 6A2.25 2.25 0 016 3.75h2.25A2.25 2.25 0 0110.5 6v2.25a2.25 2.25 0 01-2.25 2.25H6a2.25 2.25 0 01-2.25-2.25V6zM13.5 15.75a2.25 2.25 0 012.25-2.25H18a2.25 2.25 0 012.25 2.25V18A2.25 2.25 0 0118 20.25h-2.25A2.25 2.25 0 0113.5 18v-2.25z" />
-            </svg>
-
+        <a href="/products" class="bn-item">
             <span>دسته‌بندی</span>
         </a>
 
-        <a
-            href="/products"
-            class="bn-item">
-            <svg
-                viewBox="0 0 24 24"
-                fill="none"
-                stroke="currentColor"
-                stroke-width="1.9">
-                <path
-                    stroke-linecap="round"
-                    stroke-linejoin="round"
-                    d="M21 21l-5.2-5.2M16.8 10.4a6.4 6.4 0 11-12.8 0 6.4 6.4 0 0112.8 0z" />
-            </svg>
-
+        <a href="/products" class="bn-item">
             <span>جستجو</span>
         </a>
 
-        <a
-            href="/custom-order"
-            class="bn-item">
-            <svg
-                viewBox="0 0 24 24"
-                fill="none"
-                stroke="currentColor"
-                stroke-width="1.9">
-                <path
-                    stroke-linecap="round"
-                    stroke-linejoin="round"
-                    d="M12 3.5l2.4 5.2 5.6.7-4.1 3.9 1.1 5.5-5-2.7-5 2.7 1.1-5.5L4 9.4l5.6-.7L12 3.5z" />
-            </svg>
-
+        <a href="/custom-order" class="bn-item">
             <span>سفارش</span>
         </a>
 
@@ -499,17 +678,6 @@ $userName = $isAdmin
             <a
                 href="/admin"
                 class="bn-item">
-                <svg
-                    viewBox="0 0 24 24"
-                    fill="none"
-                    stroke="currentColor"
-                    stroke-width="1.9">
-                    <path
-                        stroke-linecap="round"
-                        stroke-linejoin="round"
-                        d="M15.75 6a3.75 3.75 0 11-7.5 0 3.75 3.75 0 017.5 0zM4.5 20.25a8.25 8.25 0 0115 0" />
-                </svg>
-
                 <span>پنل</span>
             </a>
 
@@ -518,17 +686,6 @@ $userName = $isAdmin
             <a
                 href="/api/logout"
                 class="bn-item">
-                <svg
-                    viewBox="0 0 24 24"
-                    fill="none"
-                    stroke="currentColor"
-                    stroke-width="1.9">
-                    <path
-                        stroke-linecap="round"
-                        stroke-linejoin="round"
-                        d="M9 6.5a3.5 3.5 0 117 0M4.5 20a7.5 7.5 0 0115 0" />
-                </svg>
-
                 <span>خروج</span>
             </a>
 
@@ -538,17 +695,6 @@ $userName = $isAdmin
                 type="button"
                 class="bn-item"
                 data-auth-open="login">
-                <svg
-                    viewBox="0 0 24 24"
-                    fill="none"
-                    stroke="currentColor"
-                    stroke-width="1.9">
-                    <path
-                        stroke-linecap="round"
-                        stroke-linejoin="round"
-                        d="M15.75 6a3.75 3.75 0 11-7.5 0 3.75 3.75 0 017.5 0zM4.5 20.25a8.25 8.25 0 0115 0" />
-                </svg>
-
                 <span>حساب</span>
             </button>
 
@@ -565,8 +711,7 @@ $userName = $isAdmin
         <div
             class="auth-modal"
             role="dialog"
-            aria-modal="true"
-            aria-labelledby="authModalTitle">
+            aria-modal="true">
 
             <button
                 type="button"
@@ -611,22 +756,19 @@ $userName = $isAdmin
                         حساب رابطی
                     </span>
 
-                    <h3
-                        class="auth-pane-title"
-                        id="authModalTitle">
+                    <h3 class="auth-pane-title">
                         ورود به حساب
                     </h3>
 
                     <p class="auth-pane-note">
-                        برای ادامه سفارش و مشاهده وضعیت حساب وارد شوید.
+                        برای ادامه سفارش وارد حساب خود شوید.
                     </p>
 
                 </div>
 
                 <div
                     class="form-error"
-                    id="loginError"
-                    style="display:none;"></div>
+                    id="loginError"></div>
 
                 <div class="form-field">
 
@@ -664,19 +806,20 @@ $userName = $isAdmin
 
                 <button
                     type="submit"
-                    class="r-btn r-btn-primary co-submit"
+                    class="r-btn r-btn-primary"
                     id="loginBtn">
                     ورود
                 </button>
 
             </form>
 
-            <!-- ثبت نام -->
+            <!-- ثبت‌نام -->
 
             <form
                 class="auth-pane"
                 id="pane-register"
-                method="post">
+                method="post"
+                novalidate>
 
                 <div class="auth-pane-top">
 
@@ -685,14 +828,18 @@ $userName = $isAdmin
                     </span>
 
                     <h3 class="auth-pane-title">
-                        ثبت‌نام
+                        ایجاد حساب
                     </h3>
 
                     <p class="auth-pane-note">
-                        اطلاعات شما پس از ثبت، طبق روند فروشگاه بررسی می‌شود.
+                        اطلاعات خود را وارد کنید تا حساب شما ساخته شود.
                     </p>
 
                 </div>
+
+                <div
+                    class="form-error"
+                    id="registerError"></div>
 
                 <div class="form-field">
 
@@ -717,15 +864,14 @@ $userName = $isAdmin
                     <input
                         type="text"
                         name="company_name"
-                        autocomplete="organization"
-                        required>
+                        autocomplete="organization">
 
                 </div>
 
                 <div class="form-field">
 
                     <label>
-                        موبایل
+                        شماره موبایل
                     </label>
 
                     <input
@@ -772,7 +918,8 @@ $userName = $isAdmin
 
                 <button
                     type="submit"
-                    class="r-btn r-btn-primary co-submit">
+                    class="r-btn r-btn-primary"
+                    id="registerBtn">
                     ایجاد حساب
                 </button>
 
@@ -782,7 +929,7 @@ $userName = $isAdmin
 
     </div>
 
-    <script src="/assets/js/app.js?v=18"></script>
+    <script src="/assets/js/app.js?v=20"></script>
 
 </body>
 
