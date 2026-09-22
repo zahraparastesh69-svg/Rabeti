@@ -1,11 +1,10 @@
-
 <?php
-
+require_once __DIR__ . '/../../config/bootstrap.php';
 require_once ROOT_PATH . '/config/database.php';
 require_once ROOT_PATH . '/config/upload.php';
 require_once ROOT_PATH . '/config/auth.php';
-
 require_admin();
+
 
 $db = db();
 
@@ -35,7 +34,6 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         if (mb_strlen($name) < 2) {
 
             $error = 'نام دسته‌بندی باید حداقل ۲ حرف باشد.';
-
         } else {
 
             /*
@@ -104,11 +102,9 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         if ($id <= 0) {
 
             $error = 'دسته‌بندی نامعتبر است.';
-
         } elseif (mb_strlen($name) < 2) {
 
             $error = 'نام دسته‌بندی باید حداقل ۲ حرف باشد.';
-
         } else {
 
             /*
@@ -128,7 +124,6 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             if (!$category) {
 
                 $error = 'دسته‌بندی پیدا نشد.';
-
             } else {
 
                 /*
@@ -250,7 +245,6 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 $error = 'این دسته‌بندی دارای ' .
                     number_format($productCount) .
                     ' محصول است و فعلاً قابل حذف نیست. ابتدا محصولات آن را جابه‌جا کنید.';
-
             } else {
 
                 $stmt = $db->prepare("
