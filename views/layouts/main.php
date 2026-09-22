@@ -11,7 +11,7 @@ $userName = $isAdmin
     : ($_SESSION['customer_name'] ?? 'کاربر');
 ?>
 <?php
- $cartCount = 0;
+$cartCount = 0;
 if (is_logged_in()) {
     try {
         $uid = (int)($_SESSION['admin_id'] ?? $_SESSION['customer_id'] ?? 0);
@@ -23,9 +23,10 @@ if (is_logged_in()) {
         ");
         $stmt->execute([$uid]);
         $cartCount = (int)$stmt->fetchColumn();
-    } catch (Throwable $e) {}
+    } catch (Throwable $e) {
+    }
 }
-}
+
 ?>
 <!DOCTYPE html>
 <html lang="fa" dir="rtl">
