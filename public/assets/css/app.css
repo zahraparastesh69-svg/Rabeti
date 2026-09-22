@@ -2820,11 +2820,11 @@ body.app-body {
     gap: 6px;
   }
   .header-center {
-  display: flex;
-  align-items: center;
-  text-align: center;
-  gap: 10px;
-}
+    display: flex;
+    align-items: center;
+    text-align: center;
+    gap: 10px;
+  }
   .header-action-btn,
   .hamburger {
     width: 38px;
@@ -4112,5 +4112,34 @@ body.app-body {
     height: 30px;
 
     font-size: 20px;
+  }
+}
+/* ── مودال ورود در موبایل: وسط صفحه واقعی ── */
+@media (max-width: 760px) {
+  .auth-modal-overlay {
+    align-items: flex-start; /* از بالا شروع */
+    padding: 0;
+  }
+  .auth-modal {
+    max-width: 100%;
+    min-height: 100dvh; /* تمام صفحه */
+    max-height: 100dvh;
+    border-radius: 0;
+    padding: 24px 20px 40px;
+    /* محتوا را در وسط عمودی قرار بده */
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+  }
+  .auth-modal-close {
+    position: fixed; /* همیشه در دسترس */
+    top: 12px;
+    left: 12px;
+    z-index: 10;
+  }
+  /* دکمه بستن روی پس‌زمینه محو بهتر دیده شود */
+  .auth-modal-overlay::before {
+    content: "×";
+    display: none;
   }
 }
