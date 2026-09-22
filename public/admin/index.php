@@ -30,6 +30,7 @@ $countCats = (int)db()->query("
     FROM categories
     WHERE is_active = 1
 ")->fetchColumn();
+$countPendingCustomers = (int)db()->query("SELECT COUNT(*) FROM companies WHERE status='pending'")->fetchColumn();
 
 $latestCustom = db()->query("
     SELECT
