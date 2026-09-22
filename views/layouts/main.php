@@ -359,33 +359,6 @@ $userName = $isAdmin
 
             </div>
 
-            <div class="header-center">
-
-                <?php if ($isAdmin): ?>
-
-                    <div class="header-user-state admin">
-                        <span class="header-user-dot"></span>
-                        <span>مدیریت</span>
-                    </div>
-
-                <?php elseif ($isCustomer): ?>
-
-                    <div class="header-user-state">
-                        <span class="header-user-dot"></span>
-                        <span>
-                            خوش آمدید،
-                            <?= htmlspecialchars(
-                                $userName,
-                                ENT_QUOTES,
-                                'UTF-8'
-                            ) ?>
-                        </span>
-                    </div>
-
-                <?php endif; ?>
-
-            </div>
-
             <div class="header-left">
 
                 <a

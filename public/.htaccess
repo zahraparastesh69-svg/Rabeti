@@ -25,3 +25,4 @@ RewriteRule ^api/login/?$  api/login.php  [L,QSA]
 RewriteRule ^api/logout/?$ api/logout.php [L,QSA]
 
 RewriteRule ^api/register/?$ api/register.php [L,QSA]
+sock-b2b.local/admin/products?action=edit&id=1
