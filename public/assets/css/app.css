@@ -266,15 +266,16 @@ img {
 }
 .header-action-btn {
   position: relative;
+  padding: 10px;
   width: 40px;
   height: 40px;
-  border: 1px solid var(--r6-line);
+  /* border: 1px solid var(--r6-line);
   border-radius: 11px;
-  background: #fff;
-  color: var(--r6-dark);
+  background: #fff; */
+  /* color: var(--r6-dark); */
   display: grid;
   place-items: center;
-  transition: 0.2s ease;
+  transition: 0.1s ease;
 }
 .header-action-btn:hover {
   border-color: var(--r6-brand);
@@ -329,6 +330,7 @@ img {
 .user-chip-name {
   font-size: 13px;
   font-weight: 700;
+  text-align: center;
 }
 .caret {
   transition: transform 0.2s;
@@ -2817,6 +2819,12 @@ body.app-body {
   .header-left {
     gap: 6px;
   }
+  .header-center {
+  display: flex;
+  align-items: center;
+  text-align: center;
+  gap: 10px;
+}
   .header-action-btn,
   .hamburger {
     width: 38px;
@@ -3110,12 +3118,23 @@ body.app-body {
   overflow: hidden;
   background: var(--r6-cream);
 }
+.r6-hero-picture {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  display: block;
+}
+
 .r6-hero-img {
   position: absolute;
   inset: 0;
   width: 100%;
   height: 100%;
-  object-fit: cover;
+  object-fit: contain;
+  object-position: center;
+  display: block;
+  background: var(--r6-cream);
 }
 .r6-hero-fade {
   position: absolute;
@@ -3583,7 +3602,7 @@ body.app-body {
   border-bottom: 1px solid var(--r6-line);
 }
 .r6-drawer-link::after {
-  content: "←";
+  /* content: "←"; */
   color: var(--r6-text);
   font-size: 0.95rem;
 }
@@ -3596,7 +3615,6 @@ body.app-body {
 }
 .r6-drawer-foot {
   padding: 16px;
-  border-top: 1px solid var(--r6-line);
 }
 .r6-drawer-foot .r-btn {
   width: 100%;
@@ -3633,5 +3651,466 @@ body.app-body {
   }
   .r6-basket {
     padding: 20px 18px;
+  }
+}
+/* =========================================================
+   MOBILE DRAWER FOOTER
+   ========================================================= */
+
+.r6-drawer-foot {
+  width: 100%;
+  box-sizing: border-box;
+  padding: 12px 14px;
+}
+
+.r6-drawer-foot .r-btn {
+  width: 100%;
+  max-width: 100%;
+  min-width: 0;
+  box-sizing: border-box;
+}
+
+/* دکمه ورود / ثبت‌نام */
+.r6-drawer-foot .r-btn-outline {
+  width: 100%;
+  min-height: 42px;
+  height: auto;
+
+  padding: 9px 12px;
+
+  box-sizing: border-box;
+
+  border: 1.5px solid var(--r6-brand);
+  border-radius: 10px;
+
+  font-size: 14px;
+  line-height: 1.4;
+  white-space: nowrap;
+
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+/* موبایل */
+@media (max-width: 760px) {
+  .r6-drawer-foot {
+    width: 100%;
+    padding: 10px 12px;
+    box-sizing: border-box;
+  }
+
+  .r6-drawer-foot .r-btn-outline {
+    width: 100%;
+    max-width: 100%;
+    min-height: 42px;
+
+    padding: 8px 10px;
+
+    border-radius: 9px;
+
+    font-size: 13px;
+  }
+}
+
+/* موبایل‌های خیلی کوچک */
+@media (max-width: 430px) {
+  .r6-drawer-foot {
+    padding: 9px 10px;
+  }
+
+  .r6-drawer-foot .r-btn-outline {
+    min-height: 40px;
+    padding: 7px 8px;
+    font-size: 13px;
+    border-radius: 8px;
+  }
+}
+
+/* =========================================================
+   R6 HERO / ROTATING BANNER
+   هدف:
+   - تصویر کامل دیده شود
+   - هیچ Crop اتفاق نیفتد
+   - متن روی بنر قرار بگیرد
+   - دسکتاپ بنر بزرگ و تمیز باشد
+   - موبایل حدود یک‌سوم ارتفاع صفحه باشد
+   ========================================================= */
+/* ============================================================
+   HERO SLIDER
+============================================================ */
+
+.r6-hero {
+  position: relative;
+  width: 100%;
+  height: 480px;
+  overflow: hidden;
+  background: var(--r6-cream);
+  color: var(--r6-text);
+}
+
+/* ------------------------------------------------------------
+   لایه اسلایدها
+------------------------------------------------------------ */
+
+.r6-hero-slides {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+}
+
+/* ------------------------------------------------------------
+   هر اسلاید
+------------------------------------------------------------ */
+
+.r6-hero-slide {
+  position: absolute;
+  inset: 0;
+
+  width: 100%;
+  height: 100%;
+
+  opacity: 0;
+  visibility: hidden;
+
+  transition:
+    opacity 0.65s ease,
+    visibility 0.65s ease;
+
+  pointer-events: none;
+}
+
+/* فقط اسلاید فعال */
+
+.r6-hero-slide.is-active {
+  opacity: 1;
+  visibility: visible;
+  pointer-events: auto;
+  z-index: 1;
+}
+
+/* ------------------------------------------------------------
+   تصویر
+------------------------------------------------------------ */
+
+.r6-hero-picture {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  display: block;
+}
+
+.r6-hero-img {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
+  object-position: center;
+  display: block;
+  background: var(--r6-cream);
+}
+
+/* ------------------------------------------------------------
+   لایه خوانایی متن
+------------------------------------------------------------ */
+
+.r6-hero-fade {
+  position: absolute;
+  inset: 0;
+
+  z-index: 1;
+
+  background: linear-gradient(
+    to top,
+    rgba(245, 239, 228, 0.97) 0%,
+    rgba(245, 239, 228, 0.82) 25%,
+    rgba(245, 239, 228, 0.2) 55%,
+    rgba(245, 239, 228, 0) 75%
+  );
+
+  pointer-events: none;
+}
+
+/* ------------------------------------------------------------
+   محتوای روی بنر
+------------------------------------------------------------ */
+
+.r6-hero-content {
+  position: absolute;
+
+  left: 0;
+  right: 0;
+  bottom: 0;
+
+  z-index: 2;
+
+  width: 100%;
+  max-width: 1280px;
+
+  margin: 0 auto;
+
+  padding: 26px 22px 32px;
+
+  box-sizing: border-box;
+}
+
+/* ------------------------------------------------------------
+   متن
+------------------------------------------------------------ */
+
+.r6-hero-content h1 {
+  margin: 0 0 10px;
+
+  font-size: clamp(1.8rem, 5vw, 2.8rem);
+  line-height: 1.4;
+  font-weight: 800;
+
+  color: var(--r6-text);
+}
+
+.r6-hero-content p {
+  margin: 0 0 20px;
+
+  max-width: 700px;
+
+  color: var(--r6-mut);
+
+  font-size: 0.95rem;
+  line-height: 2;
+}
+
+/* ------------------------------------------------------------
+   دکمه‌ها
+------------------------------------------------------------ */
+
+.r6-hero-cta {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+
+.r6-hero-cta .r-btn {
+  min-width: 160px;
+}
+
+/* ------------------------------------------------------------
+   دکمه قبلی / بعدی
+------------------------------------------------------------ */
+
+.r6-hero-prev,
+.r6-hero-next {
+  position: absolute;
+
+  top: 50%;
+
+  z-index: 10;
+
+  width: 44px;
+  height: 44px;
+
+  transform: translateY(-50%);
+
+  display: flex;
+  align-items: center;
+  justify-content: center;
+
+  border: 1px solid rgba(255, 255, 255, 0.55);
+  border-radius: 50%;
+
+  background: rgba(27, 63, 80, 0.55);
+  color: #fff;
+
+  font-family: inherit;
+  font-size: 30px;
+  line-height: 1;
+
+  cursor: pointer;
+
+  backdrop-filter: blur(6px);
+
+  transition:
+    background 0.2s ease,
+    transform 0.2s ease;
+}
+
+.r6-hero-prev:hover,
+.r6-hero-next:hover {
+  background: rgba(27, 63, 80, 0.82);
+}
+
+.r6-hero-prev {
+  right: 20px;
+}
+
+.r6-hero-next {
+  left: 20px;
+}
+
+/* ------------------------------------------------------------
+   نقطه‌های اسلایدر
+------------------------------------------------------------ */
+
+.r6-hero-dots {
+  position: absolute;
+
+  left: 50%;
+  bottom: 16px;
+
+  z-index: 10;
+
+  transform: translateX(-50%);
+
+  display: flex;
+  align-items: center;
+  gap: 7px;
+}
+
+.r6-hero-dot {
+  width: 8px;
+  height: 8px;
+
+  padding: 0;
+
+  border: 0;
+  border-radius: 50%;
+
+  background: rgba(27, 63, 80, 0.35);
+
+  cursor: pointer;
+
+  transition:
+    width 0.25s ease,
+    background 0.25s ease;
+}
+
+.r6-hero-dot.is-active {
+  width: 24px;
+
+  border-radius: 10px;
+
+  background: var(--r6-brand);
+}
+
+/* ------------------------------------------------------------
+   حالت بدون بنر
+------------------------------------------------------------ */
+
+.r6-hero-empty {
+  position: absolute;
+  inset: 0;
+
+  display: flex;
+  flex-direction: column;
+
+  align-items: center;
+  justify-content: center;
+
+  text-align: center;
+
+  padding: 30px;
+}
+
+/* ============================================================
+   MOBILE
+============================================================ */
+
+@media (max-width: 760px) {
+  .r6-hero {
+    /*
+     * تقریباً یک‌سوم ارتفاع موبایل
+     */
+    height: clamp(220px, 30svh, 280px);
+  }
+
+  .r6-hero-content {
+    padding: 18px 15px 22px;
+  }
+
+  .r6-hero-content h1 {
+    font-size: clamp(1.45rem, 7vw, 2rem);
+    margin-bottom: 6px;
+  }
+
+  .r6-hero-content p {
+    font-size: 0.78rem;
+    line-height: 1.8;
+
+    margin-bottom: 12px;
+
+    display: -webkit-box;
+    -webkit-line-clamp: 2;
+    -webkit-box-orient: vertical;
+    overflow: hidden;
+  }
+
+  .r6-hero-cta {
+    gap: 7px;
+  }
+
+  .r6-hero-cta .r-btn {
+    min-width: 0;
+    flex: 1;
+
+    padding: 9px 10px;
+
+    font-size: 12px;
+  }
+
+  .r6-hero-prev,
+  .r6-hero-next {
+    width: 34px;
+    height: 34px;
+
+    font-size: 23px;
+  }
+
+  .r6-hero-prev {
+    right: 9px;
+  }
+
+  .r6-hero-next {
+    left: 9px;
+  }
+
+  .r6-hero-dots {
+    bottom: 8px;
+  }
+}
+
+/* ============================================================
+   SMALL MOBILE
+============================================================ */
+
+@media (max-width: 430px) {
+  .r6-hero {
+    height: clamp(200px, 30svh, 260px);
+  }
+
+  .r6-hero-content {
+    padding: 14px 12px 18px;
+  }
+
+  .r6-hero-content h1 {
+    font-size: 1.35rem;
+  }
+
+  .r6-hero-content p {
+    font-size: 0.73rem;
+  }
+
+  .r6-hero-cta .r-btn {
+    font-size: 11px;
+  }
+
+  .r6-hero-prev,
+  .r6-hero-next {
+    width: 30px;
+    height: 30px;
+
+    font-size: 20px;
   }
 }

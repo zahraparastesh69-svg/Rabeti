@@ -1,10 +1,14 @@
 <?php
+// admin/logout.php
 
 require_once __DIR__ . '/../../config/database.php';
 require_once ROOT_PATH . '/config/auth.php';
 
-require_admin();
+$wasAdmin = is_admin_logged_in();
 
-session_destroy();
+if ($wasAdmin) {
+    logout_session();
+}
+
 header('Location: /admin/login');
 exit;
