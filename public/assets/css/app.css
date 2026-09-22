@@ -4225,3 +4225,16 @@ body.app-body {
   }
   .cart-item-side .stepper { width: 100px; }
 }
+
+/* ═══ Checkout ═══ */
+.checkout-grid { display:grid; grid-template-columns:1fr; gap:18px; margin-top:18px; }
+@media (min-width:900px) { .checkout-grid { grid-template-columns:1fr 1.5fr; align-items:start; } }
+.checkout-summary { background:#fff; border:1px solid var(--line); border-radius:var(--r2); padding:18px 20px; }
+.checkout-summary > b { display:block; font-size:.95rem; margin-bottom:12px; }
+.cs-row { display:flex; justify-content:space-between; gap:10px; font-size:.8rem; padding:6px 0; color:var(--text-2); }
+.cs-row b { color:var(--text); white-space:nowrap; }
+.cs-row small { color:var(--text-2); }
+.cs-total { border-top:1px dashed var(--line); margin-top:8px; padding-top:12px; font-size:.95rem; }
+.cs-total b { color:var(--brand); font-weight:800; }
+.cs-edit { display:block; margin-top:12px; font-size:.78rem; color:var(--brand); }
+.checkout-form { max-width:100%; }

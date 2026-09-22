@@ -29,3 +29,7 @@ RewriteRule ^api/register/?$ api/register.php [L,QSA]
 RewriteRule ^api/cart/?$ api/cart.php [L,QSA]
 
 RewriteRule ^cart/?$ cart.php [L,QSA]
+
+RewriteRule ^checkout/?$ checkout.php [L,QSA]
+
+RewriteRule ^order-success/?$ order-success.php [L,QSA]
