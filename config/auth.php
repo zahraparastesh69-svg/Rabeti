@@ -90,8 +90,11 @@ function attempt_admin_login(string $mobile, string $password): bool
 
     session_regenerate_id(true);
 
-    $_SESSION['admin_id']   = (int)$user['id'];
-    $_SESSION['admin_name'] = $user['full_name'];
+    $_SESSION['admin_id'] =
+        (int)$user['id'];
+
+    $_SESSION['admin_name'] =
+        $user['full_name'] ?? 'مدیر';
 
     unset(
         $_SESSION['customer_id'],
@@ -129,32 +132,38 @@ function register_customer(
 
     $pdo = db();
 
-    $fullName = trim($fullName);
-    $companyName = trim($companyName);
-    $mobile = trim($mobile);
+    $fullName =
+        trim($fullName);
+
+    $companyName =
+        trim($companyName);
+
+    $mobile =
+        trim($mobile);
 
     if ($fullName === '') {
         return [
             'ok' => false,
-            'error' => 'نام و نام خانوادگی را وارد کنید.'
+            'error' =>
+            'نام و نام خانوادگی را وارد کنید.'
         ];
     }
 
     if (!preg_match('/^09\d{9}$/', $mobile)) {
         return [
             'ok' => false,
-            'error' => 'شماره موبایل نامعتبر است.'
+            'error' =>
+            'شماره موبایل صحیح نیست.'
         ];
     }
 
     if (strlen($password) < 8) {
         return [
             'ok' => false,
-            'error' => 'رمز عبور باید حداقل ۸ کاراکتر باشد.'
+            'error' =>
+            'رمز عبور باید حداقل ۸ کاراکتر باشد.'
         ];
     }
-
-    /* بررسی شماره تکراری */
 
     $stmt = $pdo->prepare("
         SELECT id, role, is_active
@@ -165,32 +174,27 @@ function register_customer(
 
     $stmt->execute([$mobile]);
 
-    $existing = $stmt->fetch();
+    $existing =
+        $stmt->fetch();
 
     if ($existing) {
 
-        if (($existing['role'] ?? '') === 'admin') {
-            return [
-                'ok' => false,
-                'error' => 'این شماره موبایل قبلاً برای حساب مدیریت ثبت شده است.'
-            ];
-        }
-
         return [
             'ok' => false,
-            'error' => 'این شماره موبایل قبلاً ثبت‌نام کرده است.'
+            'error' =>
+            'این شماره موبایل قبلاً ثبت شده است.'
         ];
     }
 
-    $passwordHash = password_hash(
-        $password,
-        PASSWORD_DEFAULT
-    );
+    $passwordHash =
+        password_hash(
+            $password,
+            PASSWORD_DEFAULT
+        );
 
     /*
-     * بعضی نسخه‌های دیتابیس ممکن است company_name
-     * داشته باشند و بعضی نسخه‌ها نداشته باشند.
-     * بنابراین ستون‌ها را بررسی می‌کنیم.
+     * با توجه به تفاوت احتمالی نسخه‌های
+     * schema، ستون‌ها را قبل از INSERT بررسی می‌کنیم.
      */
 
     $columnsStmt = $pdo->query("
@@ -200,23 +204,29 @@ function register_customer(
           AND table_name = 'users'
     ");
 
-    $columns = $columnsStmt
+    $columns =
+        $columnsStmt
         ? $columnsStmt->fetchAll(PDO::FETCH_COLUMN)
         : [];
 
-    $hasCompanyName = in_array(
-        'company_name',
-        $columns,
-        true
-    );
+    $hasCompanyName =
+        in_array(
+            'company_name',
+            $columns,
+            true
+        );
 
-    $hasCreatedAt = in_array(
-        'created_at',
-        $columns,
-        true
-    );
+    $hasCreatedAt =
+        in_array(
+            'created_at',
+            $columns,
+            true
+        );
 
-    if ($hasCompanyName && $hasCreatedAt) {
+    if (
+        $hasCompanyName &&
+        $hasCreatedAt
+    ) {
 
         $stmt = $pdo->prepare("
             INSERT INTO users
@@ -229,7 +239,8 @@ function register_customer(
                 is_active,
                 created_at
             )
-            VALUES (?, ?, ?, ?, 'customer', 1, NOW())
+            VALUES
+            (?, ?, ?, ?, 'customer', 1, NOW())
         ");
 
         $stmt->execute([
@@ -250,7 +261,8 @@ function register_customer(
                 role,
                 is_active
             )
-            VALUES (?, ?, ?, ?, 'customer', 1)
+            VALUES
+            (?, ?, ?, ?, 'customer', 1)
         ");
 
         $stmt->execute([
@@ -271,7 +283,8 @@ function register_customer(
                 is_active,
                 created_at
             )
-            VALUES (?, ?, ?, 'customer', 1, NOW())
+            VALUES
+            (?, ?, ?, 'customer', 1, NOW())
         ");
 
         $stmt->execute([
@@ -290,7 +303,8 @@ function register_customer(
                 role,
                 is_active
             )
-            VALUES (?, ?, ?, 'customer', 1)
+            VALUES
+            (?, ?, ?, 'customer', 1)
         ");
 
         $stmt->execute([
@@ -300,14 +314,18 @@ function register_customer(
         ]);
     }
 
-    $customerId = (int)$pdo->lastInsertId();
+    $customerId =
+        (int)$pdo->lastInsertId();
 
-    /* ورود خودکار بعد از ثبت‌نام */
+    /* ورود خودکار */
 
     session_regenerate_id(true);
 
-    $_SESSION['customer_id']   = $customerId;
-    $_SESSION['customer_name'] = $fullName;
+    $_SESSION['customer_id'] =
+        $customerId;
+
+    $_SESSION['customer_name'] =
+        $fullName;
 
     unset(
         $_SESSION['admin_id'],
@@ -326,14 +344,17 @@ function register_customer(
 function require_admin(): void
 {
     if (!is_admin_logged_in()) {
-        header('Location: /admin/login');
+        header(
+            'Location: /admin/login'
+        );
         exit;
     }
 }
 
 function admin_name(): string
 {
-    return $_SESSION['admin_name'] ?? 'مدیر';
+    return $_SESSION['admin_name']
+        ?? 'مدیر';
 }
 
 /* ══════════ خروج کامل ══════════ */
@@ -344,7 +365,8 @@ function logout_session(): void
 
     if (ini_get('session.use_cookies')) {
 
-        $params = session_get_cookie_params();
+        $params =
+            session_get_cookie_params();
 
         setcookie(
             session_name(),
