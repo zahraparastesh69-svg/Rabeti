@@ -1,5 +1,5 @@
 <?php
-require __DIR__ . '/../config/database.php';
+require_once ROOT_PATH . '/config/database.php';
 
 $errors = [];
 $saved  = false;
@@ -136,4 +136,4 @@ ob_start();
 
 <?php
 $content = ob_get_clean();
-require __DIR__ . '/../views/layouts/main.php';
+require ROOT_PATH . '/views/layouts/main.php';

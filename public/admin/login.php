@@ -1,7 +1,7 @@
 <?php
 // admin/login.php
 
-require_once __DIR__ . '/../../config/database.php';
+require_once ROOT_PATH . '/config/database.php';
 require_once ROOT_PATH . '/config/auth.php';
 
 if (is_admin_logged_in()) {

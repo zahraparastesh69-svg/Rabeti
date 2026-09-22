@@ -1,5 +1,5 @@
 <?php
-require __DIR__ . '/../config/database.php';
+require_once ROOT_PATH . '/config/database.php';
 
 $h = static fn($v) => htmlspecialchars((string)$v, ENT_QUOTES, 'UTF-8');
 
@@ -880,5 +880,5 @@ ob_start();
 <?php
 $content = ob_get_clean();
 
-require __DIR__ . '/../views/layouts/main.php';
+require ROOT_PATH . '/views/layouts/main.php';
 ?>

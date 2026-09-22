@@ -1,5 +1,5 @@
 <?php
-require __DIR__ . '/../config/database.php';
+require_once ROOT_PATH . '/config/database.php';
 
 $h = static fn($v) => htmlspecialchars((string)$v, ENT_QUOTES, 'UTF-8');
 
@@ -24,7 +24,7 @@ if (!$product) {
     ob_start();
     echo '<div class="empty-state"><div class="empty-icon">🔍</div><h2>این محصول پیدا نشد</h2><a href="/products" class="btn btn-orange">مشاهده کاتالوگ</a></div>';
     $content = ob_get_clean();
-    require __DIR__ . '/../views/layouts/main.php';
+    require ROOT_PATH . '/views/layouts/main.php';
     exit;
 }
 
@@ -164,4 +164,4 @@ ob_start();
 
 <?php
 $content = ob_get_clean();
-require __DIR__ . '/../views/layouts/main.php';
+require ROOT_PATH . '/views/layouts/main.php';

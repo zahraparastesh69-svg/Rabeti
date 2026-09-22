@@ -1,6 +1,6 @@
 <?php
 
-require_once __DIR__ . '/../../config/database.php';
+require_once ROOT_PATH . '/config/database.php';
 require_once ROOT_PATH . '/config/auth.php';
 
 require_admin();
@@ -203,4 +203,4 @@ ob_start();
 
 <?php
 $content = ob_get_clean();
-require __DIR__ . '/../../views/layouts/admin.php';
+require ROOT_PATH . '/views/layouts/admin.php';

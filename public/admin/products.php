@@ -4,11 +4,11 @@ require_once ROOT_PATH . '/config/auth.php';
 
 require_admin();
 
-/* غیرفعال‌سازی (مخفی کردن) محصول */
+/* حذف نرم — محصول هرگز از DB پاک نمی‌شود */
 if ($_SERVER['REQUEST_METHOD'] === 'POST' && ($_POST['do'] ?? '') === 'deactivate') {
     $id = (int)($_POST['id'] ?? 0);
     if ($id > 0) {
-        db()->prepare("UPDATE products SET is_active = 0 WHERE id = ?")->execute([$id]);
+        db()->prepare("UPDATE products SET is_active=0 WHERE id=?")->execute([$id]);
         header('Location: /admin/products');
         exit;
     }
@@ -20,7 +20,7 @@ $products = db()->query("
            pr.price, inv.qty_available
     FROM products p
     JOIN categories c ON c.id = p.category_id
-    LEFT JOIN product_prices pr ON pr.product_id = p.id AND pr.customer_group = 'wholesale'
+    LEFT JOIN product_prices pr ON pr.product_id = p.id AND pr.customer_group='wholesale'
     LEFT JOIN inventory inv ON inv.product_id = p.id
     ORDER BY p.id DESC
 ")->fetchAll();
@@ -54,8 +54,7 @@ ob_start();
                 <tr style="<?= $p['is_active'] ? '' : 'opacity:.5;' ?>">
                     <td><b><?= htmlspecialchars($p['code']) ?></b></td>
                     <td>
-                        <a href="/product/<?= htmlspecialchars($p['slug']) ?>" target="_blank"
-                            style="color:var(--teal-800);">
+                        <a href="/product/<?= htmlspecialchars($p['slug']) ?>" target="_blank" style="color:var(--teal-700);">
                             <?= htmlspecialchars($p['name']) ?>
                         </a>
                     </td>
@@ -70,19 +69,12 @@ ob_start();
                     </td>
                     <td style="white-space:nowrap;">
                         <a href="/admin/products?action=edit&id=<?= (int)$p['id'] ?>"
-                            class="btn"
-                            style="padding:6px 14px;font-size:.72rem;background:var(--teal-100);color:var(--teal-800);">
-                            ویرایش
-                        </a>
+                            class="btn" style="padding:6px 14px;font-size:.72rem;background:var(--teal-100);color:var(--teal-800);">ویرایش</a>
                         <?php if ($p['is_active']): ?>
-                            <form method="post" style="display:inline;"
-                                onsubmit="return confirm('این محصول از فروشگاه مخفی شود؟')">
+                            <form method="post" style="display:inline;" onsubmit="return confirm('این محصول از فروشگاه مخفی شود؟')">
                                 <input type="hidden" name="do" value="deactivate">
                                 <input type="hidden" name="id" value="<?= (int)$p['id'] ?>">
-                                <button class="btn"
-                                    style="padding:6px 14px;font-size:.72rem;background:#fff0f0;color:#c62828;">
-                                    حذف
-                                </button>
+                                <button class="btn" style="padding:6px 14px;font-size:.72rem;background:#fff0f0;color:#c62828;">حذف</button>
                             </form>
                         <?php endif; ?>
                     </td>

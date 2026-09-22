@@ -1,7 +1,7 @@
 <?php
 // api/logout.php
 
-require_once __DIR__ . '/../../config/auth.php';
+require_once ROOT_PATH . '/config/auth.php';
 
 $wasAdmin = is_admin_logged_in();
 

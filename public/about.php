@@ -79,4 +79,4 @@ ob_start();
 
 <?php
 $content = ob_get_clean();
-require __DIR__ . '/../views/layouts/main.php';
+require ROOT_PATH . '/views/layouts/main.php';
