@@ -4,164 +4,116 @@
 require_once __DIR__ . '/../../config/database.php';
 require_once __DIR__ . '/../../config/auth.php';
 
-header(
-    'Content-Type: application/json; charset=utf-8'
-);
+header('Content-Type: application/json; charset=utf-8');
 
-if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
+function json_response(array $data, int $status = 200)
+{
+    http_response_code($status);
 
-    http_response_code(405);
-
-    echo json_encode([
-        'ok' => false,
-        'error' =>
-        'متد درخواست نامعتبر است.'
-    ], JSON_UNESCAPED_UNICODE);
-
-    exit;
-}
-
-$fullName =
-    trim($_POST['full_name'] ?? '');
-
-$companyName =
-    trim($_POST['company_name'] ?? '');
-
-$mobile =
-    trim($_POST['mobile'] ?? '');
-
-$password =
-    $_POST['password'] ?? '';
-
-$password2 =
-    $_POST['password2'] ?? '';
-
-/* ══════════ اعتبارسنجی ══════════ */
-
-if ($fullName === '') {
-
-    http_response_code(422);
-
-    echo json_encode([
-        'ok' => false,
-        'error' =>
-        'نام و نام خانوادگی را وارد کنید.'
-    ], JSON_UNESCAPED_UNICODE);
-
-    exit;
-}
-
-$mobile =
-    preg_replace(
-        '/[۰-۹]/u',
-        fn($d) =>
-        mb_strpos(
-            '۰۱۲۳۴۵۶۷۸۹',
-            $d
-        ),
-        $mobile
+    echo json_encode(
+        $data,
+        JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES
     );
 
-/*
- * تبدیل مطمئن اعداد فارسی
- */
-
-$mobileMap = [
-    '۰' => '0',
-    '۱' => '1',
-    '۲' => '2',
-    '۳' => '3',
-    '۴' => '4',
-    '۵' => '5',
-    '۶' => '6',
-    '۷' => '7',
-    '۸' => '8',
-    '۹' => '9',
-];
-
-$mobile =
-    strtr($mobile, $mobileMap);
-
-if (!preg_match('/^09\d{9}$/', $mobile)) {
-
-    http_response_code(422);
-
-    echo json_encode([
-        'ok' => false,
-        'error' =>
-        'شماره موبایل صحیح نیست.'
-    ], JSON_UNESCAPED_UNICODE);
-
     exit;
 }
 
-if (strlen($password) < 8) {
-
-    http_response_code(422);
-
-    echo json_encode([
-        'ok' => false,
-        'error' =>
-        'رمز عبور باید حداقل ۸ کاراکتر باشد.'
-    ], JSON_UNESCAPED_UNICODE);
-
-    exit;
+if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
+    json_response([
+        'ok'    => false,
+        'error' => 'متد درخواست نامعتبر است.'
+    ], 405);
 }
-
-if ($password !== $password2) {
-
-    http_response_code(422);
-
-    echo json_encode([
-        'ok' => false,
-        'error' =>
-        'تکرار رمز عبور صحیح نیست.'
-    ], JSON_UNESCAPED_UNICODE);
-
-    exit;
-}
-
-/* ══════════ ثبت در دیتابیس ══════════ */
 
 try {
+    $fullName = trim($_POST['full_name'] ?? '');
+    $companyName = trim($_POST['company_name'] ?? '');
+    $mobile = trim($_POST['mobile'] ?? '');
+    $password = $_POST['password'] ?? '';
+    $password2 = $_POST['password2'] ?? '';
 
-    $result =
-        register_customer(
-            $fullName,
-            $companyName,
-            $mobile,
-            $password
-        );
+    // تبدیل اعداد فارسی به انگلیسی
+    $mobile = strtr($mobile, [
+        '۰' => '0',
+        '۱' => '1',
+        '۲' => '2',
+        '۳' => '3',
+        '۴' => '4',
+        '۵' => '5',
+        '۶' => '6',
+        '۷' => '7',
+        '۸' => '8',
+        '۹' => '9',
+    ]);
 
-    if (!$result['ok']) {
-
-        http_response_code(409);
-
-        echo json_encode(
-            $result,
-            JSON_UNESCAPED_UNICODE
-        );
-
-        exit;
+    // اعتبارسنجی
+    if ($fullName === '') {
+        json_response([
+            'ok'    => false,
+            'error' => 'نام و نام خانوادگی را وارد کنید.'
+        ], 422);
     }
 
-    echo json_encode([
-        'ok' => true,
-        'role' => 'customer',
-        'name' => $result['name'],
-        'redirect' => '/'
-    ], JSON_UNESCAPED_UNICODE);
+    if (!preg_match('/^09\d{9}$/', $mobile)) {
+        json_response([
+            'ok'    => false,
+            'error' => 'شماره موبایل صحیح نیست.'
+        ], 422);
+    }
 
-    exit;
+    if (strlen($password) < 8) {
+        json_response([
+            'ok'    => false,
+            'error' => 'رمز عبور باید حداقل ۸ کاراکتر باشد.'
+        ], 422);
+    }
+
+    if ($password !== $password2) {
+        json_response([
+            'ok'    => false,
+            'error' => 'تکرار رمز عبور صحیح نیست.'
+        ], 422);
+    }
+
+    // ثبت مشتری
+    $result = register_customer(
+        $fullName,
+        $companyName,
+        $mobile,
+        $password
+    );
+
+    if (!$result['ok']) {
+        json_response($result, 409);
+    }
+
+    json_response([
+        'ok'       => true,
+        'role'     => 'customer',
+        'name'     => $result['name'],
+        'id'       => $result['id'],
+        'redirect' => '/'
+    ], 200);
+} catch (PDOException $e) {
+
+    error_log(
+        'REGISTER PDO ERROR: ' .
+            $e->getMessage()
+    );
+
+    json_response([
+        'ok'    => false,
+        'error' => 'خطای پایگاه داده هنگام ثبت‌نام.'
+    ], 500);
 } catch (Throwable $e) {
 
-    http_response_code(500);
+    error_log(
+        'REGISTER ERROR: ' .
+            $e->getMessage()
+    );
 
-    echo json_encode([
-        'ok' => false,
-        'error' =>
-        'ثبت‌نام انجام نشد. لطفاً دوباره تلاش کنید.'
-    ], JSON_UNESCAPED_UNICODE);
-
-    exit;
+    json_response([
+        'ok'    => false,
+        'error' => 'خطای سرور هنگام ثبت‌نام.'
+    ], 500);
 }

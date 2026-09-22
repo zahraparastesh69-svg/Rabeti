@@ -432,3 +432,35 @@ paneRegister?.addEventListener("submit", async (event) => {
     button.textContent = "ایجاد حساب";
   }
 });
+// ══════════ ثبت‌نام با AJAX ══════════
+document
+  .getElementById("pane-register")
+  ?.addEventListener("submit", async (e) => {
+    e.preventDefault();
+    const btn = e.target.querySelector('button[type="submit"]');
+    const fd = new FormData(e.target);
+    btn.disabled = true;
+    btn.textContent = "در حال ثبت...";
+
+    try {
+      const res = await fetch("/api/register", { method: "POST", body: fd });
+      const data = await res.json();
+
+      if (!data.ok) {
+        showToast("⚠️ " + (data.error || "ثبت‌نام ناموفق بود"));
+        btn.disabled = false;
+        btn.textContent = "ثبت درخواست عضویت";
+        return;
+      }
+
+      closeAuthModal();
+      showToast(
+        "✅ ثبت‌نام شما ثبت شد — پس از تأیید کارشناس قیمت همکاری فعال می‌شود",
+      );
+      e.target.reset();
+    } catch {
+      showToast("خطای اتصال — دوباره تلاش کنید");
+      btn.disabled = false;
+      btn.textContent = "ثبت درخواست عضویت";
+    }
+  });

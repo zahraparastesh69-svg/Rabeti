@@ -381,3 +381,46 @@ function logout_session(): void
 
     session_destroy();
 }
+/* ─── ثبت‌نام مشتری + شرکت در انتظار تأیید ─── */
+function register_customer(string $fullName, string $companyName, string $mobile, string $password): array
+{
+    $pdo = db();
+
+    // موبایل تکراری؟
+    $stmt = $pdo->prepare("SELECT id FROM users WHERE mobile = ? LIMIT 1");
+    $stmt->execute([$mobile]);
+    if ($stmt->fetch()) {
+        return ['ok' => false, 'error' => 'این شماره قبلاً ثبت شده است. وارد شوید.'];
+    }
+
+    $pdo->beginTransaction();
+
+    try {
+        // ۱. کاربر — شرکت در انتظار تأیید ادمین است
+        $stmt = $pdo->prepare("
+            INSERT INTO users (full_name, company_name, mobile, password_hash, role, is_active)
+            VALUES (?, ?, ?, ?, 'customer', 1)
+        ");
+        $stmt->execute([$fullName, $companyName ?: null, $mobile, password_hash($password, PASSWORD_DEFAULT)]);
+        $userId = (int)$pdo->lastInsertId();
+
+        // ۲. شرکت در وضعیت pending
+        $stmt = $pdo->prepare("INSERT INTO companies (name, status) VALUES (?, 'pending')");
+        $stmt->execute([$companyName ?: 'مشتری بدون نام شرکت']);
+        $companyId = (int)$pdo->lastInsertId();
+
+        // ۳. رابط کاربر-شرکت با نقش owner
+        $stmt = $pdo->prepare("INSERT INTO company_users (company_id, user_id, role) VALUES (?,?, 'owner')");
+        $stmt->execute([$companyId, $userId]);
+
+        $pdo->prepare("INSERT INTO audit_logs (user_id, action, entity, entity_id, ip) VALUES (?, 'customer.register', 'user', ?, ?)")
+            ->execute([$userId, $userId, $_SERVER['REMOTE_ADDR'] ?? '0.0.0.0']);
+
+        $pdo->commit();
+
+        return ['ok' => true, 'id' => $userId, 'name' => $fullName];
+    } catch (Throwable $e) {
+        $pdo->rollBack();
+        throw $e;   // به catch بالای api/register.php برمی‌گردد
+    }
+}
