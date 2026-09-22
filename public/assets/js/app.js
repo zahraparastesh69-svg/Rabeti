@@ -521,3 +521,21 @@ document.addEventListener("click", async (e) => {
     btn.disabled = false;
   }
 });
+// ══════════ سبد: تغییر تعداد با Stepper ══════════
+window.cartChange = function (itemId, delta) {
+  const numEl = document
+    .getElementById("qVal")
+    .closest("form")
+    .parentElement.querySelector(`[onsubmit] ~ * , *`); // placeholder
+  // ساده: مقدار فعلی از DOM همان ردیف
+  const row = document
+    .querySelector(`button[onclick*="cartChange(${itemId}, -1)"]`)
+    ?.closest(".cart-item-side");
+  const num = row?.querySelector(".step-num");
+  let val = parseInt(faToEn(num?.textContent || "1"), 10) || 1;
+  val = Math.max(1, val + delta);
+
+  document.getElementById("qItem").value = itemId;
+  document.getElementById("qVal").value = val;
+  document.getElementById("cartQtyForm").submit();
+};

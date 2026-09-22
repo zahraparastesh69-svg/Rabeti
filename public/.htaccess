@@ -27,3 +27,5 @@ RewriteRule ^api/logout/?$ api/logout.php [L,QSA]
 RewriteRule ^api/register/?$ api/register.php [L,QSA]
 
 RewriteRule ^api/cart/?$ api/cart.php [L,QSA]
+
+RewriteRule ^cart/?$ cart.php [L,QSA]
