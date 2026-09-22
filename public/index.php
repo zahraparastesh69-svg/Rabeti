@@ -305,8 +305,7 @@ ob_start();
             $stock = (int)($p['qty_available'] ?? 0);
             ?>
 
-            <article class="r6-card">
-
+            <article class="r6-card" data-product-id="<?= (int)$p['id'] ?>">
                 <a
                     href="/product/<?= $h($p['slug']) ?>"
                     class="r6-card-img">

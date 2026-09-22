@@ -464,3 +464,60 @@ document
       btn.textContent = "ثبت درخواست عضویت";
     }
   });
+// ══════════ افزودن سریع واقعی به سبد ══════════
+document.addEventListener("click", async (e) => {
+  const btn = e.target.closest(".r6-add, .quick-add");
+  if (!btn) return;
+
+  const card = btn.closest(".r6-card, .card");
+  const link = card?.querySelector('a[href*="/product/"]');
+  if (!link) return;
+
+  // استخراج id محصول از صفحه — از data attribute اگر بود، وگرنه از slug
+  let pid = card.dataset.productId;
+  if (!pid) {
+    const slug = link.getAttribute("href").split("/").pop();
+    pid = slug.replace(/^[a-z\-]+-/, "").replace(/\D/g, "") || 0;
+  }
+
+  // تعداد از Stepper اگر کنارش هست
+  const stepper = card.querySelector(".step-num");
+  const qty = stepper ? parseInt(faToEn(stepper.textContent), 10) || 1 : 1;
+
+  btn.disabled = true;
+  try {
+    const fd = new FormData();
+    fd.append("product_id", pid);
+    fd.append("qty", qty);
+
+    const res = await fetch("/api/cart", { method: "POST", body: fd });
+    const data = await res.json();
+
+    if (res.status === 401) {
+      showToast("🔒 برای خرید ابتدا وارد شوید");
+      document.getElementById("authModalOverlay")?.classList.add("show");
+      document.body.style.overflow = "hidden";
+      return;
+    }
+
+    if (!data.ok) {
+      showToast("⚠️ " + data.error);
+      return;
+    }
+
+    showToast(data.msg);
+    // آپدیت badge ها
+    document
+      .getElementById("cartBadge")
+      ?.replaceChildren(document.createTextNode(enToFa(data.count)));
+    document.getElementById("cartBadge")?.style.removeProperty("display");
+    document
+      .getElementById("bnCartBadge")
+      ?.replaceChildren(document.createTextNode(enToFa(data.count)));
+    document.getElementById("bnCartBadge")?.style.removeProperty("display");
+  } catch {
+    showToast("خطای اتصال");
+  } finally {
+    btn.disabled = false;
+  }
+});

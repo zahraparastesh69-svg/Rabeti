@@ -10,6 +10,23 @@ $userName = $isAdmin
     ? ($_SESSION['admin_name'] ?? 'مدیر')
     : ($_SESSION['customer_name'] ?? 'کاربر');
 ?>
+<?php
+ $cartCount = 0;
+if (is_logged_in()) {
+    try {
+        $uid = (int)($_SESSION['admin_id'] ?? $_SESSION['customer_id'] ?? 0);
+        $stmt = db()->prepare("
+            SELECT COALESCE(SUM(ci.qty), 0)
+            FROM cart_items ci
+            JOIN carts c ON c.id = ci.cart_id
+            WHERE c.user_id = ? AND c.status = 'active'
+        ");
+        $stmt->execute([$uid]);
+        $cartCount = (int)$stmt->fetchColumn();
+    } catch (Throwable $e) {}
+}
+}
+?>
 <!DOCTYPE html>
 <html lang="fa" dir="rtl">
 
@@ -379,12 +396,7 @@ $userName = $isAdmin
                             d="M6 7V6a6 6 0 1112 0v1h2.2l1.4 12.6A2 2 0 0119.6 22H4.4a2 2 0 01-2-2.4L3.8 7H6zm2 0h8V6a4 4 0 10-8 0v1z" />
                     </svg>
 
-                    <span
-                        class="badge"
-                        id="cartBadge"
-                        style="display:none;">
-                        ۰
-                    </span>
+                    <span class="badge" id="cartBadge" <?= $cartCount ? '' : 'style="display:none;"' ?>><?= $cartCount ?></span>
                 </a>
 
                 <div class="header-account">
