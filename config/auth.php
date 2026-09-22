@@ -14,9 +14,7 @@ if (session_status() === PHP_SESSION_NONE) {
     session_start();
 }
 
-/* ============================================================
-   وضعیت ورود
-============================================================ */
+/* ══════════ وضعیت ورود ══════════ */
 
 function is_admin_logged_in(): bool
 {
@@ -33,9 +31,7 @@ function is_logged_in(): bool
     return is_admin_logged_in() || is_customer_logged_in();
 }
 
-/* ============================================================
-   ورود ادمین
-============================================================ */
+/* ══════════ ورود ادمین ══════════ */
 
 function attempt_admin_login(string $mobile, string $password): bool
 {
@@ -70,10 +66,13 @@ function attempt_admin_login(string $mobile, string $password): bool
 
     $user = $stmt->fetch();
 
-    $ok = $user && password_verify(
-        $password,
-        $user['password_hash']
-    );
+    $ok =
+        $user &&
+        !empty($user['password_hash']) &&
+        password_verify(
+            $password,
+            $user['password_hash']
+        );
 
     $pdo->prepare("
         INSERT INTO login_attempts
@@ -119,9 +118,210 @@ function attempt_admin_login(string $mobile, string $password): bool
     return true;
 }
 
-/* ============================================================
-   گارد ادمین
-============================================================ */
+/* ══════════ ثبت‌نام مشتری ══════════ */
+
+function register_customer(
+    string $fullName,
+    string $companyName,
+    string $mobile,
+    string $password
+): array {
+
+    $pdo = db();
+
+    $fullName = trim($fullName);
+    $companyName = trim($companyName);
+    $mobile = trim($mobile);
+
+    if ($fullName === '') {
+        return [
+            'ok' => false,
+            'error' => 'نام و نام خانوادگی را وارد کنید.'
+        ];
+    }
+
+    if (!preg_match('/^09\d{9}$/', $mobile)) {
+        return [
+            'ok' => false,
+            'error' => 'شماره موبایل نامعتبر است.'
+        ];
+    }
+
+    if (strlen($password) < 8) {
+        return [
+            'ok' => false,
+            'error' => 'رمز عبور باید حداقل ۸ کاراکتر باشد.'
+        ];
+    }
+
+    /* بررسی شماره تکراری */
+
+    $stmt = $pdo->prepare("
+        SELECT id, role, is_active
+        FROM users
+        WHERE mobile = ?
+        LIMIT 1
+    ");
+
+    $stmt->execute([$mobile]);
+
+    $existing = $stmt->fetch();
+
+    if ($existing) {
+
+        if (($existing['role'] ?? '') === 'admin') {
+            return [
+                'ok' => false,
+                'error' => 'این شماره موبایل قبلاً برای حساب مدیریت ثبت شده است.'
+            ];
+        }
+
+        return [
+            'ok' => false,
+            'error' => 'این شماره موبایل قبلاً ثبت‌نام کرده است.'
+        ];
+    }
+
+    $passwordHash = password_hash(
+        $password,
+        PASSWORD_DEFAULT
+    );
+
+    /*
+     * بعضی نسخه‌های دیتابیس ممکن است company_name
+     * داشته باشند و بعضی نسخه‌ها نداشته باشند.
+     * بنابراین ستون‌ها را بررسی می‌کنیم.
+     */
+
+    $columnsStmt = $pdo->query("
+        SELECT column_name
+        FROM information_schema.columns
+        WHERE table_schema = current_schema()
+          AND table_name = 'users'
+    ");
+
+    $columns = $columnsStmt
+        ? $columnsStmt->fetchAll(PDO::FETCH_COLUMN)
+        : [];
+
+    $hasCompanyName = in_array(
+        'company_name',
+        $columns,
+        true
+    );
+
+    $hasCreatedAt = in_array(
+        'created_at',
+        $columns,
+        true
+    );
+
+    if ($hasCompanyName && $hasCreatedAt) {
+
+        $stmt = $pdo->prepare("
+            INSERT INTO users
+            (
+                full_name,
+                company_name,
+                mobile,
+                password_hash,
+                role,
+                is_active,
+                created_at
+            )
+            VALUES (?, ?, ?, ?, 'customer', 1, NOW())
+        ");
+
+        $stmt->execute([
+            $fullName,
+            $companyName,
+            $mobile,
+            $passwordHash
+        ]);
+    } elseif ($hasCompanyName) {
+
+        $stmt = $pdo->prepare("
+            INSERT INTO users
+            (
+                full_name,
+                company_name,
+                mobile,
+                password_hash,
+                role,
+                is_active
+            )
+            VALUES (?, ?, ?, ?, 'customer', 1)
+        ");
+
+        $stmt->execute([
+            $fullName,
+            $companyName,
+            $mobile,
+            $passwordHash
+        ]);
+    } elseif ($hasCreatedAt) {
+
+        $stmt = $pdo->prepare("
+            INSERT INTO users
+            (
+                full_name,
+                mobile,
+                password_hash,
+                role,
+                is_active,
+                created_at
+            )
+            VALUES (?, ?, ?, 'customer', 1, NOW())
+        ");
+
+        $stmt->execute([
+            $fullName,
+            $mobile,
+            $passwordHash
+        ]);
+    } else {
+
+        $stmt = $pdo->prepare("
+            INSERT INTO users
+            (
+                full_name,
+                mobile,
+                password_hash,
+                role,
+                is_active
+            )
+            VALUES (?, ?, ?, 'customer', 1)
+        ");
+
+        $stmt->execute([
+            $fullName,
+            $mobile,
+            $passwordHash
+        ]);
+    }
+
+    $customerId = (int)$pdo->lastInsertId();
+
+    /* ورود خودکار بعد از ثبت‌نام */
+
+    session_regenerate_id(true);
+
+    $_SESSION['customer_id']   = $customerId;
+    $_SESSION['customer_name'] = $fullName;
+
+    unset(
+        $_SESSION['admin_id'],
+        $_SESSION['admin_name']
+    );
+
+    return [
+        'ok'   => true,
+        'id'   => $customerId,
+        'name' => $fullName
+    ];
+}
+
+/* ══════════ گارد ادمین ══════════ */
 
 function require_admin(): void
 {
@@ -136,15 +336,14 @@ function admin_name(): string
     return $_SESSION['admin_name'] ?? 'مدیر';
 }
 
-/* ============================================================
-   خروج کامل
-============================================================ */
+/* ══════════ خروج کامل ══════════ */
 
 function logout_session(): void
 {
     $_SESSION = [];
 
     if (ini_get('session.use_cookies')) {
+
         $params = session_get_cookie_params();
 
         setcookie(

@@ -20,19 +20,13 @@ menuBtn?.addEventListener("click", openDrawer);
 closeBtn?.addEventListener("click", closeDrawer);
 overlay?.addEventListener("click", closeDrawer);
 
+// ══════════ حذف ورود/ثبت‌نام از منوی کشویی ══════════
+document.querySelector(".drawer-login-button")?.remove();
+
 document.querySelectorAll(".r6-drawer-link").forEach((link) => {
   link.addEventListener("click", () => {
-    if (!link.classList.contains("drawer-login-button")) {
-      closeDrawer();
-    }
-  });
-});
-
-document.addEventListener("keydown", (e) => {
-  if (e.key === "Escape") {
     closeDrawer();
-    closeAuthModal();
-  }
+  });
 });
 
 // ══════════ هدر در اسکرول ══════════
@@ -82,24 +76,10 @@ window.showToast = function (message, duration = 2800) {
   }, duration);
 };
 
-// ══════════ آکاردئون دسته‌ها ══════════
-document.querySelectorAll('.cat-card[role="button"]').forEach((card) => {
-  card.addEventListener("click", () => {
-    const wasOpen = card.classList.contains("active");
-
-    document.querySelectorAll(".cat-card.active").forEach((item) => {
-      item.classList.remove("active");
-    });
-
-    if (!wasOpen) {
-      card.classList.add("active");
-    }
-  });
-});
-
-// ══════════ نوار پایین — صفحه جاری ══════════
+// ══════════ نوار پایین ══════════
 document.querySelectorAll(".bottom-nav .bn-item").forEach((item) => {
   const href = item.getAttribute("href");
+
   const path = window.location.pathname;
 
   const isHome = href === "/" && (path === "/" || path === "/index.php");
@@ -126,12 +106,15 @@ const paneRegister = document.getElementById("pane-register");
 
 function openAuthModal(tab = "login") {
   authOverlay?.classList.add("show");
+
   document.body.style.overflow = "hidden";
+
   switchAuthTab(tab);
 }
 
 function closeAuthModal() {
   authOverlay?.classList.remove("show");
+
   document.body.style.overflow = "";
 }
 
@@ -151,14 +134,16 @@ function switchAuthTab(tab) {
 
 document.querySelectorAll("[data-auth-open]").forEach((button) => {
   button.addEventListener("click", () => {
+    closeDrawer();
+
     openAuthModal(button.dataset.authOpen || "login");
   });
 });
 
 authClose?.addEventListener("click", closeAuthModal);
 
-authOverlay?.addEventListener("click", (e) => {
-  if (e.target === authOverlay) {
+authOverlay?.addEventListener("click", (event) => {
+  if (event.target === authOverlay) {
     closeAuthModal();
   }
 });
@@ -169,13 +154,21 @@ authTabs.forEach((tabButton) => {
   });
 });
 
-// ══════════ Stepper تعداد ══════════
+document.addEventListener("keydown", (event) => {
+  if (event.key === "Escape") {
+    closeDrawer();
+    closeAuthModal();
+  }
+});
+
+// ══════════ تبدیل اعداد فارسی ══════════
 const faToEn = (value) =>
   String(value).replace(/[۰-۹]/g, (digit) => "۰۱۲۳۴۵۶۷۸۹".indexOf(digit));
 
 const enToFa = (number) =>
   String(number).replace(/\d/g, (digit) => "۰۱۲۳۴۵۶۷۸۹"[digit]);
 
+// ══════════ Stepper ══════════
 document.querySelectorAll(".r6-stepper").forEach((stepper) => {
   const num = stepper.querySelector(".r6-num");
 
@@ -198,25 +191,41 @@ document.querySelectorAll(".r6-stepper").forEach((stepper) => {
   });
 });
 
-// ══════════ ورود با AJAX ══════════
-paneLogin?.addEventListener("submit", async (e) => {
-  e.preventDefault();
+// ══════════ خطای فرم احراز هویت ══════════
+function getFormMessage(form) {
+  let box = form.querySelector(".form-error");
 
-  const btn = document.getElementById("loginBtn");
+  if (!box) {
+    box = document.createElement("div");
 
-  const err = document.getElementById("loginError");
+    box.className = "form-error";
+
+    box.style.display = "none";
+
+    form.prepend(box);
+  }
+
+  return box;
+}
+
+// ══════════ ورود ══════════
+paneLogin?.addEventListener("submit", async (event) => {
+  event.preventDefault();
+
+  const button = document.getElementById("loginBtn");
+
+  const error = document.getElementById("loginError");
 
   const mobile = document.getElementById("loginMobile")?.value.trim() || "";
 
   const password = document.getElementById("loginPassword")?.value || "";
 
-  if (!btn || !err) return;
+  if (!button || !error) return;
 
-  btn.disabled = true;
-  btn.textContent = "در حال ورود...";
+  button.disabled = true;
+  button.textContent = "در حال ورود...";
 
-  err.style.display = "none";
-  err.textContent = "";
+  error.style.display = "none";
 
   try {
     const formData = new FormData();
@@ -236,12 +245,12 @@ paneLogin?.addEventListener("submit", async (e) => {
     const data = await response.json();
 
     if (!data.ok) {
-      err.textContent = data.error || "ورود ناموفق بود";
+      error.textContent = data.error || "ورود ناموفق بود.";
 
-      err.style.display = "block";
+      error.style.display = "block";
 
-      btn.disabled = false;
-      btn.textContent = "ورود";
+      button.disabled = false;
+      button.textContent = "ورود";
 
       return;
     }
@@ -252,16 +261,139 @@ paneLogin?.addEventListener("submit", async (e) => {
       return;
     }
 
-    // مشتری
     closeAuthModal();
 
     window.location.reload();
-  } catch (error) {
-    err.textContent = "خطای اتصال — دوباره تلاش کنید";
+  } catch (errorObject) {
+    error.textContent = "خطای اتصال — دوباره تلاش کنید.";
 
-    err.style.display = "block";
+    error.style.display = "block";
 
-    btn.disabled = false;
-    btn.textContent = "ورود";
+    button.disabled = false;
+    button.textContent = "ورود";
   }
 });
+
+// ══════════ ثبت‌نام مشترک برای مودال و صفحه مستقل ══════════
+document
+  .querySelectorAll('#pane-register, form[action="/register"]')
+  .forEach((form) => {
+    form.addEventListener("submit", async (event) => {
+      event.preventDefault();
+
+      const button = form.querySelector('button[type="submit"]');
+
+      const message = getFormMessage(form);
+
+      const fullName =
+        form.querySelector('[name="full_name"]')?.value.trim() || "";
+
+      const companyName =
+        form.querySelector('[name="company_name"]')?.value.trim() || "";
+
+      const mobile = form.querySelector('[name="mobile"]')?.value.trim() || "";
+
+      const password = form.querySelector('[name="password"]')?.value || "";
+
+      const password2 = form.querySelector('[name="password2"]')?.value || "";
+
+      if (!fullName) {
+        message.textContent = "نام و نام خانوادگی را وارد کنید.";
+
+        message.style.display = "block";
+
+        return;
+      }
+
+      if (!/^09\d{9}$/.test(faToEn(mobile))) {
+        message.textContent = "شماره موبایل صحیح نیست.";
+
+        message.style.display = "block";
+
+        return;
+      }
+
+      if (password.length < 8) {
+        message.textContent = "رمز عبور باید حداقل ۸ کاراکتر باشد.";
+
+        message.style.display = "block";
+
+        return;
+      }
+
+      if (password2 && password !== password2) {
+        message.textContent = "تکرار رمز عبور صحیح نیست.";
+
+        message.style.display = "block";
+
+        return;
+      }
+
+      message.style.display = "none";
+
+      if (button) {
+        button.disabled = true;
+        button.textContent = "در حال ایجاد حساب...";
+      }
+
+      try {
+        const formData = new FormData();
+
+        formData.append("full_name", fullName);
+
+        formData.append("company_name", companyName);
+
+        formData.append("mobile", faToEn(mobile));
+
+        formData.append("password", password);
+
+        if (password2) {
+          formData.append("password2", password2);
+        }
+
+        const response = await fetch("/api/register", {
+          method: "POST",
+          body: formData,
+          headers: {
+            Accept: "application/json",
+          },
+        });
+
+        const data = await response.json();
+
+        if (!data.ok) {
+          message.textContent = data.error || "ثبت‌نام انجام نشد.";
+
+          message.style.display = "block";
+
+          if (button) {
+            button.disabled = false;
+            button.textContent = "ایجاد حساب";
+          }
+
+          return;
+        }
+
+        /*
+         * API بعد از ثبت‌نام، کاربر را
+         * خودکار وارد می‌کند.
+         */
+        if (form.id === "pane-register") {
+          closeAuthModal();
+          window.location.reload();
+          return;
+        }
+
+        window.location.href = "/";
+      } catch (errorObject) {
+        message.textContent = "خطای اتصال — دوباره تلاش کنید.";
+
+        message.style.display = "block";
+
+        if (button) {
+          button.disabled = false;
+          button.textContent = "ایجاد حساب";
+        }
+      }
+    });
+  });
