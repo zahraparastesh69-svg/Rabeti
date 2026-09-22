@@ -379,11 +379,7 @@ if (is_logged_in()) {
 
             <div class="header-left">
 
-                <a
-                    href="#"
-                    class="header-action-btn"
-                    title="سبد خرید"
-                    aria-label="سبد خرید">
+                <a href="/cart" class="header-action-btn" title="سبد خرید" aria-label="سبد خرید">
                     <svg
                         width="19"
                         height="19"

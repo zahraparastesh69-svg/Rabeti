@@ -539,3 +539,45 @@ window.cartChange = function (itemId, delta) {
   document.getElementById("qVal").value = val;
   document.getElementById("cartQtyForm").submit();
 };
+// ══════════ افزودن به سبد از صفحه محصول ══════════
+document
+  .querySelector(".pd-order-btn[data-product-id]")
+  ?.addEventListener("click", async function () {
+    const btn = this;
+    const pid = btn.dataset.productId;
+    const stepper = document.querySelector(
+      ".r6-stepper .r6-num, .stepper .step-num",
+    );
+    const qty = stepper ? parseInt(faToEn(stepper.textContent), 10) || 1 : 1;
+
+    btn.disabled = true;
+    try {
+      const fd = new FormData();
+      fd.append("product_id", pid);
+      fd.append("qty", qty);
+
+      const res = await fetch("/api/cart", { method: "POST", body: fd });
+      const data = await res.json();
+
+      if (res.status === 401) {
+        showToast("🔒 برای خرید ابتدا وارد شوید");
+        document.getElementById("authModalOverlay")?.classList.add("show");
+        document.body.style.overflow = "hidden";
+        return;
+      }
+      if (!data.ok) {
+        showToast("⚠️ " + (data.error || "افزودن ناموفق"));
+        return;
+      }
+      showToast(data.msg);
+      const b = document.getElementById("cartBadge");
+      if (b) {
+        b.textContent = enToFa(data.count);
+        b.style.removeProperty("display");
+      }
+    } catch {
+      showToast("خطای اتصال");
+    } finally {
+      btn.disabled = false;
+    }
+  });

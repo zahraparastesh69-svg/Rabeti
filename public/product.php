@@ -119,12 +119,14 @@ ob_start();
             <div class="pd-spec"><span>حداقل سفارش (MOQ)</span><b><?= (int)$product['base_moq'] ?> جفت</b></div>
             <div class="pd-spec"><span>دسته</span><b><?= $h($product['cat_name']) ?></b></div>
             <div class="pd-spec"><span>موجودی انبار</span><b><?= number_format((int)($product['qty_available'] ?? 0)) ?> جفت</b></div>
+            <!-- <span class="pd-badge neutral">موجودی انبار: <?= number_format((int)($product['qty_available'] ?? 0)) ?> جفت -->
+            </span>
             <div class="pd-spec"><span>ارسال</span><b>سراسر کشور — ۲۴ تا ۷۲ ساعت</b></div>
         </div>
 
         <div class="pd-actions">
             <?php if ($inStock): ?>
-                <button class="btn btn-orange pd-order-btn" onclick="showToast('🛒 سبد خرید در فاز بعدی فعال می‌شود')">
+                <button type="button" class="r6-add pd-order-btn" data-product-id="<?= (int)$product['id'] ?>">
                     افزودن به سبد سفارش
                 </button>
             <?php else: ?>
