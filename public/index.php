@@ -229,7 +229,7 @@ ob_start();
     <div class="r-sec-head">
 
         <div>
-            <h2>چه جورابی می‌خواهید؟</h2>
+            <h2>دسته‌بندی جوراب عمده</h2>
         </div>
 
         <a
@@ -380,7 +380,7 @@ ob_start();
                                 +
                             </button>
 
-                           <input type="text" inputmode="numeric" class="r6-num step-input" value="۱">
+                            <input type="text" inputmode="numeric" class="r6-num step-input" value="۱">
 
                             <button
                                 type="button"

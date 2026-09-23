@@ -4817,3 +4817,101 @@ body.app-body {
     font-size: 0.92rem !important;
   }
 }
+
+/* ═══ چیپ‌های دسته — گرید بزرگ: ۴ دسکتاپ / ۳ موبایل ═══ */
+.r6-cats {
+  display: grid !important;
+  grid-template-columns: repeat(4, minmax(0, 1fr)) !important;
+  gap: 14px !important;
+  overflow: visible !important; /* گرید شد؛ اسکرول افقی حذف */
+}
+
+.r6-cat {
+  width: auto !important;
+  aspect-ratio: 1 / 1 !important; /* مربع خوشگل */
+  display: flex !important;
+  flex-direction: column !important;
+  align-items: center !important;
+  justify-content: center !important;
+  gap: 14px !important;
+  padding: 18px 10px !important;
+  background: #fff !important;
+  border: 1px solid var(--r6-line, var(--line, #e6e2d8)) !important;
+  border-radius: 16px !important;
+  box-shadow: 0 2px 10px rgba(31, 74, 94, 0.05);
+  transition:
+    transform 0.25s ease,
+    border-color 0.25s,
+    box-shadow 0.25s;
+}
+.r6-cat:hover {
+  transform: translateY(-4px);
+  border-color: var(--r6-brand, var(--brand, #2a5f78));
+  box-shadow: 0 12px 26px rgba(31, 74, 94, 0.12);
+}
+
+/* عکس دسته — دو برابر قبل */
+.r6-cat img {
+  width: 68px !important;
+  height: 68px !important;
+  object-fit: cover !important;
+  border-radius: 14px !important;
+  display: block;
+}
+.r6-cat-fallback {
+  font-size: 2rem !important;
+  width: 68px !important;
+  height: 68px !important;
+  display: grid !important;
+  place-items: center !important;
+  background: var(--r6-cream, var(--cream, #f5efe4));
+  border-radius: 14px !important;
+}
+.r6-cat > span:last-child {
+  font-size: 0.88rem !important;
+  font-weight: 700 !important;
+  color: var(--r6-text, var(--text, #23303a));
+}
+
+/* فعال */
+.r6-cat.is-active {
+  background: var(--r6-brand, var(--brand, #2a5f78)) !important;
+  border-color: var(--r6-brand, var(--brand, #2a5f78)) !important;
+}
+.r6-cat.is-active span {
+  color: #fff !important;
+}
+.r6-cat.is-active img {
+  filter: brightness(1.15);
+}
+
+/* ═══ موبایل: ۳ ستون ═══ */
+@media (max-width: 760px) {
+  .r6-cats {
+    grid-template-columns: repeat(3, minmax(0, 1fr)) !important;
+    gap: 10px !important;
+  }
+  .r6-cat {
+    padding: 14px 6px !important;
+    gap: 10px !important;
+  }
+  .r6-cat img,
+  .r6-cat-fallback {
+    width: 52px !important;
+    height: 52px !important;
+  }
+  .r6-cat-fallback {
+    font-size: 1.5rem !important;
+  }
+  .r6-cat > span:last-child {
+    font-size: 0.74rem !important;
+  }
+}
+
+/* فاصله از طرفین در موبایل — گرید تا لبه‌ها با padding همنفس */
+@media (max-width: 760px) {
+  .r6-cats {
+    margin-inline: -13px;
+    padding-inline: 13px;
+  }
+}
