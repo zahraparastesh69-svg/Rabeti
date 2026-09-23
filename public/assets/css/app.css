@@ -4693,3 +4693,127 @@ body.app-body {
   background: var(--cream, #f5efe4) !important;
   border-radius: 6px;
 }
+/* ── هدر ثابت ── */
+.header {
+  position: sticky !important;
+  top: 0 !important;
+  z-index: 100 !important;
+}
+/* نوار اعلان هم بالای هدر می‌چسبد */
+.r6-announce,
+.announce {
+  position: sticky;
+  top: 0;
+  z-index: 101;
+}
+/* ═══ سبد خرید — نسخه مهندسی‌شده موبایل ═══ */
+@media (max-width: 760px) {
+  /* ردیف کارت: عکس کوچک + اطلاعات جمع‌وجور */
+  .cart-item {
+    display: grid !important;
+    grid-template-columns: 72px 1fr !important;
+    gap: 12px !important;
+    padding: 12px !important;
+    border-radius: 14px !important;
+    background: #fff !important;
+    border: 1px solid var(--line, #e6e2d8) !important;
+    box-shadow: 0 1px 4px rgba(31, 74, 94, 0.05);
+    margin-bottom: 10px !important;
+  }
+  .cart-item-img {
+    width: 72px !important;
+    height: 72px !important;
+    aspect-ratio: 1 !important;
+    border-radius: 10px !important;
+    overflow: hidden;
+  }
+  .cart-item-img img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+  }
+
+  /* عنوان و مشخصات فشرده */
+  .cart-item-info h3 {
+    font-size: 0.82rem !important;
+    margin: 0 0 2px !important;
+  }
+  .cart-item-info .card-attr {
+    font-size: 0.64rem !important;
+  }
+  .cart-item-price {
+    margin: 4px 0 !important;
+  }
+  .cart-item-price b {
+    font-size: 0.84rem !important;
+  }
+  .cart-item-price small {
+    font-size: 0.6rem !important;
+  }
+  .cart-item-warn {
+    font-size: 0.64rem !important;
+    padding: 4px 8px !important;
+  }
+
+  /* ردیف پایینی: تعداد و جمع و حذف در یک خط مرتب */
+  .cart-item-side {
+    grid-column: 1 / -1 !important;
+    display: flex !important;
+    flex-direction: row !important;
+    align-items: center !important;
+    justify-content: space-between !important;
+    gap: 10px !important;
+    border-top: 1px dashed var(--line, #e6e2d8) !important;
+    padding-top: 10px !important;
+    margin: 0 !important;
+  }
+  .cart-item-side .stepper {
+    display: flex !important;
+    align-items: center;
+    border: 1px solid var(--line, #e6e2d8) !important;
+    border-radius: 20px !important;
+    padding: 2px !important;
+    width: auto !important;
+  }
+  .cart-item-side .step {
+    width: 28px !important;
+    height: 28px !important;
+    border: none !important;
+    border-radius: 50% !important;
+    font-size: 0.95rem !important;
+  }
+  .cart-item-side .step-num,
+  .cart-item-side .step-input {
+    width: 34px !important;
+    height: 28px !important;
+    font-size: 0.85rem !important;
+  }
+  .cart-line-total {
+    text-align: left !important;
+  }
+  .cart-line-total small {
+    font-size: 0.58rem !important;
+  }
+  .cart-line-total b {
+    font-size: 0.82rem !important;
+  }
+  .cart-remove {
+    font-size: 0.68rem !important;
+    padding: 4px 8px;
+  }
+
+  /* خلاصه پایین — چسبیده و اپ‌مانند */
+  .cart-summary {
+    position: sticky !important;
+    bottom: 0 !important;
+    z-index: 50;
+    margin: 12px -16px 0 !important;
+    border-radius: 18px 18px 0 0 !important;
+    box-shadow: 0 -8px 28px rgba(31, 74, 94, 0.12);
+    padding: 16px 18px calc(14px + env(safe-area-inset-bottom)) !important;
+  }
+  .cart-checkout-btn {
+    min-height: 48px !important;
+    font-size: 0.92rem !important;
+  }
+}

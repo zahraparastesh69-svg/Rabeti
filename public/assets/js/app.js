@@ -637,14 +637,27 @@ document.addEventListener(
 document.addEventListener("change", (e) => {
   const inp = e.target.closest(".step-input");
   if (!inp || !document.getElementById("cartQtyForm")) return;
+
   const row = inp.closest(".cart-item-side");
-  const minusBtn = row?.querySelector('button[onclick*="cartChange(-"]');
+
+  const minusBtn = row?.querySelector(
+    'button[onclick*="cartChange(-"]'
+  );
+
   const itemId = minusBtn
-    ? (minusBtn.getAttribute("onclick").match(/cartChange\((\d+)/) || [])[1]
+    ? (
+        minusBtn
+          .getAttribute("onclick")
+          .match(/cartChange\((\d+)/) || []
+      )[1]
     : null;
+
   if (!itemId) return;
 
   document.getElementById("qItem").value = itemId;
-  document.getElementById("qVal").value = parseInt(faToEnS(inp.value), 10) || 1;
+
+  document.getElementById("qVal").value =
+    parseInt(faToEnS(inp.value), 10) || 1;
+
   document.getElementById("cartQtyForm").submit();
 });

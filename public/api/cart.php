@@ -16,11 +16,21 @@ if (!is_logged_in()) {
  $db = db();
 
 /* helper: سبد فعال کاربر را بگیر یا بساز */
+/* helper: سبد فعال کاربر — بازیافت سبد تبدیل‌شده یا ساخت جدید */
 function getOrCreateCart(PDO $db, int $userId): int {
     $stmt = $db->prepare("SELECT id FROM carts WHERE user_id = ? AND status='active' LIMIT 1");
     $stmt->execute([$userId]);
     $id = $stmt->fetchColumn();
     if ($id) return (int)$id;
+
+    /* سبد قدیمی (converted) وجود دارد → همان را دوباره فعال کن */
+    $stmt = $db->prepare("SELECT id FROM carts WHERE user_id = ? LIMIT 1");
+    $stmt->execute([$userId]);
+    $id = $stmt->fetchColumn();
+    if ($id) {
+        $db->prepare("UPDATE carts SET status='active' WHERE id=?")->execute([$id]);
+        return (int)$id;
+    }
 
     $db->prepare("INSERT INTO carts (user_id) VALUES (?)")->execute([$userId]);
     return (int)$db->lastInsertId();

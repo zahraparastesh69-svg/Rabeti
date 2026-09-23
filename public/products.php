@@ -59,12 +59,21 @@ ob_start();
 </section>
 
 <!-- ▂▂▂ فیلتر دسته‌ها ▂▂▂ -->
-<section class="filter-bar">
-    <a href="/products" class="filter-chip <?= !$activeCat ? 'active' : '' ?>">همه</a>
+<!-- ▂▂▂ دسته‌بندی — مثل صفحه اصلی ▂▂▂ -->
+<section class="r6-cats" style="margin-top:16px;">
+    <a href="/products" class="r6-cat <?= !$activeCat ? 'is-active' : '' ?>">
+        <span class="r6-cat-fallback">✦</span>
+        <span>همه</span>
+    </a>
     <?php foreach ($categories as $cat): ?>
         <a href="/products?cat=<?= $h($cat['slug']) ?>"
-            class="filter-chip <?= $activeCat && $activeCat['id'] === $cat['id'] ? 'active' : '' ?>">
-            <?= trim($cat['icon'] ?? '') ?: '🧦' ?> <?= $h($cat['name']) ?>
+            class="r6-cat <?= $activeCat && $activeCat['id'] === $cat['id'] ? 'is-active' : '' ?>">
+            <?php if (!empty($cat['image_path'])): ?>
+                <img src="<?= $h($cat['image_path']) ?>" alt="<?= $h($cat['name']) ?>">
+            <?php else: ?>
+                <span class="r6-cat-fallback"><?= $h(trim($cat['icon'] ?? '') ?: '🧦') ?></span>
+            <?php endif; ?>
+            <span><?= $h($cat['name']) ?></span>
         </a>
     <?php endforeach; ?>
 </section>
