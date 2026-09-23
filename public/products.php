@@ -52,13 +52,13 @@ $pageTitle = ($activeCat ? $activeCat['name'] . ' — ' : '') . 'کاتالوگ 
 ob_start();
 ?>
 
-<!-- ▂▂▂ سربرگ کاتالوگ ▂▂▂ -->
+<!-- ▂▂▂ سربرگ ▂▂▂ -->
 <section class="page-head">
     <h1 class="section-title"><?= $activeCat ? $h($activeCat['name']) : 'همه محصولات' ?></h1>
     <p class="section-sub"><?= count($products) ?> مدل — قیمت همکاری، مستقیم از تولیدی</p>
 </section>
 
-<!-- ▂▂▂ فیلتر دسته‌ها — چیپ‌های قدیمی که کار می‌کنند ▂▂▂ -->
+<!-- ▂▂▂ فیلتر دسته‌ها ▂▂▂ -->
 <section class="filter-bar">
     <a href="/products" class="filter-chip <?= !$activeCat ? 'active' : '' ?>">همه</a>
     <?php foreach ($categories as $cat): ?>
@@ -75,6 +75,7 @@ ob_start();
         <?php foreach ($products as $index => $p): ?>
             <?php $stock = (int)($p['qty_available'] ?? 0); ?>
             <article class="prod-card" data-product-id="<?= (int)$p['id'] ?>">
+
                 <a href="/product/<?= $h($p['slug']) ?>" class="prod-img">
                     <?php if ($index === 0 && !$activeCat): ?><span class="prod-badge">محبوب</span><?php endif; ?>
                     <?php if (!empty($p['img'])): ?>
@@ -83,25 +84,31 @@ ob_start();
                         <span>🧦</span>
                     <?php endif; ?>
                 </a>
+
                 <div class="prod-info">
                     <div class="prod-cat"><?= $h($p['cat_name']) ?></div>
                     <div class="prod-name"><a href="/product/<?= $h($p['slug']) ?>"><?= $h($p['name']) ?></a></div>
                     <div class="prod-code">کد <?= $h($p['code']) ?> | حداقل <?= (int)$p['base_moq'] ?> جفت</div>
-                    <div class="prod-price"><?= $p['price'] !== null ? number_format((float)$p['price']) : 'استعلام' ?> تومان
-                        <small style="font-weight:400;color:var(--muted);">قیمت همکاری</small>
+
+                    <div class="prod-price">
+                        <?= $p['price'] !== null ? number_format((float)$p['price']) : 'استعلام' ?> تومان
+                        <small>قیمت همکاری</small>
                     </div>
+
                     <div class="prod-stock <?= $stock > 0 ? 'in' : 'out' ?>">
-                        <?= $stock > 0 ? '● موجود (' . number_format($stock) . ' جفت)' : '● ناموجود' ?>
+                        <?= $stock > 0 ? '● موجود در انبار (' . number_format($stock) . ' جفت)' : '● ناموجود' ?>
                     </div>
+
                     <?php if ($stock > 0): ?>
-                        <div class="stepper" data-min="1" style="margin-top:8px;">
+                        <div class="stepper" data-min="1">
                             <button type="button" class="step plus">+</button>
                             <span class="step-num">۱</span>
                             <button type="button" class="step minus">−</button>
                         </div>
-                        <button type="button" class="quick-add" style="margin-top:8px;width:100%;">افزودن سریع</button>
+                        <button type="button" class="quick-add">افزودن سریع</button>
                     <?php endif; ?>
                 </div>
+
             </article>
         <?php endforeach; ?>
     </section>
