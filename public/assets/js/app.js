@@ -581,66 +581,70 @@ document
       btn.disabled = false;
     }
   });
-// ══════════ Stepper عمومی — همه صفحات ══════════
+// ══════════ Stepper عمومی — دکمه + ورود دستی ══════════
+const faToEnS = (s) =>
+  (s || "").replace(/[۰-۹]/g, (d) => "۰۱۲۳۴۵۶۷۸۹".indexOf(d));
+const enToFaS = (n) => String(n).replace(/\d/g, (d) => "۰۱۲۳۴۵۶۷۸۹"[d]);
+
+// دکمه‌های + و −
 document.addEventListener("click", (e) => {
-  const btn = e.target.closest(".step");
+  const btn = e.target.closest(".step, .r6-step");
   if (!btn) return;
-  const st = btn.closest(".stepper");
+  const st = btn.closest(".stepper, .r6-stepper");
   const num = st?.querySelector(".step-num, .r6-num");
   if (!num) return;
+
+  const isInput = num.tagName === "INPUT";
   const min = parseInt(st.dataset.min || "1", 10) || 1;
-  let val = parseInt(faToEn(num.textContent), 10) || min;
-  if (btn.classList.contains("plus")) val++;
+  let val = parseInt(faToEnS(isInput ? num.value : num.textContent), 10) || min;
+
+  if (
+    btn.classList.contains("plus") ||
+    (btn.classList.contains("r6-step") && !btn.classList.contains("minus"))
+  )
+    val++;
   if (btn.classList.contains("minus")) val = Math.max(min, val - 1);
-  num.textContent = enToFa(val);
+  val = Math.max(min, val);
+
+  if (isInput) num.value = enToFaS(val);
+  else num.textContent = enToFaS(val);
 });
-// ══════════ افزودن سریع — کارت‌های هر صفحه ══════════
-document.addEventListener("click", async (e) => {
-  const btn = e.target.closest(".r6-add, .quick-add");
-  if (!btn) return;
 
-  const card = btn.closest("[data-product-id]");
-  if (!card) return;
-  const pid = card.dataset.productId;
+// ورود دستی در input
+document.addEventListener("input", (e) => {
+  const inp = e.target.closest(".step-input");
+  if (!inp) return;
+  // فقط عدد — حروف/متن پاک می‌شود
+  let v = faToEnS(inp.value).replace(/[^\d]/g, "");
+  inp.value = v ? enToFaS(parseInt(v, 10)) : "";
+});
 
-  const numEl = card.querySelector(".step-num, .r6-num");
-  const qty = numEl
-    ? parseInt(
-        (numEl.textContent || "1").replace(/[۰-۹]/g, (d) =>
-          "۰۱۲۳۴۵۶۷۸۹".indexOf(d),
-        ),
-        10,
-      ) || 1
-    : 1;
+// بلور: حداقل اعمال شود
+document.addEventListener(
+  "blur",
+  (e) => {
+    const inp = e.target.closest(".step-input");
+    if (!inp) return;
+    const st = inp.closest(".stepper, .r6-stepper");
+    const min = parseInt(st?.dataset.min || "1", 10) || 1;
+    let v = parseInt(faToEnS(inp.value), 10);
+    if (!v || v < min) v = min;
+    inp.value = enToFaS(v);
+  },
+  true,
+);
+// ══════════ سبد: تغییر دستی تعداد → ارسال فرم ══════════
+document.addEventListener("change", (e) => {
+  const inp = e.target.closest(".step-input");
+  if (!inp || !document.getElementById("cartQtyForm")) return;
+  const row = inp.closest(".cart-item-side");
+  const minusBtn = row?.querySelector('button[onclick*="cartChange(-"]');
+  const itemId = minusBtn
+    ? (minusBtn.getAttribute("onclick").match(/cartChange\((\d+)/) || [])[1]
+    : null;
+  if (!itemId) return;
 
-  btn.disabled = true;
-  try {
-    const fd = new FormData();
-    fd.append("product_id", pid);
-    fd.append("qty", qty);
-    const res = await fetch("/api/cart", { method: "POST", body: fd });
-    const data = await res.json();
-
-    if (res.status === 401) {
-      showToast("🔒 برای خرید ابتدا وارد شوید");
-      document.getElementById("authModalOverlay")?.classList.add("show");
-      document.body.style.overflow = "hidden";
-      return;
-    }
-    if (!data.ok) {
-      showToast("⚠️ " + data.error);
-      return;
-    }
-
-    showToast(data.msg);
-    const b = document.getElementById("cartBadge");
-    if (b) {
-      b.textContent = data.count;
-      b.style.removeProperty("display");
-    }
-  } catch {
-    showToast("خطای اتصال");
-  } finally {
-    btn.disabled = false;
-  }
+  document.getElementById("qItem").value = itemId;
+  document.getElementById("qVal").value = parseInt(faToEnS(inp.value), 10) || 1;
+  document.getElementById("cartQtyForm").submit();
 });

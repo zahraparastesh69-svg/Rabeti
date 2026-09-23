@@ -137,7 +137,7 @@ ob_start();
                     <div class="stepper">
                         <button type="button" class="step"
                             onclick="window.cartChange(<?= (int)$it['id'] ?>, +1)">+</button>
-                        <span class="step-num"><?= (int)$it['qty'] ?></span>
+                        <input type="text" inputmode="numeric" class="step-num step-input" value="<?= (int)$it['qty'] ?>">
                         <button type="button" class="step"
                             onclick="window.cartChange(<?= (int)$it['id'] ?>, -1)">−</button>
                     </div>

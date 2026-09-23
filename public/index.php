@@ -380,9 +380,7 @@ ob_start();
                                 +
                             </button>
 
-                            <span class="r6-num">
-                                ۱
-                            </span>
+                           <input type="text" inputmode="numeric" class="r6-num step-input" value="۱">
 
                             <button
                                 type="button"

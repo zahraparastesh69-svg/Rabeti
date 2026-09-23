@@ -102,7 +102,7 @@ ob_start();
                     <?php if ($stock > 0): ?>
                         <div class="stepper" data-min="1">
                             <button type="button" class="step plus">+</button>
-                            <span class="step-num">۱</span>
+                            <input type="text" inputmode="numeric" class="step-num step-input" value="۱">
                             <button type="button" class="step minus">−</button>
                         </div>
                         <button type="button" class="quick-add">افزودن سریع</button>

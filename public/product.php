@@ -126,7 +126,7 @@ ob_start();
 
         <div class="stepper" data-min="1" style="max-width:220px;">
             <button type="button" class="step plus">+</button>
-            <span class="step-num">۱</span>
+            <input type="text" inputmode="numeric" class="r6-num step-input" value="۱">
             <button type="button" class="step minus">−</button>
         </div>
 

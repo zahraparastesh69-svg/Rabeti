@@ -4668,3 +4668,28 @@ body.app-body {
     font-size: 0.74rem !important;
   }
 }
+/* ── ورود دستی تعداد ── */
+.step-input {
+  width: 44px !important;
+  height: 32px !important;
+  border: none !important;
+  background: transparent !important;
+  text-align: center !important;
+  font-family: inherit !important;
+  font-size: 0.92rem !important;
+  font-weight: 700 !important;
+  color: var(--text, #23303a) !important;
+  padding: 0 !important;
+  outline: none !important;
+  box-shadow: none !important;
+  -moz-appearance: textfield;
+  appearance: textfield;
+}
+.step-input::-webkit-outer-spin-button,
+.step-input::-webkit-inner-spin-button {
+  display: none;
+}
+.step-input:focus {
+  background: var(--cream, #f5efe4) !important;
+  border-radius: 6px;
+}
