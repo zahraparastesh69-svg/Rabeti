@@ -594,3 +594,53 @@ document.addEventListener("click", (e) => {
   if (btn.classList.contains("minus")) val = Math.max(min, val - 1);
   num.textContent = enToFa(val);
 });
+// ══════════ افزودن سریع — کارت‌های هر صفحه ══════════
+document.addEventListener("click", async (e) => {
+  const btn = e.target.closest(".r6-add, .quick-add");
+  if (!btn) return;
+
+  const card = btn.closest("[data-product-id]");
+  if (!card) return;
+  const pid = card.dataset.productId;
+
+  const numEl = card.querySelector(".step-num, .r6-num");
+  const qty = numEl
+    ? parseInt(
+        (numEl.textContent || "1").replace(/[۰-۹]/g, (d) =>
+          "۰۱۲۳۴۵۶۷۸۹".indexOf(d),
+        ),
+        10,
+      ) || 1
+    : 1;
+
+  btn.disabled = true;
+  try {
+    const fd = new FormData();
+    fd.append("product_id", pid);
+    fd.append("qty", qty);
+    const res = await fetch("/api/cart", { method: "POST", body: fd });
+    const data = await res.json();
+
+    if (res.status === 401) {
+      showToast("🔒 برای خرید ابتدا وارد شوید");
+      document.getElementById("authModalOverlay")?.classList.add("show");
+      document.body.style.overflow = "hidden";
+      return;
+    }
+    if (!data.ok) {
+      showToast("⚠️ " + data.error);
+      return;
+    }
+
+    showToast(data.msg);
+    const b = document.getElementById("cartBadge");
+    if (b) {
+      b.textContent = data.count;
+      b.style.removeProperty("display");
+    }
+  } catch {
+    showToast("خطای اتصال");
+  } finally {
+    btn.disabled = false;
+  }
+});

@@ -1,8 +1,10 @@
-<?php
+<!-- product-form.php -->
 
+<?php
 require_once __DIR__ . '/../../config/bootstrap.php';
 require_once ROOT_PATH . '/config/database.php';
 require_once ROOT_PATH . '/config/auth.php';
+require_once ROOT_PATH . '/config/upload.php';
 
 require_admin();
 
