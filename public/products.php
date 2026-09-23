@@ -58,26 +58,14 @@ ob_start();
     <p class="section-sub"><?= count($products) ?> مدل — قیمت همکاری، مستقیم از تولیدی</p>
 </section>
 
-<!-- ▂▂▂ فیلتر دسته‌ها ▂▂▂ -->
-<!-- ▂▂▂ دسته‌بندی — مثل صفحه اصلی ▂▂▂ -->
-<section class="r6-cats" style="margin-top:16px;">
-    <a href="/products" class="r6-cat <?= !$activeCat ? 'is-active' : '' ?>">
-        <span class="r6-cat-fallback">✦</span>
-        <span>همه</span>
-    </a>
-    <?php foreach ($categories as $cat): ?>
-        <a href="/products?cat=<?= $h($cat['slug']) ?>"
-            class="r6-cat <?= $activeCat && $activeCat['id'] === $cat['id'] ? 'is-active' : '' ?>">
-            <?php if (!empty($cat['image_path'])): ?>
-                <img src="<?= $h($cat['image_path']) ?>" alt="<?= $h($cat['name']) ?>">
-            <?php else: ?>
-                <span class="r6-cat-fallback"><?= $h(trim($cat['icon'] ?? '') ?: '🧦') ?></span>
-            <?php endif; ?>
-            <span><?= $h($cat['name']) ?></span>
-        </a>
-    <?php endforeach; ?>
-</section>
-
+<!-- ▂▂▂ مسیر راهنما ▂▂▂ -->
+<nav class="breadcrumb">
+    <a href="/">خانه</a> ›
+    <a href="/products">محصولات</a>
+    <?php if ($activeCat): ?> ›
+        <span><?= $h($activeCat['name']) ?></span>
+    <?php endif; ?>
+</nav>
 <!-- ▂▂▂ گرید محصولات ▂▂▂ -->
 <?php if ($products): ?>
     <section class="prod-grid">
