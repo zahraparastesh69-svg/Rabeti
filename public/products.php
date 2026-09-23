@@ -74,7 +74,7 @@ ob_start();
     <section class="prod-grid">
         <?php foreach ($products as $index => $p): ?>
             <?php $stock = (int)($p['qty_available'] ?? 0); ?>
-            <article class="prod-card" data-product-id="<?= (int)$p['id'] ?>">
+            <article class="prod-card card" data-product-id="<?= (int)$p['id'] ?>">
 
                 <a href="/product/<?= $h($p['slug']) ?>" class="prod-img">
                     <?php if ($index === 0 && !$activeCat): ?><span class="prod-badge">محبوب</span><?php endif; ?>
