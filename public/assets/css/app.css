@@ -4501,3 +4501,170 @@ body.app-body {
 .prod-img img {
   position: static !important;
 }
+
+/* ═══ کارت کاتالوگ — نسخه نهایی مطابق آیهان ═══ */
+
+/* گرید */
+.prod-grid {
+  display: grid !important;
+  grid-template-columns: repeat(4, minmax(0, 1fr)) !important;
+  gap: 16px;
+}
+
+/* کارت */
+.prod-card {
+  display: flex !important;
+  flex-direction: column !important;
+  height: auto !important;
+  max-height: none !important;
+  overflow: hidden !important;
+  position: relative;
+  background: #fff !important;
+  border: 1px solid var(--line, #e6e2d8) !important;
+  border-radius: 12px !important;
+}
+
+/* عکس — قلب فیکس: نسبت ثابت، نه ارتفاع آزاد */
+.prod-img {
+  display: block !important;
+  position: relative !important;
+  aspect-ratio: 4 / 5 !important; /* مثل آیهان: کمی عمودی ولی کنترل‌شده */
+  width: 100% !important;
+  height: auto !important;
+  max-height: none !important;
+  overflow: hidden !important;
+  background: #f5efe4;
+}
+.prod-img img {
+  position: absolute !important;
+  inset: 0 !important;
+  width: 100% !important;
+  height: 100% !important;
+  object-fit: cover !important;
+  display: block !important;
+  max-width: none !important;
+}
+.prod-badge {
+  position: absolute !important;
+  top: 10px !important;
+  right: 10px !important;
+  z-index: 3;
+}
+
+/* بدنه — فشرده مثل آیهان */
+.prod-info {
+  padding: 12px 14px 14px !important;
+  display: flex !important;
+  flex-direction: column !important;
+  gap: 4px !important;
+}
+.prod-cat {
+  font-size: 0.64rem !important;
+  color: var(--muted-text, #7a868c);
+}
+.prod-name {
+  font-size: 0.84rem !important;
+  font-weight: 700 !important;
+  line-height: 1.6 !important;
+}
+.prod-name a {
+  color: var(--text, #23303a);
+  text-decoration: none;
+}
+.prod-code {
+  font-size: 0.68rem !important;
+  color: var(--muted-text, #7a868c);
+}
+.prod-price {
+  font-size: 0.95rem !important;
+  font-weight: 800 !important;
+  color: var(--cta-d, var(--orange-dark, #c96f12)) !important;
+  margin: 4px 0 0 !important;
+}
+.prod-price small {
+  display: block;
+  font-size: 0.6rem !important;
+  font-weight: 400;
+  color: var(--muted-text, #7a868c);
+}
+.prod-stock {
+  font-size: 0.68rem !important;
+  font-weight: 700 !important;
+}
+.prod-stock.in {
+  color: #1a7f4b;
+}
+.prod-stock.out {
+  color: #b4443c;
+}
+
+/* Stepper فشرده — سبک آیهان: دایره‌ای کوچک */
+.prod-card .stepper {
+  display: flex !important;
+  align-items: center;
+  justify-content: space-between;
+  width: 100% !important;
+  max-width: none !important;
+  border: 1px solid var(--line, #e6e2d8) !important;
+  border-radius: 20px !important;
+  padding: 3px !important;
+  margin-top: 10px !important;
+}
+.prod-card .step {
+  width: 30px !important;
+  height: 30px !important;
+  border: 1px solid var(--line, #e6e2d8) !important;
+  border-radius: 50% !important;
+  background: #fff !important;
+  font-size: 1rem !important;
+  line-height: 1;
+  color: var(--brand, #2a5f78) !important;
+  cursor: pointer;
+}
+.prod-card .step-num {
+  font-size: 0.9rem !important;
+  font-weight: 700 !important;
+  color: var(--text, #23303a);
+}
+
+/* دکمه — تمام‌عرض سبز-آبی تیره مثل آیهان */
+.prod-card .quick-add {
+  width: 100% !important;
+  min-height: 42px !important;
+  margin-top: 10px !important;
+  border: none !important;
+  border-radius: 10px !important;
+  background: var(--brand, #2a5f78) !important;
+  color: #fff !important;
+  font-family: inherit !important;
+  font-size: 0.82rem !important;
+  font-weight: 700 !important;
+  cursor: pointer !important;
+}
+.prod-card .quick-add:hover {
+  background: var(--dark, #1f4a5e) !important;
+}
+
+/* موبایل: ۲ ستونه فشرده */
+@media (max-width: 760px) {
+  .prod-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr)) !important;
+    gap: 10px !important;
+  }
+  .prod-img {
+    aspect-ratio: 4 / 5 !important;
+  }
+  .prod-info {
+    padding: 10px 11px 12px !important;
+  }
+  .prod-name {
+    font-size: 0.76rem !important;
+  }
+  .prod-price {
+    font-size: 0.86rem !important;
+  }
+  .prod-card .quick-add {
+    min-height: 38px !important;
+    font-size: 0.74rem !important;
+  }
+}
