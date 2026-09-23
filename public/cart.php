@@ -84,7 +84,13 @@ ob_start();
     <h1 class="catalog-title">سبد سفارش شما</h1>
     <p class="catalog-sub"><?= count($items) ?> قلم کالا — قیمت‌ها همکاری است</p>
 </section>
-
+<?php if ($hasIssue): ?>
+    <div class="form-alert error" style="display:block;">
+        ⚠️ برخی اقلام مشکل تعداد/موجودی دارند — با فلش‌های روی هر قلم اصلاح کنید
+    </div>
+<?php else: ?>
+    <a href="/checkout" class="btn btn-primary cart-checkout-btn">ادامه و ثبت سفارش ←</a>
+<?php endif; ?>
 <?php if ($items): ?>
 
     <div class="cart-list">
@@ -113,7 +119,14 @@ ob_start();
                             <b class="cart-no-price">قیمت نیاز به استعلام دارد</b>
                         <?php endif; ?>
                     </div>
+                    <?php $moqErr = ((int)$it['qty'] < (int)$it['base_moq']) ? 'حداقل سفارش این محصول ' . (int)$it['base_moq'] . ' جفت است' : ''; ?>
+                    <?php $stkErr = ((int)$it['stock'] < (int)$it['qty']) ? 'موجودی کافی نیست — فقط ' . number_format((int)$it['stock']) . ' جفت' : ''; ?>
 
+                    <?php if ($moqErr || $stkErr): ?>
+                        <div class="cart-item-warn">
+                            ⚠️ <?= $h($stkErr ?: $moqErr) ?>
+                        </div>
+                    <?php endif; ?>
                     <span class="stock <?= $it['stock'] >= $it['qty'] ? 'in' : 'out' ?>">
                         <?= $it['stock'] >= $it['qty'] ? '● موجود در انبار' : '⚠ موجودی انبار فقط ' . number_format((int)$it['stock']) . ' جفت' ?>
                     </span>
@@ -153,6 +166,15 @@ ob_start();
         </form>
 
         <!-- جمع کل -->
+        <?php
+        $hasIssue = false;
+        foreach ($items as $it) {
+            if ((int)$it['qty'] < (int)$it['base_moq'] || (int)$it['stock'] < (int)$it['qty']) {
+                $hasIssue = true;
+                break;
+            }
+        }
+        ?>
         <div class="cart-summary">
             <div class="cart-summary-row">
                 <span>تعداد کل</span>

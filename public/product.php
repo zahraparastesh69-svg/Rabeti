@@ -124,6 +124,12 @@ ob_start();
             <div class="pd-spec"><span>ارسال</span><b>سراسر کشور — ۲۴ تا ۷۲ ساعت</b></div>
         </div>
 
+        <div class="stepper" data-min="1" style="max-width:220px;">
+            <button type="button" class="step plus">+</button>
+            <span class="step-num">۱</span>
+            <button type="button" class="step minus">−</button>
+        </div>
+
         <div class="pd-actions">
             <?php if ($inStock): ?>
                 <button type="button" class="r6-add pd-order-btn" data-product-id="<?= (int)$product['id'] ?>">

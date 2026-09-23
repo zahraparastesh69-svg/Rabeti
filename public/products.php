@@ -78,34 +78,35 @@ ob_start();
     <section class="premium-product-grid catalog-grid">
         <?php foreach ($products as $index => $p): ?>
             <?php $stock = (int)($p['qty_available'] ?? 0); ?>
-            <a href="/product/<?= $h($p['slug']) ?>" class="premium-product-card">
-                <div class="product-visual">
-                    <span class="product-index"><?= str_pad((string)($index + 1), 2, '0', STR_PAD_LEFT) ?></span>
-                    <?php if ($stock > 0): ?>
-                        <span class="product-badge">موجود</span>
+            <article class="card" data-product-id="<?= (int)$p['id'] ?>">
+                <a href="/product/<?= $h($p['slug']) ?>" class="card-img">
+                    <?php if ($i === 0 && !$activeCat): ?><span class="badge">محبوب</span><?php endif; ?>
+                    <?php if (!empty($p['img'])): ?>
+                        <img src="<?= $h($p['img']) ?>" alt="<?= $h($p['name']) ?>" loading="lazy">
                     <?php else: ?>
-                        <span class="product-badge out">ناموجود</span>
+                        <span>🧦</span>
                     <?php endif; ?>
-                    <div class="product-surface"></div>
-                    <div class="product-sock">🧦</div>
-                    <div class="product-shadow"></div>
-                    <span class="product-open">↗</span>
-                </div>
-                <div class="premium-product-info">
-                    <div class="product-meta-line">
-                        <span>کد <?= $h($p['code']) ?></span>
-                        <span><?= $h($p['cat_name']) ?></span>
+                </a>
+                <div class="card-body">
+                    <h3><a href="/product/<?= $h($p['slug']) ?>"><?= $h($p['name']) ?></a></h3>
+                    <span class="card-attr">کد <?= $h($p['code']) ?> | حداقل <?= (int)$p['base_moq'] ?> جفت</span>
+                    <div class="price">
+                        <b><?= $p['price'] !== null ? number_format((float)$p['price']) : 'استعلام' ?> تومان</b>
+                        <small>قیمت همکاری</small>
                     </div>
-                    <h3><?= $h($p['name']) ?></h3>
-                    <div class="product-bottom-line">
-                        <div>
-                            <small>قیمت همکاری</small>
-                            <strong><?= $p['price'] !== null ? number_format((float)$p['price']) . ' تومان' : 'استعلام قیمت' ?></strong>
+                    <span class="stock <?= $stock > 0 ? 'in' : 'out' ?>">
+                        <?= $stock > 0 ? '● موجود در انبار (' . number_format((int)$stock) . ' جفت)' : '● ناموجود' ?>
+                    </span>
+                    <?php if ($stock > 0): ?>
+                        <div class="stepper" data-min="1">
+                            <button type="button" class="step plus">+</button>
+                            <span class="step-num">۱</span>
+                            <button type="button" class="step minus">−</button>
                         </div>
-                        <span class="product-moq">حداقل <?= (int)$p['base_moq'] ?> جفت</span>
-                    </div>
+                        <button type="button" class="quick-add">افزودن سریع</button>
+                    <?php endif; ?>
                 </div>
-            </a>
+            </article>
         <?php endforeach; ?>
     </section>
 <?php else: ?>

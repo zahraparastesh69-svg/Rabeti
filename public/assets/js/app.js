@@ -581,3 +581,16 @@ document
       btn.disabled = false;
     }
   });
+// ══════════ Stepper عمومی — همه صفحات ══════════
+document.addEventListener("click", (e) => {
+  const btn = e.target.closest(".step");
+  if (!btn) return;
+  const st = btn.closest(".stepper");
+  const num = st?.querySelector(".step-num, .r6-num");
+  if (!num) return;
+  const min = parseInt(st.dataset.min || "1", 10) || 1;
+  let val = parseInt(faToEn(num.textContent), 10) || min;
+  if (btn.classList.contains("plus")) val++;
+  if (btn.classList.contains("minus")) val = Math.max(min, val - 1);
+  num.textContent = enToFa(val);
+});
