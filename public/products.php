@@ -4,7 +4,6 @@ require_once ROOT_PATH . '/config/database.php';
 
 $h = static fn($v) => htmlspecialchars((string)$v, ENT_QUOTES, 'UTF-8');
 
-/* ─────────── فیلتر دسته ─────────── */
 $catSlug   = trim($_GET['cat'] ?? '');
 $activeCat = null;
 
@@ -18,18 +17,18 @@ if ($catSlug !== '') {
         http_response_code(404);
         $pageTitle = 'دسته یافت نشد';
         ob_start();
-        echo '<div class="empty-state"><h2>این دسته پیدا نشد</h2><a href="/products" class="btn btn-primary">همه محصولات</a></div>';
+        echo '<div class="empty-state"><h2>این دسته پیدا نشد</h2><a href="/products" class="btn btn-orange">همه محصولات</a></div>';
         $content = ob_get_clean();
         require ROOT_PATH . '/views/layouts/main.php';
         exit;
     }
 }
 
-/* ─────────── محصولات — با عکس از DB ─────────── */
+/* محصولات — با عکس از DB */
 $sql = "
     SELECT p.id, p.code, p.name, p.slug, p.base_moq,
            pr.price, inv.qty_available,
-           c.name AS cat_name, c.slug AS cat_slug,
+           c.name AS cat_name,
            (SELECT image_path FROM product_images pi
             WHERE pi.product_id = p.id
             ORDER BY pi.is_main DESC, pi.sort_order ASC LIMIT 1) AS img
@@ -40,13 +39,10 @@ $sql = "
     WHERE p.is_active = 1
 ";
 $params = [];
-
 if ($activeCat) {
-    $sql .= " AND (p.category_id = ? OR c.parent_id = ?) ";
-    $params[] = $activeCat['id'];
+    $sql .= " AND p.category_id = ? ";
     $params[] = $activeCat['id'];
 }
-
 $sql .= " ORDER BY p.id DESC LIMIT 60";
 $stmt = db()->prepare($sql);
 $stmt->execute($params);
@@ -57,77 +53,63 @@ ob_start();
 ?>
 
 <!-- ▂▂▂ سربرگ کاتالوگ ▂▂▂ -->
-<section class="r-section" style="margin-bottom:0;">
-    <h1 class="catalog-title"><?= $activeCat ? $h($activeCat['name']) : 'همه محصولات' ?></h1>
-    <p class="catalog-sub"><?= count($products) ?> مدل — قیمت همکاری، مستقیم از تولیدی</p>
+<section class="page-head">
+    <h1 class="section-title"><?= $activeCat ? $h($activeCat['name']) : 'همه محصولات' ?></h1>
+    <p class="section-sub"><?= count($products) ?> مدل — قیمت همکاری، مستقیم از تولیدی</p>
 </section>
 
-<!-- ▂▂▂ چیپ‌های دسته (هماهنگ با صفحه اصلی) ▂▂▂ -->
-<section class="r-cats" style="margin-top:16px;">
-    <a href="/products" class="r6-cat <?= !$activeCat ? 'is-active' : '' ?>">
-        <span class="r6-cat-fallback">✦</span>
-        <span>همه</span>
-    </a>
+<!-- ▂▂▂ فیلتر دسته‌ها — چیپ‌های قدیمی که کار می‌کنند ▂▂▂ -->
+<section class="filter-bar">
+    <a href="/products" class="filter-chip <?= !$activeCat ? 'active' : '' ?>">همه</a>
     <?php foreach ($categories as $cat): ?>
         <a href="/products?cat=<?= $h($cat['slug']) ?>"
-            class="r6-cat <?= $activeCat && $activeCat['id'] === $cat['id'] ? 'is-active' : '' ?>">
-            <?php if (!empty($cat['image_path'])): ?>
-                <img src="<?= $h($cat['image_path']) ?>" alt="<?= $h($cat['name']) ?>">
-            <?php else: ?>
-                <span class="r6-cat-fallback"><?= $h(trim($cat['icon'] ?? '') ?: '🧦') ?></span>
-            <?php endif; ?>
-            <span><?= $h($cat['name']) ?></span>
+            class="filter-chip <?= $activeCat && $activeCat['id'] === $cat['id'] ? 'active' : '' ?>">
+            <?= trim($cat['icon'] ?? '') ?: '🧦' ?> <?= $h($cat['name']) ?>
         </a>
     <?php endforeach; ?>
 </section>
 
-<!-- ▂▂▂ گرید محصولات — کامپوننت کارت یکدست v6 ▂▂▂ -->
+<!-- ▂▂▂ گرید محصولات ▂▂▂ -->
 <?php if ($products): ?>
-    <section class="r-section">
-        <div class="r-grid">
-            <?php foreach ($products as $index => $p): ?>
-                <?php $stock = (int)($p['qty_available'] ?? 0); ?>
-                <article class="r6-card" data-product-id="<?= (int)$p['id'] ?>">
-                    <a href="/product/<?= $h($p['slug']) ?>" class="r6-card-img">
-                        <?php if ($index === 0 && !$activeCat): ?>
-                            <span class="r6-badge">محبوب</span>
-                        <?php endif; ?>
-                        <?php if (!empty($p['img'])): ?>
-                            <img src="<?= $h($p['img']) ?>" alt="<?= $h($p['name']) ?>" loading="lazy">
-                        <?php else: ?>
-                            <span>🧦</span>
-                        <?php endif; ?>
-                    </a>
-                    <div class="r6-card-body">
-                        <h3><a href="/product/<?= $h($p['slug']) ?>"><?= $h($p['name']) ?></a></h3>
-                        <span class="r6-attr">کد <?= $h($p['code']) ?> | حداقل <?= (int)$p['base_moq'] ?> جفت</span>
-                        <div class="r6-price">
-                            <b><?= $p['price'] !== null ? number_format((float)$p['price']) : 'استعلام' ?> تومان</b>
-                            <small>قیمت همکاری</small>
-                        </div>
-                        <span class="r6-stock <?= $stock > 0 ? 'in' : 'out' ?>">
-                            <?= $stock > 0
-                                ? '● موجود در انبار (' . number_format($stock) . ' جفت)'
-                                : '● ناموجود' ?>
-                        </span>
-                        <?php if ($stock > 0): ?>
-                            <div class="r6-stepper" data-min="1">
-                                <button type="button" class="r6-step plus">+</button>
-                                <span class="r6-num">۱</span>
-                                <button type="button" class="r6-step minus">−</button>
-                            </div>
-                            <button type="button" class="r6-add">افزودن سریع</button>
-                        <?php endif; ?>
+    <section class="prod-grid">
+        <?php foreach ($products as $index => $p): ?>
+            <?php $stock = (int)($p['qty_available'] ?? 0); ?>
+            <article class="prod-card" data-product-id="<?= (int)$p['id'] ?>">
+                <a href="/product/<?= $h($p['slug']) ?>" class="prod-img">
+                    <?php if ($index === 0 && !$activeCat): ?><span class="prod-badge">محبوب</span><?php endif; ?>
+                    <?php if (!empty($p['img'])): ?>
+                        <img src="<?= $h($p['img']) ?>" alt="<?= $h($p['name']) ?>" loading="lazy">
+                    <?php else: ?>
+                        <span>🧦</span>
+                    <?php endif; ?>
+                </a>
+                <div class="prod-info">
+                    <div class="prod-cat"><?= $h($p['cat_name']) ?></div>
+                    <div class="prod-name"><a href="/product/<?= $h($p['slug']) ?>"><?= $h($p['name']) ?></a></div>
+                    <div class="prod-code">کد <?= $h($p['code']) ?> | حداقل <?= (int)$p['base_moq'] ?> جفت</div>
+                    <div class="prod-price"><?= $p['price'] !== null ? number_format((float)$p['price']) : 'استعلام' ?> تومان
+                        <small style="font-weight:400;color:var(--muted);">قیمت همکاری</small>
                     </div>
-                </article>
-            <?php endforeach; ?>
-        </div>
+                    <div class="prod-stock <?= $stock > 0 ? 'in' : 'out' ?>">
+                        <?= $stock > 0 ? '● موجود (' . number_format($stock) . ' جفت)' : '● ناموجود' ?>
+                    </div>
+                    <?php if ($stock > 0): ?>
+                        <div class="stepper" data-min="1" style="margin-top:8px;">
+                            <button type="button" class="step plus">+</button>
+                            <span class="step-num">۱</span>
+                            <button type="button" class="step minus">−</button>
+                        </div>
+                        <button type="button" class="quick-add" style="margin-top:8px;width:100%;">افزودن سریع</button>
+                    <?php endif; ?>
+                </div>
+            </article>
+        <?php endforeach; ?>
     </section>
 <?php else: ?>
     <div class="empty-state">
         <div class="empty-icon">📦</div>
         <h2>فعلاً محصولی در این دسته نیست</h2>
-        <a href="/products" class="btn btn-primary">مشاهده همه محصولات</a>
+        <a href="/products" class="btn btn-orange">مشاهده همه محصولات</a>
     </div>
 <?php endif; ?>
 

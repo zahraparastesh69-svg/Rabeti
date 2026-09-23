@@ -33,3 +33,6 @@ RewriteRule ^cart/?$ cart.php [L,QSA]
 RewriteRule ^checkout/?$ checkout.php [L,QSA]
 
 RewriteRule ^order-success/?$ order-success.php [L,QSA]
+
+RewriteRule ^admin/orders/?$ admin/orders.php [L,QSA]
+RewriteRule ^admin/order-detail/?$ admin/order-detail.php [L,QSA]

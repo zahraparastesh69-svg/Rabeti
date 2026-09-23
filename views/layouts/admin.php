@@ -26,6 +26,9 @@ if (!isset($countPendingCustomers)) {
         WHERE status = 'pending'
     ")->fetchColumn();
 }
+if (!isset($countOrders)) {
+    $countOrders = (int)db()->query("SELECT COUNT(*) FROM orders WHERE status='pending_review'")->fetchColumn();
+}
 
 $adminPageTitle =
     $pageTitle ?? 'پنل مدیریت';
@@ -75,6 +78,13 @@ $menu = [
         'href'  => '/admin/customers',
         'icon'  => 'customers',
         'badge' => $countPendingCustomers
+    ],
+    [
+        'key'   => 'orders',
+        'label' => 'سفارش‌ها',
+        'href'  => '/admin/orders',
+        'icon'  => 'products',
+        'badge' => ($countOrders ?? 0)
     ],
 
 ];
