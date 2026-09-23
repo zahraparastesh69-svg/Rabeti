@@ -4370,3 +4370,387 @@ body.app-body {
 .r6-cat.is-active img {
   filter: brightness(1.1);
 }
+
+/* ═══════════════════════════════════════════════════════════════
+   V6 COMPONENTS — گرید، کارت محصول، چیپ دسته (پایه: #2A5F78)
+   ═══════════════════════════════════════════════════════════════ */
+
+:root {
+  --r6-brand: #2a5f78;
+  --r6-dark: #1f4a5e;
+  --r6-deep: #1b3f50;
+  --r6-cream: #f5efe4;
+  --r6-text: #23303a;
+  --r6-mut: #7a868c;
+  --r6-line: #e6e2d8;
+  --r6-cta: #e58a24;
+  --r6-cta-d: #c96f12;
+  --r6-ok: #2e8b57;
+  --r6-no: #b4443c;
+}
+
+/* ─── گرید و سکشن ─── */
+.r-section {
+  margin: 48px 0;
+}
+.r-grid {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 14px;
+}
+@media (max-width: 760px) {
+  .r-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 10px;
+  }
+}
+
+/* ─── کارت محصول ─── */
+.r6-card {
+  background: #fff;
+  border: 1px solid var(--r6-line);
+  border-radius: 12px;
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+  transition:
+    transform 0.22s ease,
+    box-shadow 0.22s ease;
+}
+.r6-card:hover {
+  transform: translateY(-3px);
+  box-shadow: 0 12px 28px rgba(31, 74, 94, 0.1);
+}
+.r6-card-img {
+  position: relative;
+  aspect-ratio: 1;
+  background: #f1ede3;
+  display: grid;
+  place-items: center;
+  font-size: 3rem;
+  text-decoration: none;
+  overflow: hidden;
+}
+.r6-card-img img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  display: block;
+}
+.r6-badge {
+  position: absolute;
+  top: 12px;
+  left: 12px;
+  background: var(--r6-cta);
+  color: #fff;
+  font-size: 0.66rem;
+  font-weight: 800;
+  padding: 5px 12px;
+  border-radius: 8px;
+  z-index: 2;
+}
+.r6-card-body {
+  padding: 16px 14px 14px;
+  text-align: center;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 6px;
+  flex: 1;
+}
+.r6-card-body h3 {
+  margin: 0;
+  font-size: 0.92rem;
+  font-weight: 700;
+  color: var(--r6-text);
+  line-height: 1.6;
+}
+.r6-card-body h3 a {
+  color: inherit;
+  text-decoration: none;
+}
+.r6-card-body h3 a:hover {
+  color: var(--r6-brand);
+}
+.r6-attr {
+  font-size: 0.72rem;
+  color: var(--r6-mut);
+}
+.r6-price b {
+  display: block;
+  font-size: 1rem;
+  font-weight: 800;
+  color: var(--r6-cta-d);
+}
+.r6-price small {
+  font-size: 0.66rem;
+  color: var(--r6-mut);
+}
+.r6-stock {
+  font-size: 0.72rem;
+  font-weight: 600;
+}
+.r6-stock.in {
+  color: var(--r6-ok);
+}
+.r6-stock.out {
+  color: var(--r6-no);
+}
+
+/* Stepper */
+.r6-stepper {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  width: 100%;
+  max-width: 220px;
+  border: 1px solid var(--r6-line);
+  border-radius: 10px;
+  padding: 4px;
+}
+.r6-step {
+  width: 38px;
+  height: 36px;
+  border: none;
+  background: none;
+  font-size: 1.15rem;
+  color: var(--r6-brand);
+  cursor: pointer;
+  border-radius: 8px;
+}
+.r6-step:active {
+  background: var(--r6-cream);
+}
+.r6-num {
+  font-size: 0.95rem;
+  font-weight: 700;
+  color: var(--r6-text);
+}
+
+/* دکمه افزودن */
+.r6-add {
+  width: 100%;
+  min-height: 44px;
+  border: none;
+  border-radius: 10px;
+  background: var(--r6-brand);
+  color: #fff;
+  font-family: inherit;
+  font-size: 0.85rem;
+  font-weight: 700;
+  cursor: pointer;
+  transition:
+    background 0.2s,
+    transform 0.1s;
+}
+.r6-add:hover {
+  background: var(--r6-dark);
+}
+.r6-add:active {
+  transform: scale(0.97);
+}
+
+/* ─── چیپ‌های دسته ─── */
+.r-cats {
+  display: flex;
+  gap: 10px;
+  overflow-x: auto;
+  padding: 4px 2px 10px;
+  scrollbar-width: none;
+}
+.r-cats::-webkit-scrollbar {
+  display: none;
+}
+.r6-cat {
+  flex: 0 0 auto;
+  width: 96px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 12px;
+  padding: 20px 8px 16px;
+  background: #fff;
+  border: 1px solid var(--r6-line);
+  border-radius: 12px;
+  text-decoration: none;
+  transition:
+    border-color 0.2s,
+    background 0.2s,
+    transform 0.2s;
+}
+.r6-cat:hover {
+  border-color: var(--r6-brand);
+  transform: translateY(-2px);
+}
+.r6-cat img {
+  width: 34px;
+  height: 34px;
+  object-fit: cover;
+  border-radius: 8px;
+  display: block;
+}
+.r6-cat-fallback {
+  font-size: 1.4rem;
+  line-height: 1;
+  color: var(--r6-text);
+}
+.r6-cat > span:last-child {
+  font-size: 0.8rem;
+  font-weight: 600;
+  color: var(--r6-text);
+}
+.r6-cat.is-active {
+  background: var(--r6-brand);
+  border-color: var(--r6-brand);
+}
+.r6-cat.is-active span {
+  color: #fff;
+}
+.r6-cat.is-active img {
+  filter: brightness(1.15);
+}
+
+/* ─── هیرو و بقیه v6 (اگر نیستند) ─── */
+.r6-hero {
+  position: relative;
+  min-height: 480px;
+  display: flex;
+  align-items: flex-end;
+  overflow: hidden;
+  background: var(--r6-cream);
+}
+.r6-hero-img {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+.r6-hero-fade {
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(
+    to top,
+    rgba(245, 239, 228, 0.97) 0%,
+    rgba(245, 239, 228, 0.82) 26%,
+    rgba(245, 239, 228, 0) 60%
+  );
+}
+.r6-hero-content {
+  position: relative;
+  z-index: 2;
+  width: 100%;
+  max-width: 1280px;
+  margin: 0 auto;
+  padding: 26px 22px 30px;
+}
+.r6-eyebrow {
+  display: block;
+  color: var(--r6-brand);
+  font-size: 0.74rem;
+  font-weight: 800;
+  margin-bottom: 10px;
+}
+.r6-eyebrow-light {
+  display: block;
+  color: rgba(255, 255, 255, 0.65);
+  font-size: 0.74rem;
+  font-weight: 700;
+  margin-bottom: 10px;
+}
+.r6-hero-content h1 {
+  margin: 0 0 10px;
+  font-size: clamp(2rem, 7vw, 3.2rem);
+  font-weight: 800;
+  color: var(--r6-text);
+  line-height: 1.4;
+  letter-spacing: -0.5px;
+}
+.r6-hero-content p {
+  margin: 0 0 22px;
+  color: var(--r6-mut);
+  font-size: 0.92rem;
+  line-height: 2;
+}
+.r6-hero-cta {
+  display: flex;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+.r6-hero-cta .r-btn {
+  min-width: 170px;
+}
+.r6-arrow {
+  transition: transform 0.2s;
+}
+.r-btn:hover .r6-arrow {
+  transform: translateX(-4px);
+}
+
+.r-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 9px;
+  min-height: 46px;
+  padding: 12px 26px;
+  border-radius: 10px;
+  font-size: 0.88rem;
+  font-weight: 700;
+  text-decoration: none;
+  border: none;
+  cursor: pointer;
+  font-family: inherit;
+  transition: 0.2s;
+}
+.r-btn:active {
+  transform: scale(0.97);
+}
+.r-btn-primary {
+  background: var(--r6-brand);
+  color: #fff;
+}
+.r-btn-primary:hover {
+  background: var(--r6-dark);
+}
+.r-btn-outline {
+  background: transparent;
+  color: var(--r6-brand);
+  border: 1.5px solid var(--r6-brand);
+}
+.r-btn-accent {
+  background: var(--r6-cta);
+  color: #fff;
+}
+.r-btn-white {
+  background: #fff;
+  color: var(--r6-brand);
+}
+
+/* catalog title */
+.catalog-title {
+  margin: 0 0 8px;
+  font-size: clamp(1.6rem, 3.5vw, 2.2rem);
+  font-weight: 800;
+  color: var(--r6-text);
+  letter-spacing: -0.5px;
+}
+.catalog-sub {
+  margin: 0;
+  font-size: 0.88rem;
+  color: var(--r6-mut);
+}
+
+@media (max-width: 760px) {
+  .r6-hero {
+    min-height: 420px;
+  }
+  .r6-hero-content h1 {
+    font-size: clamp(1.7rem, 8vw, 2.2rem);
+  }
+  .r6-hero-cta .r-btn {
+    flex: 1;
+    min-width: 0;
+  }
+}
