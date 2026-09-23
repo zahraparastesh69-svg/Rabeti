@@ -5,6 +5,7 @@ require_once ROOT_PATH . '/config/database.php';
 require_once ROOT_PATH . '/config/auth.php';
 
 require_admin();
+
 $action    = ($_GET['action'] ?? 'new') === 'edit' ? 'edit' : 'new';
 $productId = (int)($_GET['id'] ?? 0);
 $errors    = [];
@@ -90,22 +91,40 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                        ON DUPLICATE KEY UPDATE qty_available = VALUES(qty_available)")
             ->execute([$productId, $qty]);
 
-        /* عکس محصول — اگر فایل جدید انتخاب شده باشد */
+        /* عکس محصول — اگر شکست بخورد، ریدایرکت نمی‌کنیم تا خطا دیده شود */
+        $uploadFailed = false;
         if (!empty($_FILES['image']['name'])) {
-            $imgPath = upload_image($_FILES['image'], 'products');
-            if ($imgPath) {
+            $up = upload_image_ex($_FILES['image'], 'products');
+            if ($up['ok']) {
                 db()->prepare("UPDATE product_images SET is_main=0 WHERE product_id=?")->execute([$productId]);
                 db()->prepare("INSERT INTO product_images (product_id, image_path, is_main) VALUES (?,?,1)")
-                    ->execute([$productId, $imgPath]);
-                $currentImage = $imgPath;
+                    ->execute([$productId, $up['path']]);
+                $currentImage = $up['path'];
+            } else {
+                $errors['image']  = 'آپلود ناموفق: ' . $up['error'];
+                $uploadFailed     = true;
             }
         }
 
-        header('Location: /admin/products');
-        exit;
+        /* ✅ فقط وقتی هیچ خطایی (از جمله آپلود) نبود، ریدایرکت */
+        if (!$uploadFailed) {
+            header('Location: /admin/products');
+            exit;
+        }
+
+        /* آپلود شکست خورد → فرم دوباره باز می‌شود با پیام دقیق خطا
+           و بقیه داده‌ها هم که همین الان ذخیره شده‌اند حفظ می‌شوند */
+        $product = array_merge($product, [
+            'code' => $code,
+            'name' => $name,
+            'slug' => $slug,
+            'description' => $description,
+            'base_moq' => $baseMoq,
+            'category_id' => $categoryId
+        ]);
     }
 
-    /* بازگرداندن مقادیر پس از خطا */
+    /* بازگرداندن مقادیر پس از خطای اعتبارسنجی */
     $product = array_merge($product, [
         'code' => $code,
         'name' => $name,
@@ -130,7 +149,9 @@ ob_start();
 <form method="post" class="co-form" style="max-width:100%;" enctype="multipart/form-data">
 
     <?php if ($errors): ?>
-        <div class="form-alert">⚠️ خطاها را اصلاح کنید</div>
+        <div class="form-alert error" style="display:block;">
+            ⚠️ <?php foreach ($errors as $er): ?><?= htmlspecialchars($er) ?><br><?php endforeach; ?>
+        </div>
     <?php endif; ?>
 
     <div class="form-row">
@@ -190,6 +211,7 @@ ob_start();
         <?php endif; ?>
         <input type="file" name="image" accept="image/jpeg,image/png,image/webp">
         <span class="field-hint">JPG/PNG/WebP — حداکثر ۲ مگابایت — ترجیحاً مربعی</span>
+        <?php if (isset($errors['image'])): ?><span class="field-error"><?= $errors['image'] ?></span><?php endif; ?>
     </div>
 
     <div class="form-field">
