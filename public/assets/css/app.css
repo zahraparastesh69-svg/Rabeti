@@ -4490,3 +4490,14 @@ body.app-body {
     font-size: 0.74rem;
   }
 }
+.prod-card {
+  overflow: visible;
+  height: auto;
+}
+.prod-img {
+  aspect-ratio: 1 / 1 !important;
+  height: auto !important;
+}
+.prod-img img {
+  position: static !important;
+}
