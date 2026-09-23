@@ -1,6 +1,7 @@
 RewriteEngine On
 
 
+RewriteRule ^admin/product-form/?$ admin/product-form.php [L,QSA]
 
 RewriteRule ^admin/products/?$ admin/products.php [L,QSA]
 

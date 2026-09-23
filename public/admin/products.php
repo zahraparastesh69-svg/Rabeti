@@ -33,7 +33,7 @@ ob_start();
 
 <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:16px;flex-wrap:wrap;gap:10px;">
     <h2 style="font-size:1rem;"><?= count($products) ?> محصول</h2>
-    <a href="/admin/products?action=new" class="btn btn-orange" style="padding:10px 22px;font-size:.82rem;">+ محصول جدید</a>
+    <a href="/admin/product-form?action=new" class="btn btn-orange" style="padding:10px 22px;font-size:.82rem;">+ محصول جدید</a>
 </div>
 
 <div class="admin-table-wrap">
@@ -69,7 +69,7 @@ ob_start();
                         </span>
                     </td>
                     <td style="white-space:nowrap;">
-                        <a href="/admin/products?action=edit&id=<?= (int)$p['id'] ?>"
+                        <a href="/admin/product-form?action=edit&id=<?= (int)$p['id'] ?>"
                             class="btn" style="padding:6px 14px;font-size:.72rem;background:var(--teal-100);color:var(--teal-800);">ویرایش</a>
                         <?php if ($p['is_active']): ?>
                             <form method="post" style="display:inline;" onsubmit="return confirm('این محصول از فروشگاه مخفی شود؟')">
