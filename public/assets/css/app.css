@@ -4360,3 +4360,13 @@ body.app-body {
   padding: 6px 10px;
   margin-top: 6px;
 }
+.r6-cat.is-active {
+  background: var(--r6-brand, var(--brand, #2a5f78));
+  border-color: var(--r6-brand, var(--brand, #2a5f78));
+}
+.r6-cat.is-active span {
+  color: #fff;
+}
+.r6-cat.is-active img {
+  filter: brightness(1.1);
+}
