@@ -1,6 +1,5 @@
-<!-- product-form.php -->
-
 <?php
+
 require_once __DIR__ . '/../../config/bootstrap.php';
 require_once ROOT_PATH . '/config/database.php';
 require_once ROOT_PATH . '/config/auth.php';
@@ -8,9 +7,24 @@ require_once ROOT_PATH . '/config/upload.php';
 
 require_admin();
 
+/* ─── لیست مشخصه‌ها — قبل از هر چیز تا POST هم ببیند ─── */
+$specFields = [
+    'نوع جوراب',
+    'جنس',
+    'طرح',
+    'مناسب برای',
+    'تعداد در بسته',
+    'رنگ',
+    'دوخت پنجه',
+    'پاشنه و پنجه',
+    'وسط‌کش',
+    'سایز',
+];
+
 $action    = ($_GET['action'] ?? 'new') === 'edit' ? 'edit' : 'new';
 $productId = (int)($_GET['id'] ?? 0);
 $errors    = [];
+$currentSpecs = [];
 
 /* ─── حالت ویرایش: خواندن داده ─── */
 if ($action === 'edit' && $productId > 0) {
@@ -33,19 +47,21 @@ if ($action === 'edit' && $productId > 0) {
     $stmt = db()->prepare("SELECT image_path FROM product_images WHERE product_id=? AND is_main=1 LIMIT 1");
     $stmt->execute([$productId]);
     $currentImage = $stmt->fetchColumn() ?: null;
-    $stmt = db()->prepare("SELECT spec_key, spec_value FROM product_specs WHERE product_id=? ORDER BY sort_order, id");
+
+    /* خواندن مشخصات موجود → آرایه key => value */
+    $stmt = db()->prepare("SELECT spec_key, spec_value FROM product_specs WHERE product_id=?");
     $stmt->execute([$productId]);
-    $specsText = '';
+    $currentSpecs = [];
     foreach ($stmt->fetchAll() as $s) {
-        $specsText .= $s['spec_key'] . ': ' . $s['spec_value'] . "\n";
+        $currentSpecs[$s['spec_key']] = $s['spec_value'];
     }
 } else {
     $action = 'new';
-    $product = ['code' => '', 'name' => '', 'slug' => '', 'description' => '', 'base_moq' => '48', 'category_id' => ''];
+    $product = ['code' => '', 'name' => '', 'slug' => '', 'description' => '', 'base_moq' => '48', 'category_id' => '', 'color_label' => ''];
     $price = 0;
     $qty = 0;
     $currentImage = null;
-    $specsText = '';
+    $currentSpecs = [];
 }
 
 /* ─── ذخیره ─── */
@@ -59,17 +75,13 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     $categoryId  = (int)($_POST['category_id'] ?? 0);
     $price       = max(0, (int)($_POST['price'] ?? 0));
     $qty         = max(0, (int)($_POST['qty'] ?? 0));
-    $specsText = trim($_POST['specs'] ?? '');
+
+
+    /* مشخصات: از فیلدهای جداگانه */
     $specs = [];
-    foreach (preg_split('/\r\n|\r|\n/', $specsText) as $line) {
-        $line = trim($line);
-        if ($line === '') continue;
-        $line = ltrim($line, '•-– ');
-        $pos = mb_strpos($line, ':');
-        if ($pos === false) continue;
-        $k = trim(mb_substr($line, 0, $pos));
-        $v = trim(mb_substr($line, $pos + 1));
-        if ($k !== '' && $v !== '') $specs[] = [$k, $v];
+    foreach ($specFields as $key) {
+        $v = trim($_POST['spec_' . md5($key)] ?? '');
+        if ($v !== '') $specs[] = [$key, $v];
     }
 
     /* اعتبارسنجی */
@@ -93,12 +105,12 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
     if (!$errors) {
         if ($action === 'new') {
-            db()->prepare("INSERT INTO products (category_id, code, name, slug, description, base_moq) VALUES (?,?,?,?,?,?)")
+            db()->prepare("INSERT INTO products (category_id, code, name, slug, description, base_moq) VALUES (?,?,?,?,?,?,?)")
                 ->execute([$categoryId, $code, $name, $slug, $description ?: null, $baseMoq]);
             $productId = (int)db()->lastInsertId();
         } else {
-            db()->prepare("UPDATE products SET category_id=?, code=?, name=?, slug=?, description=?, base_moq=? WHERE id=?")
-                ->execute([$categoryId, $code, $name, $slug, $description ?: null, $baseMoq, $productId]);
+            db()->prepare("UPDATE products SET category_id=?, code=?, name=?, slug=?, description=?, base_moq=?")
+                ->execute([$categoryId, $code, $name, $slug, $description ?: null, $baseMoql, $productId]);
         }
 
         /* قیمت */
@@ -112,7 +124,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                        ON DUPLICATE KEY UPDATE qty_available = VALUES(qty_available)")
             ->execute([$productId, $qty]);
 
-        /* مشخصات ساختاریافته */
+        /* مشخصات — بازنویسی کامل */
         db()->prepare("DELETE FROM product_specs WHERE product_id=?")->execute([$productId]);
         if ($specs) {
             $insSpec = db()->prepare("INSERT INTO product_specs (product_id, spec_key, spec_value, sort_order) VALUES (?,?,?,?)");
@@ -120,7 +132,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 $insSpec->execute([$productId, $sv[0], $sv[1], $i]);
             }
         }
-        /* عکس محصول — اگر شکست بخورد، ریدایرکت نمی‌کنیم تا خطا دیده شود */
+
+        /* عکس محصول */
         $uploadFailed = false;
         if (!empty($_FILES['image']['name'])) {
             $up = upload_image_ex($_FILES['image'], 'products');
@@ -130,37 +143,35 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                     ->execute([$productId, $up['path']]);
                 $currentImage = $up['path'];
             } else {
-                $errors['image']  = 'آپلود ناموفق: ' . $up['error'];
-                $uploadFailed     = true;
+                $errors['image'] = 'آپلود ناموفق: ' . $up['error'];
+                $uploadFailed    = true;
             }
         }
 
-        /* ✅ فقط وقتی هیچ خطایی (از جمله آپلود) نبود، ریدایرکت */
         if (!$uploadFailed) {
             header('Location: /admin/products');
             exit;
         }
 
-        /* آپلود شکست خورد → فرم دوباره باز می‌شود با پیام دقیق خطا
-           و بقیه داده‌ها هم که همین الان ذخیره شده‌اند حفظ می‌شوند */
         $product = array_merge($product, [
             'code' => $code,
             'name' => $name,
             'slug' => $slug,
             'description' => $description,
             'base_moq' => $baseMoq,
-            'category_id' => $categoryId
+            'category_id' => $categoryId,
+            'color_label' => $colorLabel
         ]);
     }
 
-    /* بازگرداندن مقادیر پس از خطای اعتبارسنجی */
     $product = array_merge($product, [
         'code' => $code,
         'name' => $name,
         'slug' => $slug,
         'description' => $description,
         'base_moq' => $baseMoq,
-        'category_id' => $categoryId
+        'category_id' => $categoryId,
+        'color_label' => $colorLabel
     ]);
 }
 
@@ -219,18 +230,6 @@ ob_start();
         </div>
     </div>
 
-    <div class="form-field">
-        <label>رنگ‌بندی</label>
-        <input type="text" name="color_label" value="<?= htmlspecialchars($product['color_label'] ?? '') ?>"
-            placeholder="مثلاً: سفید | یا: ۶ رنگ | یا: سفید، مشکی، طوسی">
-        <span class="field-hint">تک‌رنگ یا چندرنگ — آزاد</span>
-    </div>
-
-    <div class="form-field">
-        <label>مشخصات محصول (هر خط: عنوان: مقدار)</label>
-        <textarea name="specs" rows="9" dir="rtl"><?= htmlspecialchars($specsText ?? '') ?></textarea>
-        <span class="field-hint">هر خط یک ویژگی — مثال: نوع جوراب: نیم ساق</span>
-    </div>
 
     <div class="form-row">
         <div class="form-field">
@@ -250,7 +249,6 @@ ob_start();
             <img src="<?= htmlspecialchars($currentImage) ?>" alt="عکس فعلی"
                 style="max-width:180px;border-radius:14px;margin-bottom:10px;display:block;border:1px solid var(--card-border);">
             <span class="field-hint">عکس فعلی بالا است — اگر فایل جدید انتخاب کنید جایگزین می‌شود</span>
-
         <?php endif; ?>
         <input type="file" name="image" accept="image/jpeg,image/png,image/webp">
         <span class="field-hint">JPG/PNG/WebP — حداکثر ۲ مگابایت — ترجیحاً مربعی</span>
@@ -259,8 +257,22 @@ ob_start();
 
     <div class="form-field">
         <label>توضیحات</label>
-        <textarea name="description" rows="6" placeholder="جنس نخ، مخاطب فروش، رنگ‌بندی، بسته‌بندی..."><?= htmlspecialchars($product['description'] ?? '') ?></textarea>
+        <textarea name="description" rows="6" placeholder="معرفی کوتاه محصول..."><?= htmlspecialchars($product['description'] ?? '') ?></textarea>
     </div>
+
+    <!-- ▂▂▂ مشخصات — فیلد جدا برای هر مشخصه ▂▂▂ -->
+    <div class="form-field">
+        <label>مشخصات محصول</label>
+        <span class="field-hint">فیلدهای خالی نادیده گرفته می‌شوند — در صفحه محصول به‌صورت لیست نمایش داده می‌شوند</span>
+    </div>
+
+    <?php foreach ($specFields as $key): ?>
+        <div class="form-field">
+            <label><?= htmlspecialchars($key) ?></label>
+            <input type="text" name="spec_<?= md5($key) ?>"
+                value="<?= htmlspecialchars($currentSpecs[$key] ?? '') ?>">
+        </div>
+    <?php endforeach; ?>
 
     <button type="submit" class="btn btn-orange co-submit">
         <?= $action === 'edit' ? 'ذخیره تغییرات' : 'افزودن محصول' ?> ←
