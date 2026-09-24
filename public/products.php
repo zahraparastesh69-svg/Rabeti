@@ -1,3 +1,4 @@
+<!-- products.php -->
 <?php
 require_once __DIR__ . '/../config/bootstrap.php';
 require_once ROOT_PATH . '/config/database.php';

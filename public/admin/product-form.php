@@ -33,12 +33,19 @@ if ($action === 'edit' && $productId > 0) {
     $stmt = db()->prepare("SELECT image_path FROM product_images WHERE product_id=? AND is_main=1 LIMIT 1");
     $stmt->execute([$productId]);
     $currentImage = $stmt->fetchColumn() ?: null;
+    $stmt = db()->prepare("SELECT spec_key, spec_value FROM product_specs WHERE product_id=? ORDER BY sort_order, id");
+    $stmt->execute([$productId]);
+    $specsText = '';
+    foreach ($stmt->fetchAll() as $s) {
+        $specsText .= $s['spec_key'] . ': ' . $s['spec_value'] . "\n";
+    }
 } else {
     $action = 'new';
     $product = ['code' => '', 'name' => '', 'slug' => '', 'description' => '', 'base_moq' => '48', 'category_id' => ''];
     $price = 0;
     $qty = 0;
     $currentImage = null;
+    $specsText = '';
 }
 
 /* ─── ذخیره ─── */
@@ -52,6 +59,18 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     $categoryId  = (int)($_POST['category_id'] ?? 0);
     $price       = max(0, (int)($_POST['price'] ?? 0));
     $qty         = max(0, (int)($_POST['qty'] ?? 0));
+    $specsText = trim($_POST['specs'] ?? '');
+    $specs = [];
+    foreach (preg_split('/\r\n|\r|\n/', $specsText) as $line) {
+        $line = trim($line);
+        if ($line === '') continue;
+        $line = ltrim($line, '•-– ');
+        $pos = mb_strpos($line, ':');
+        if ($pos === false) continue;
+        $k = trim(mb_substr($line, 0, $pos));
+        $v = trim(mb_substr($line, $pos + 1));
+        if ($k !== '' && $v !== '') $specs[] = [$k, $v];
+    }
 
     /* اعتبارسنجی */
     if (!preg_match('/^S\d{3}$/', $code))          $errors['code'] = 'کد باید مثل S125 باشد';
@@ -93,6 +112,14 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                        ON DUPLICATE KEY UPDATE qty_available = VALUES(qty_available)")
             ->execute([$productId, $qty]);
 
+        /* مشخصات ساختاریافته */
+        db()->prepare("DELETE FROM product_specs WHERE product_id=?")->execute([$productId]);
+        if ($specs) {
+            $insSpec = db()->prepare("INSERT INTO product_specs (product_id, spec_key, spec_value, sort_order) VALUES (?,?,?,?)");
+            foreach ($specs as $i => $sv) {
+                $insSpec->execute([$productId, $sv[0], $sv[1], $i]);
+            }
+        }
         /* عکس محصول — اگر شکست بخورد، ریدایرکت نمی‌کنیم تا خطا دیده شود */
         $uploadFailed = false;
         if (!empty($_FILES['image']['name'])) {
@@ -192,6 +219,19 @@ ob_start();
         </div>
     </div>
 
+    <div class="form-field">
+        <label>رنگ‌بندی</label>
+        <input type="text" name="color_label" value="<?= htmlspecialchars($product['color_label'] ?? '') ?>"
+            placeholder="مثلاً: سفید | یا: ۶ رنگ | یا: سفید، مشکی، طوسی">
+        <span class="field-hint">تک‌رنگ یا چندرنگ — آزاد</span>
+    </div>
+
+    <div class="form-field">
+        <label>مشخصات محصول (هر خط: عنوان: مقدار)</label>
+        <textarea name="specs" rows="9" dir="rtl"><?= htmlspecialchars($specsText ?? '') ?></textarea>
+        <span class="field-hint">هر خط یک ویژگی — مثال: نوع جوراب: نیم ساق</span>
+    </div>
+
     <div class="form-row">
         <div class="form-field">
             <label>قیمت عمده (تومان) <i>*</i></label>
@@ -210,6 +250,7 @@ ob_start();
             <img src="<?= htmlspecialchars($currentImage) ?>" alt="عکس فعلی"
                 style="max-width:180px;border-radius:14px;margin-bottom:10px;display:block;border:1px solid var(--card-border);">
             <span class="field-hint">عکس فعلی بالا است — اگر فایل جدید انتخاب کنید جایگزین می‌شود</span>
+
         <?php endif; ?>
         <input type="file" name="image" accept="image/jpeg,image/png,image/webp">
         <span class="field-hint">JPG/PNG/WebP — حداکثر ۲ مگابایت — ترجیحاً مربعی</span>

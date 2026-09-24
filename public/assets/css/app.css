@@ -2556,13 +2556,7 @@ body.app-body {
   border-color: var(--r6-brand);
   transform: translateY(-2px);
 }
-.r6-cat img {
-  width: 55px;
-  height: 55px;
-  object-fit: cover;
-  border-radius: 14px;
-  margin: auto;
-}
+
 .r6-cat-fallback {
   width: 55px;
   height: 55px;
@@ -4914,4 +4908,98 @@ body.app-body {
     margin-inline: -13px;
     padding-inline: 13px;
   }
+}
+
+/* ═══ چیپ دسته — عکس پرکننده کل ناحیه بالایی ═══ */
+html body .r6-cats .r6-cat {
+  display: flex !important;
+  flex-direction: column !important;
+  padding: 0 !important;
+  overflow: hidden !important;
+  aspect-ratio: 1 / 1 !important;
+}
+
+/* ناحیه عکس — همه فضا به‌جز نوار اسم */
+html body .r6-cats .r6-cat img,
+html body .r6-cat img {
+  flex: 1 1 auto !important;
+  width: 100% !important;
+  height: 100% !important;
+  min-width: 0 !important;
+  min-height: 0 !important;
+  max-width: none !important;
+  max-height: none !important;
+  object-fit: cover !important;
+  object-position: center !important;
+  display: block !important;
+  border-radius: 0 !important;
+}
+
+/* fallback (ایموجی) — همان ناحیه */
+html body .r6-cats .r6-cat .r6-cat-fallback,
+html body .r6-cat .r6-cat-fallback {
+  flex: 1 1 auto !important;
+  width: 100% !important;
+  height: 100% !important;
+  display: grid !important;
+  place-items: center !important;
+  font-size: 2.6rem !important;
+  background: var(--r6-cream, var(--cream, #f5efe4));
+  border-radius: 0 !important;
+}
+
+/* نوار اسم — پایین چیپ */
+html body .r6-cats .r6-cat > span:last-child {
+  flex: 0 0 auto !important;
+  width: 100% !important;
+  padding: 10px 6px !important;
+  font-size: 0.86rem !important;
+  font-weight: 700 !important;
+  text-align: center !important;
+  background: #fff !important;
+  color: var(--r6-text, var(--text, #23303a)) !important;
+}
+
+/* حالت فعال */
+html body .r6-cat.is-active > span:last-child {
+  background: var(--r6-brand, var(--brand, #2a5f78)) !important;
+  color: #fff !important;
+}
+
+@media (max-width: 760px) {
+  html body .r6-cats .r6-cat > span:last-child {
+    padding: 8px 4px !important;
+    font-size: 0.72rem !important;
+  }
+}
+
+/* ═══ بلوک مشخصات تک‌محصول ═══ */
+.pd-specs-box {
+  background: #fff;
+  border: 1px solid var(--line, #e6e2d8);
+  border-radius: 14px;
+  padding: 18px 22px;
+  margin: 16px 0;
+}
+.pdp-bullets {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+.pdp-bullets li {
+  position: relative;
+  padding-right: 18px;
+  font-size: 0.86rem;
+  line-height: 2.3;
+  color: var(--text, #23303a);
+}
+.pdp-bullets li::before {
+  content: "";
+  position: absolute;
+  right: 4px;
+  top: 12px;
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: var(--brand, #2a5f78);
 }
