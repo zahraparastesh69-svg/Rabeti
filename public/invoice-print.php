@@ -5,932 +5,786 @@ declare(strict_types=1);
 require_once __DIR__ . '/../config/bootstrap.php';
 require_once ROOT_PATH . '/config/database.php';
 require_once ROOT_PATH . '/config/auth.php';
+require_once ROOT_PATH . '/app/services/InvoiceService.php';
 
 if (!is_logged_in()) {
     header('Location: /');
     exit;
 }
 
-$userId = (int)($_SESSION['admin_id'] ?? $_SESSION['customer_id'] ?? 0);
-$isAdmin = is_admin_logged_in();
+$userId = (int)(
+    $_SESSION['admin_id']
+    ?? $_SESSION['customer_id']
+    ?? 0
+);
 
-$invoiceNumber = trim((string)($_GET['inv'] ?? ''));
-
-if ($invoiceNumber === '') {
-    exit('شماره فاکتور مشخص نشده است.');
+if ($userId <= 0) {
+    header('Location: /');
+    exit;
 }
 
-/*
-|--------------------------------------------------------------------------
-| دریافت فاکتور
-|--------------------------------------------------------------------------
-| مهم:
-| از SELECT i.*, o.* استفاده نمی‌کنیم.
-| چون فیلدهای مشترکی مثل status / id / user_id می‌توانند روی هم
-| overwrite شوند و باعث خطاهایی مثل pending_review شوند.
-|--------------------------------------------------------------------------
-*/
+$isAdmin = !empty($_SESSION['admin_id']);
 
-$sql = "
-    SELECT
-        i.*,
+$invoiceNumber = trim(
+    (string)(
+        $_GET['inv']
+        ?? $_GET['invoice']
+        ?? ''
+    )
+);
 
-        o.id AS order_id,
-        o.order_number,
-        o.status AS order_status,
-        o.shipping_mobile,
-        o.shipping_address,
-        o.shipping_city,
-        o.shipping_province,
+if ($invoiceNumber === '') {
+    http_response_code(404);
+    exit('فاکتور پیدا نشد.');
+}
 
-        u.full_name AS customer_name,
-        u.mobile AS customer_mobile
-
-    FROM invoices i
-
-    INNER JOIN orders o
-        ON o.id = i.order_id
-
-    INNER JOIN users u
-        ON u.id = i.user_id
-
-    WHERE
-        i.invoice_number = ?
-        AND (i.user_id = ? OR ? = 1)
-
-    LIMIT 1
-";
-
-$stmt = db()->prepare($sql);
-$stmt->execute([
+$invoice = InvoiceService::find(
     $invoiceNumber,
     $userId,
-    $isAdmin ? 1 : 0
-]);
-
-$invoice = $stmt->fetch(PDO::FETCH_ASSOC);
+    $isAdmin
+);
 
 if (!$invoice) {
     http_response_code(404);
-    exit('فاکتور یافت نشد.');
+    exit('فاکتور پیدا نشد.');
 }
 
+if (!InvoiceService::authorize(
+    $invoice,
+    $userId,
+    $isAdmin
+)) {
+    http_response_code(403);
+    exit('دسترسی غیرمجاز.');
+}
 
-/*
-|--------------------------------------------------------------------------
-| اقلام فاکتور
-|--------------------------------------------------------------------------
-*/
+$items = $invoice['items'] ?? [];
+$totals = $invoice['totals'] ?? [];
 
-$stmt = db()->prepare("
-    SELECT *
-    FROM order_items
-    WHERE order_id = ?
-    ORDER BY id ASC
-");
-
-$stmt->execute([
-    (int)$invoice['order_id']
-]);
-
-$items = $stmt->fetchAll(PDO::FETCH_ASSOC);
-
-
-/*
-|--------------------------------------------------------------------------
-| توابع کمکی
-|--------------------------------------------------------------------------
-*/
-
-function e(mixed $value): string
+function e(?string $value): string
 {
     return htmlspecialchars(
-        (string)($value ?? ''),
+        (string)$value,
         ENT_QUOTES,
         'UTF-8'
     );
 }
 
-function moneyFa(mixed $value): string
+function fa(string|int|float $value): string
 {
-    if ($value === null || $value === '') {
-        return '۰';
-    }
-
-    return number_format(
-        (float)$value,
-        0,
-        '.',
-        ','
+    return InvoiceService::faDigits(
+        (string)$value
     );
 }
 
-function faDigits(string $value): string
+function moneyFa(string|int|float $value): string
 {
-    return strtr(
-        $value,
-        [
-            '0' => '۰',
-            '1' => '۱',
-            '2' => '۲',
-            '3' => '۳',
-            '4' => '۴',
-            '5' => '۵',
-            '6' => '۶',
-            '7' => '۷',
-            '8' => '۸',
-            '9' => '۹',
-        ]
-    );
+    return InvoiceService::money($value);
 }
 
-function formatDateFa(?string $date): string
-{
-    if (!$date) {
-        return '—';
-    }
-
-    try {
-        $d = new DateTimeImmutable($date);
-        return faDigits($d->format('Y/m/d'));
-    } catch (Throwable) {
-        return e($date);
-    }
-}
-
-function invoiceStatusLabel(?string $status): string
-{
-    $labels = [
-        'unpaid'  => 'پرداخت‌نشده',
-        'partial' => 'پرداخت جزئی',
-        'paid'    => 'پرداخت‌شده',
-        'void'    => 'باطل‌شده',
-        'cancelled' => 'لغوشده',
-    ];
-
-    return $labels[$status ?? ''] ?? 'نامشخص';
-}
-
-function invoiceStatusClass(?string $status): string
-{
-    return match ($status) {
-        'paid'      => 'status-paid',
-        'partial'   => 'status-partial',
-        'void',
-        'cancelled' => 'status-danger',
-        default     => 'status-unpaid',
-    };
-}
-
-function orderStatusLabel(?string $status): string
-{
-    $labels = [
-        'pending_review' => 'در انتظار بررسی',
-        'pending'        => 'در انتظار پرداخت',
-        'confirmed'      => 'تأیید شده',
-        'processing'     => 'در حال آماده‌سازی',
-        'ready'          => 'آماده تحویل',
-        'shipped'        => 'ارسال شده',
-        'delivered'      => 'تحویل شده',
-        'cancelled'      => 'لغو شده',
-        'rejected'       => 'رد شده',
-    ];
-
-    return $labels[$status ?? ''] ?? 'نامشخص';
-}
-
-
-/*
-|--------------------------------------------------------------------------
-| اطلاعات اصلی
-|--------------------------------------------------------------------------
-*/
-
-$invoiceStatus = (string)($invoice['status'] ?? '');
-$orderStatus   = (string)($invoice['order_status'] ?? '');
-
-$invoiceStatusText = invoiceStatusLabel($invoiceStatus);
-$orderStatusText   = orderStatusLabel($orderStatus);
-
-$invoiceStatusCss = invoiceStatusClass($invoiceStatus);
-
-$subtotal = 0;
-
-foreach ($items as $item) {
-    $qty = (float)($item['quantity'] ?? $item['qty'] ?? 0);
-
-    $unitPrice = (float)(
-        $item['unit_price']
-        ?? $item['price']
-        ?? 0
-    );
-
-    $subtotal += $qty * $unitPrice;
-}
-
-
-/*
-|--------------------------------------------------------------------------
-| مبالغ
-|--------------------------------------------------------------------------
-*/
-
-$totalAmount = (float)(
-    $invoice['total_amount']
-    ?? $invoice['grand_total']
-    ?? $invoice['amount']
-    ?? $subtotal
+$statusLabel = InvoiceService::statusLabel(
+    (string)$invoice['invoice_status']
 );
 
-$discountAmount = (float)(
-    $invoice['discount_amount']
-    ?? $invoice['discount']
-    ?? 0
+$orderStatusLabel = InvoiceService::orderStatusLabel(
+    (string)$invoice['order_status']
 );
 
-$shippingAmount = (float)(
-    $invoice['shipping_amount']
-    ?? $invoice['shipping_fee']
-    ?? 0
+$statusClass = match ($invoice['invoice_status']) {
+    'paid'    => 'is-paid',
+    'partial' => 'is-partial',
+    'void'    => 'is-void',
+    default   => 'is-unpaid',
+};
+
+$customerName = trim(
+    (string)($invoice['customer_name'] ?? '')
 );
 
-$taxAmount = (float)(
-    $invoice['tax_amount']
-    ?? $invoice['tax']
-    ?? 0
+$companyName = trim(
+    (string)($invoice['customer_company'] ?? '')
 );
 
+$customerMobile = trim(
+    (string)($invoice['customer_mobile'] ?? '')
+);
 
-/*
-|--------------------------------------------------------------------------
-| لینک PDF
-|--------------------------------------------------------------------------
-*/
+$orderNumber = trim(
+    (string)($invoice['order_number'] ?? '')
+);
 
-$pdfUrl = '/invoice-pdf.php?inv=' . rawurlencode($invoiceNumber);
+$issueDate = InvoiceService::dateFa(
+    $invoice['issue_date'] ?? null
+);
 
-
-/*
-|--------------------------------------------------------------------------
-| عنوان
-|--------------------------------------------------------------------------
-*/
-
-$pageTitle = 'فاکتور ' . $invoiceNumber;
-
+$dueDate = InvoiceService::dateFa(
+    $invoice['due_date'] ?? null
+);
 ?>
-<!DOCTYPE html>
+<!doctype html>
 <html lang="fa" dir="rtl">
 
 <head>
-
-    <meta charset="UTF-8">
+    <meta charset="utf-8">
 
     <meta
         name="viewport"
-        content="width=device-width, initial-scale=1.0">
+        content="width=device-width, initial-scale=1, viewport-fit=cover">
 
-    <title><?= e($pageTitle) ?></title>
+    <meta
+        name="robots"
+        content="noindex, nofollow, noarchive">
+
+    <meta
+        name="googlebot"
+        content="noindex, nofollow, noarchive">
+
+    <title>
+        فاکتور <?= e($invoice['invoice_number']) ?>
+    </title>
 
     <style>
+        :root {
+            --ink: #202124;
+            --muted: #6b7280;
+            --line: #e7e7e7;
+            --soft: #f7f7f7;
+            --accent: #111827;
+            --success: #147a45;
+            --warning: #a16207;
+            --danger: #b42318;
+        }
+
         * {
             box-sizing: border-box;
         }
 
         html {
             direction: rtl;
+            background: #f2f3f5;
         }
 
         body {
             margin: 0;
-            background: #f4f6f8;
-            color: #1f2937;
+            padding: 20px;
+            color: var(--ink);
+            background: #f2f3f5;
             font-family:
                 Tahoma,
                 Arial,
                 sans-serif;
-            line-height: 1.8;
+            font-size: 13px;
+            line-height: 1.7;
         }
 
         button,
         a {
-            font-family: inherit;
+            font: inherit;
         }
 
-        .page {
-            width: 100%;
-            max-width: 1050px;
+        .invoice-page {
+            width: min(900px, 100%);
             margin: 0 auto;
-            padding: 24px;
+            background: #fff;
+            border: 1px solid #e5e7eb;
+            border-radius: 14px;
+            overflow: hidden;
         }
 
-        /* --------------------------------------------------
-           Toolbar
-        -------------------------------------------------- */
+        .invoice-inner {
+            padding: 24px 26px;
+        }
+
+        /* Toolbar */
 
         .toolbar {
+            width: min(900px, 100%);
+            margin: 0 auto 12px;
             display: flex;
-            align-items: center;
             justify-content: space-between;
-            gap: 12px;
-            margin-bottom: 18px;
+            align-items: center;
+            gap: 8px;
         }
 
         .toolbar-right,
         .toolbar-left {
             display: flex;
-            align-items: center;
-            gap: 8px;
-            flex-wrap: wrap;
-        }
-
-        .btn {
-            display: inline-flex;
-            align-items: center;
-            justify-content: center;
             gap: 7px;
+            align-items: center;
+        }
 
-            min-height: 42px;
-            padding: 9px 15px;
-
-            border: 1px solid #d1d5db;
-            border-radius: 10px;
-
+        .toolbar a,
+        .toolbar button {
+            border: 1px solid #ddd;
             background: #fff;
-            color: #374151;
-
+            color: #222;
             text-decoration: none;
+            border-radius: 8px;
+            padding: 7px 11px;
             cursor: pointer;
-
-            font-size: 14px;
-            font-weight: 700;
-
-            transition:
-                background .15s ease,
-                border-color .15s ease,
-                transform .15s ease;
+            white-space: nowrap;
         }
 
-        .btn:hover {
-            background: #f9fafb;
-            border-color: #9ca3af;
-        }
-
-        .btn:active {
-            transform: translateY(1px);
-        }
-
-        .btn-primary {
+        .toolbar .primary {
             background: #111827;
             border-color: #111827;
             color: #fff;
         }
 
-        .btn-primary:hover {
-            background: #1f2937;
-            border-color: #1f2937;
-        }
+        /* Header */
 
-        .btn-pdf {
-            background: #7f1d1d;
-            border-color: #7f1d1d;
-            color: #fff;
-        }
-
-        .btn-pdf:hover {
-            background: #991b1b;
-            border-color: #991b1b;
-        }
-
-        /* --------------------------------------------------
-           Invoice
-        -------------------------------------------------- */
-
-        .invoice {
-            background: #fff;
-            border: 1px solid #e5e7eb;
-            border-radius: 16px;
-            overflow: hidden;
-            box-shadow: 0 8px 30px rgba(0, 0, 0, .05);
-        }
-
-        .invoice-header {
-            padding: 28px;
-            border-bottom: 1px solid #e5e7eb;
-
+        .invoice-head {
             display: flex;
             justify-content: space-between;
-            gap: 24px;
+            align-items: flex-start;
+            gap: 20px;
+            padding-bottom: 17px;
+            border-bottom: 1px solid var(--line);
         }
 
         .brand {
-            display: flex;
-            flex-direction: column;
-            gap: 3px;
+            min-width: 0;
         }
 
         .brand-title {
-            font-size: 23px;
-            font-weight: 900;
-            color: #111827;
+            font-size: 20px;
+            font-weight: 800;
+            letter-spacing: -.3px;
         }
 
         .brand-subtitle {
-            color: #6b7280;
-            font-size: 13px;
+            margin-top: 3px;
+            color: var(--muted);
+            font-size: 11px;
         }
 
-        .invoice-title {
+        .invoice-meta {
             text-align: left;
-        }
-
-        .invoice-title h1 {
-            margin: 0 0 4px;
-            font-size: 24px;
-            color: #111827;
+            min-width: 175px;
         }
 
         .invoice-number {
-            font-family: Tahoma, Arial, sans-serif;
+            font-size: 16px;
             font-weight: 800;
-            color: #4b5563;
+            direction: ltr;
+            unicode-bidi: plaintext;
         }
 
-        /* --------------------------------------------------
-           Meta
-        -------------------------------------------------- */
-
-        .meta-grid {
-            display: grid;
-            grid-template-columns: repeat(4, 1fr);
-            gap: 12px;
-            padding: 22px 28px;
-            border-bottom: 1px solid #e5e7eb;
-        }
-
-        .meta-card {
-            padding: 14px;
-            background: #f9fafb;
-            border: 1px solid #eef0f2;
-            border-radius: 12px;
-        }
-
-        .meta-label {
-            display: block;
-            margin-bottom: 4px;
-            color: #6b7280;
-            font-size: 12px;
-        }
-
-        .meta-value {
-            display: block;
-            color: #111827;
-            font-size: 14px;
-            font-weight: 800;
+        .invoice-date {
+            color: var(--muted);
+            font-size: 11px;
+            margin-top: 3px;
         }
 
         .status {
             display: inline-flex;
             align-items: center;
-            width: fit-content;
-
-            padding: 4px 9px;
+            padding: 3px 8px;
+            margin-top: 6px;
             border-radius: 999px;
-
-            font-size: 12px;
-            font-weight: 800;
-        }
-
-        .status-paid {
-            background: #dcfce7;
-            color: #166534;
-        }
-
-        .status-partial {
-            background: #fef3c7;
-            color: #92400e;
-        }
-
-        .status-unpaid {
-            background: #fee2e2;
-            color: #991b1b;
-        }
-
-        .status-danger {
-            background: #fee2e2;
-            color: #991b1b;
-        }
-
-        /* --------------------------------------------------
-           Customer
-        -------------------------------------------------- */
-
-        .section {
-            padding: 24px 28px;
-            border-bottom: 1px solid #e5e7eb;
-        }
-
-        .section-title {
-            margin: 0 0 15px;
-            font-size: 16px;
-            font-weight: 900;
-            color: #111827;
-        }
-
-        .customer-grid {
-            display: grid;
-            grid-template-columns: repeat(2, 1fr);
-            gap: 12px 24px;
-        }
-
-        .info-row {
-            display: flex;
-            gap: 8px;
-            font-size: 14px;
-        }
-
-        .info-label {
-            min-width: 95px;
-            color: #6b7280;
-        }
-
-        .info-value {
-            color: #111827;
+            font-size: 10px;
             font-weight: 700;
         }
 
-        /* --------------------------------------------------
-           Items
-        -------------------------------------------------- */
-
-        .table-wrap {
-            width: 100%;
-            overflow-x: auto;
-            -webkit-overflow-scrolling: touch;
+        .is-paid {
+            background: #eaf7ef;
+            color: var(--success);
         }
 
-        .items-table {
-            width: 100%;
-            min-width: 680px;
-            border-collapse: collapse;
+        .is-partial {
+            background: #fff7df;
+            color: var(--warning);
         }
 
-        .items-table th,
-        .items-table td {
-            padding: 13px 10px;
-            border-bottom: 1px solid #edf0f2;
-            text-align: right;
-            vertical-align: middle;
+        .is-unpaid {
+            background: #fff0ee;
+            color: var(--danger);
         }
 
-        .items-table th {
-            background: #f8fafc;
-            color: #6b7280;
+        .is-void {
+            background: #f1f1f1;
+            color: #666;
+        }
+
+        /* Information */
+
+        .info-grid {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 10px;
+            margin: 16px 0;
+        }
+
+        .info-card {
+            background: var(--soft);
+            border-radius: 9px;
+            padding: 10px 12px;
+            min-width: 0;
+        }
+
+        .info-label {
+            color: var(--muted);
+            font-size: 10px;
+            margin-bottom: 2px;
+        }
+
+        .info-value {
             font-size: 12px;
-            font-weight: 800;
+            font-weight: 700;
+            overflow-wrap: anywhere;
         }
 
-        .items-table td {
-            font-size: 13px;
-            color: #374151;
+        /* Desktop items */
+
+        .items {
+            width: 100%;
+            border-collapse: collapse;
+            table-layout: fixed;
         }
 
-        .items-table tbody tr:last-child td {
-            border-bottom: 0;
+        .items th {
+            background: #f7f7f7;
+            color: #555;
+            font-size: 10px;
+            font-weight: 700;
+            padding: 8px 7px;
+            border-bottom: 1px solid var(--line);
+        }
+
+        .items td {
+            padding: 8px 7px;
+            border-bottom: 1px solid #eee;
+            vertical-align: middle;
+            font-size: 11px;
+        }
+
+        .items .col-number {
+            width: 34px;
+            text-align: center;
+        }
+
+        .items .col-qty {
+            width: 58px;
+            text-align: center;
+        }
+
+        .items .col-price {
+            width: 105px;
+            text-align: left;
+        }
+
+        .items .col-total {
+            width: 115px;
+            text-align: left;
         }
 
         .product-name {
-            color: #111827;
-            font-weight: 800;
+            font-weight: 700;
         }
 
         .product-code {
-            display: block;
-            color: #9ca3af;
-            font-size: 11px;
+            color: var(--muted);
+            font-size: 9px;
+            margin-top: 1px;
+            direction: ltr;
+            unicode-bidi: plaintext;
+        }
+
+        .product-detail {
+            color: var(--muted);
+            font-size: 9px;
+            margin-top: 1px;
+        }
+
+        .number {
+            direction: ltr;
+            unicode-bidi: plaintext;
+            white-space: nowrap;
+        }
+
+        /* Mobile cards */
+
+        .mobile-items {
+            display: none;
+        }
+
+        .mobile-item {
+            border: 1px solid var(--line);
+            border-radius: 10px;
+            padding: 10px;
+            margin-bottom: 8px;
+        }
+
+        .mobile-item-head {
+            display: flex;
+            justify-content: space-between;
+            gap: 10px;
+        }
+
+        .mobile-item-number {
+            color: var(--muted);
+            font-size: 10px;
+        }
+
+        .mobile-item-name {
+            font-weight: 800;
+            font-size: 12px;
+        }
+
+        .mobile-item-code {
+            color: var(--muted);
+            font-size: 9px;
+            direction: ltr;
+            unicode-bidi: plaintext;
+        }
+
+        .mobile-item-detail {
+            color: var(--muted);
+            font-size: 9px;
             margin-top: 2px;
         }
 
-        /* --------------------------------------------------
-           Totals
-        -------------------------------------------------- */
-
-        .totals {
-            display: flex;
-            justify-content: flex-end;
-            padding: 22px 28px;
+        .mobile-item-bottom {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 7px;
+            margin-top: 9px;
+            padding-top: 8px;
+            border-top: 1px solid var(--line);
         }
 
-        .totals-box {
+        .mobile-stat-label {
+            color: var(--muted);
+            font-size: 9px;
+        }
+
+        .mobile-stat-value {
+            font-weight: 700;
+            font-size: 10px;
+            margin-top: 1px;
+        }
+
+        /* Totals */
+
+        .bottom-grid {
+            display: grid;
+            grid-template-columns: 1fr 285px;
+            gap: 22px;
+            margin-top: 17px;
+        }
+
+        .note-box {
+            color: var(--muted);
+            font-size: 10px;
+        }
+
+        .note-title {
+            font-weight: 700;
+            color: #555;
+            margin-bottom: 3px;
+        }
+
+        .totals {
             width: 100%;
-            max-width: 420px;
         }
 
         .total-row {
             display: flex;
             justify-content: space-between;
-            gap: 20px;
-            padding: 7px 0;
+            gap: 15px;
+            padding: 4px 0;
+            font-size: 11px;
+        }
+
+        .total-row+.total-row {
+            border-top: 1px solid #f0f0f0;
+        }
+
+        .total-final {
+            margin-top: 5px;
+            padding: 9px 0 0;
+            border-top: 1px solid #222;
             font-size: 14px;
-        }
-
-        .total-row .label {
-            color: #6b7280;
-        }
-
-        .total-row .value {
-            color: #111827;
             font-weight: 800;
         }
 
-        .grand-total {
-            margin-top: 10px;
-            padding-top: 14px;
-            border-top: 2px solid #111827;
-
-            display: flex;
-            justify-content: space-between;
-            gap: 20px;
-
-            font-size: 18px;
-            font-weight: 900;
-        }
-
-        .grand-total .value {
-            color: #111827;
-        }
-
-        /* --------------------------------------------------
-           Footer
-        -------------------------------------------------- */
+        /* Footer */
 
         .invoice-footer {
-            padding: 20px 28px;
-            background: #f9fafb;
-            border-top: 1px solid #e5e7eb;
-
+            margin-top: 18px;
+            padding-top: 10px;
+            border-top: 1px solid var(--line);
+            color: var(--muted);
+            font-size: 9px;
             display: flex;
             justify-content: space-between;
-            gap: 20px;
-
-            color: #6b7280;
-            font-size: 12px;
+            gap: 10px;
         }
 
-        .footer-actions {
-            display: none;
-        }
+        /* Mobile */
 
-        /* --------------------------------------------------
-           Mobile
-        -------------------------------------------------- */
+        @media (max-width: 650px) {
 
-        @media (max-width: 760px) {
-
-            .page {
-                padding: 10px;
+            body {
+                padding: 8px;
+                background: #f2f3f5;
+                font-size: 12px;
             }
 
             .toolbar {
-                position: sticky;
-                top: 0;
-                z-index: 20;
-
-                padding: 8px 0;
-                background: #f4f6f8;
-
-                flex-direction: column;
-                align-items: stretch;
+                margin-bottom: 8px;
+                flex-wrap: wrap;
             }
 
-            .toolbar-right,
             .toolbar-left {
                 width: 100%;
+                order: 2;
             }
 
-            .toolbar .btn {
+            .toolbar-right {
+                width: 100%;
+                order: 1;
+                justify-content: space-between;
+            }
+
+            .toolbar a,
+            .toolbar button {
                 flex: 1;
-            }
-
-            .invoice {
-                border-radius: 12px;
-            }
-
-            .invoice-header {
-                padding: 20px 16px;
-                flex-direction: column;
-            }
-
-            .invoice-title {
-                text-align: right;
-            }
-
-            .invoice-title h1 {
-                font-size: 20px;
-            }
-
-            .meta-grid {
-                grid-template-columns: repeat(2, 1fr);
-                padding: 16px;
-                gap: 8px;
-            }
-
-            .meta-card {
-                padding: 11px;
-            }
-
-            .section {
-                padding: 18px 16px;
-            }
-
-            .customer-grid {
-                grid-template-columns: 1fr;
-                gap: 10px;
-            }
-
-            .info-row {
-                flex-direction: column;
-                gap: 0;
-            }
-
-            .info-label {
-                min-width: 0;
+                text-align: center;
+                padding: 8px 7px;
                 font-size: 11px;
             }
 
-            .info-value {
-                font-size: 13px;
+            .invoice-page {
+                border-radius: 11px;
             }
 
-            .totals {
-                padding: 18px 16px;
+            .invoice-inner {
+                padding: 15px 13px;
             }
 
-            .invoice-footer {
-                padding: 16px;
-                flex-direction: column;
-            }
-
-            .footer-actions {
-                display: flex;
-                gap: 8px;
-            }
-
-            .footer-actions .btn {
-                flex: 1;
-            }
-        }
-
-        @media (max-width: 420px) {
-
-            .meta-grid {
-                grid-template-columns: 1fr;
+            .invoice-head {
+                gap: 10px;
             }
 
             .brand-title {
-                font-size: 20px;
+                font-size: 16px;
             }
 
-            .btn {
+            .brand-subtitle {
+                font-size: 9px;
+            }
+
+            .invoice-meta {
+                min-width: 0;
+                text-align: left;
+            }
+
+            .invoice-number {
                 font-size: 12px;
-                padding: 8px 10px;
+            }
+
+            .invoice-date {
+                font-size: 9px;
+            }
+
+            .status {
+                font-size: 9px;
+                padding: 2px 6px;
+            }
+
+            .info-grid {
+                grid-template-columns: 1fr 1fr;
+                gap: 7px;
+                margin: 11px 0;
+            }
+
+            .info-card {
+                padding: 8px 9px;
+            }
+
+            .info-label {
+                font-size: 8px;
+            }
+
+            .info-value {
+                font-size: 10px;
+            }
+
+            .desktop-items {
+                display: none;
+            }
+
+            .mobile-items {
+                display: block;
+            }
+
+            .bottom-grid {
+                grid-template-columns: 1fr;
+                gap: 12px;
+                margin-top: 12px;
+            }
+
+            .totals {
+                background: var(--soft);
+                border-radius: 9px;
+                padding: 9px 11px;
+            }
+
+            .invoice-footer {
+                flex-direction: column;
+                gap: 3px;
             }
         }
 
-        /* --------------------------------------------------
-           Print
-        -------------------------------------------------- */
+        /* Print */
 
         @media print {
 
             @page {
                 size: A4;
-                margin: 12mm;
+                margin: 8mm;
+            }
+
+            html,
+            body {
+                background: #fff !important;
+                padding: 0 !important;
+                margin: 0 !important;
             }
 
             body {
-                background: #fff;
+                font-size: 10px;
             }
 
-            .page {
-                max-width: none;
-                padding: 0;
-            }
-
-            .no-print,
-            .toolbar,
-            .footer-actions {
+            .toolbar {
                 display: none !important;
             }
 
-            .invoice {
+            .invoice-page {
+                width: 100%;
+                max-width: none;
+                margin: 0;
                 border: 0;
                 border-radius: 0;
-                box-shadow: none;
+                overflow: visible;
             }
 
-            .invoice-header {
-                padding: 0 0 15px;
+            .invoice-inner {
+                padding: 0;
             }
 
-            .section {
-                padding: 15px 0;
+            .invoice-head {
+                padding-bottom: 8px;
             }
 
-            .meta-grid {
-                padding: 15px 0;
+            .info-grid {
+                margin: 9px 0;
             }
 
-            .totals {
-                padding: 15px 0;
+            .info-card {
+                padding: 6px 8px;
+            }
+
+            .items th,
+            .items td {
+                padding: 5px 5px;
+            }
+
+            .bottom-grid {
+                margin-top: 9px;
             }
 
             .invoice-footer {
-                padding: 15px 0;
+                margin-top: 9px;
+            }
+
+            .mobile-items {
+                display: none !important;
+            }
+
+            .desktop-items {
+                display: table !important;
+            }
+
+            .invoice-page,
+            .info-card,
+            tr,
+            .bottom-grid {
+                break-inside: avoid;
             }
         }
     </style>
-
 </head>
 
 <body>
 
-    <div class="page">
+    <div class="toolbar">
 
-        <!-- =====================================================
-         Toolbar
-    ====================================================== -->
+        <div class="toolbar-right">
 
-        <div class="toolbar no-print">
+            <a href="/"
+                aria-label="بازگشت به صفحه اصلی">
+                خانه
+            </a>
 
-            <div class="toolbar-right">
-
-                <a
-                    href="/orders"
-                    class="btn">
-                    ← بازگشت به سفارش‌ها
-                </a>
-
-                <a
-                    href="/"
-                    class="btn">
-                    خانه
-                </a>
-
-            </div>
-
-            <div class="toolbar-left">
-
-                <button
-                    type="button"
-                    class="btn btn-primary"
-                    onclick="window.print()">
-                    🖨 چاپ فاکتور
-                </button>
-
-                <a
-                    href="<?= e($pdfUrl) ?>"
-                    class="btn btn-pdf"
-                    target="_blank"
-                    rel="noopener">
-                    📄 دریافت PDF
-                </a>
-
-            </div>
+            <button
+                type="button"
+                onclick="history.back()">
+                بازگشت
+            </button>
 
         </div>
 
+        <div class="toolbar-left">
 
-        <!-- =====================================================
-         Invoice
-    ====================================================== -->
+            <button
+                type="button"
+                onclick="window.print()"
+                class="primary">
+                چاپ
+            </button>
 
-        <main class="invoice">
+            <a
+                href="/invoice-pdf?inv=<?= rawurlencode($invoice['invoice_number']) ?>"
+                target="_blank"
+                rel="noopener">
+                PDF
+            </a>
 
-            <!-- Header -->
+        </div>
 
-            <header class="invoice-header">
+    </div>
+
+    <main class="invoice-page">
+
+        <div class="invoice-inner">
+
+            <header class="invoice-head">
 
                 <div class="brand">
-
                     <div class="brand-title">
                         فاکتور فروش
                     </div>
 
                     <div class="brand-subtitle">
-                        سیستم فروش B2B
+                        فروش عمده جوراب
                     </div>
-
                 </div>
 
-                <div class="invoice-title">
+                <div class="invoice-meta">
 
-                    <h1>
-                        فاکتور
-                    </h1>
-
-                    <div class="invoice-number" dir="ltr">
+                    <div class="invoice-number">
                         <?= e($invoice['invoice_number']) ?>
+                    </div>
+
+                    <div class="invoice-date">
+                        تاریخ صدور:
+                        <?= e($issueDate) ?>
+                    </div>
+
+                    <div class="status <?= e($statusClass) ?>">
+                        <?= e($statusLabel) ?>
                     </div>
 
                 </div>
@@ -938,162 +792,99 @@ $pageTitle = 'فاکتور ' . $invoiceNumber;
             </header>
 
 
-            <!-- Meta -->
+            <section class="info-grid">
 
-            <section class="meta-grid">
+                <div class="info-card">
 
-                <div class="meta-card">
+                    <div class="info-label">
+                        مشتری
+                    </div>
 
-                    <span class="meta-label">
-                        شماره فاکتور
-                    </span>
-
-                    <span class="meta-value" dir="ltr">
-                        <?= e($invoice['invoice_number']) ?>
-                    </span>
+                    <div class="info-value">
+                        <?= e($customerName ?: '—') ?>
+                    </div>
 
                 </div>
 
 
-                <div class="meta-card">
+                <?php if ($companyName !== ''): ?>
 
-                    <span class="meta-label">
-                        شماره سفارش
-                    </span>
+                    <div class="info-card">
 
-                    <span class="meta-value" dir="ltr">
-                        <?= e($invoice['order_number']) ?>
-                    </span>
+                        <div class="info-label">
+                            شرکت / فروشگاه
+                        </div>
+
+                        <div class="info-value">
+                            <?= e($companyName) ?>
+                        </div>
+
+                    </div>
+
+                <?php else: ?>
+
+                    <div class="info-card">
+
+                        <div class="info-label">
+                            شماره تماس
+                        </div>
+
+                        <div class="info-value number">
+                            <?= e($customerMobile ?: '—') ?>
+                        </div>
+
+                    </div>
+
+                <?php endif; ?>
+
+
+                <div class="info-card">
+
+                    <div class="info-label">
+                        سفارش
+                    </div>
+
+                    <div class="info-value number">
+                        <?= e($orderNumber ?: '—') ?>
+                    </div>
 
                 </div>
 
 
-                <div class="meta-card">
+                <div class="info-card">
 
-                    <span class="meta-label">
-                        تاریخ صدور
-                    </span>
+                    <div class="info-label">
+                        وضعیت سفارش
+                    </div>
 
-                    <span class="meta-value">
-                        <?= formatDateFa($invoice['issued_at'] ?? null) ?>
-                    </span>
+                    <div class="info-value">
+                        <?= e($orderStatusLabel) ?>
+                    </div>
 
                 </div>
 
 
-                <div class="meta-card">
+                <div class="info-card">
 
-                    <span class="meta-label">
-                        وضعیت فاکتور
-                    </span>
+                    <div class="info-label">
+                        تاریخ سررسید
+                    </div>
 
-                    <span class="status <?= e($invoiceStatusCss) ?>">
-                        <?= e($invoiceStatusText) ?>
-                    </span>
+                    <div class="info-value">
+                        <?= e($dueDate) ?>
+                    </div>
 
                 </div>
 
-            </section>
 
+                <div class="info-card">
 
-            <!-- Customer -->
-
-            <section class="section">
-
-                <h2 class="section-title">
-                    اطلاعات مشتری
-                </h2>
-
-                <div class="customer-grid">
-
-                    <div class="info-row">
-
-                        <span class="info-label">
-                            نام مشتری
-                        </span>
-
-                        <span class="info-value">
-                            <?= e($invoice['customer_name'] ?? '—') ?>
-                        </span>
-
+                    <div class="info-label">
+                        تعداد اقلام
                     </div>
 
-
-                    <div class="info-row">
-
-                        <span class="info-label">
-                            شماره موبایل
-                        </span>
-
-                        <span class="info-value" dir="ltr">
-                            <?= e(
-                                $invoice['customer_mobile']
-                                    ?? $invoice['shipping_mobile']
-                                    ?? '—'
-                            ) ?>
-                        </span>
-
-                    </div>
-
-
-                    <div class="info-row">
-
-                        <span class="info-label">
-                            وضعیت سفارش
-                        </span>
-
-                        <span class="info-value">
-                            <?= e($orderStatusText) ?>
-                        </span>
-
-                    </div>
-
-
-                    <div class="info-row">
-
-                        <span class="info-label">
-                            شهر
-                        </span>
-
-                        <span class="info-value">
-                            <?= e(
-                                $invoice['shipping_city']
-                                    ?? '—'
-                            ) ?>
-                        </span>
-
-                    </div>
-
-
-                    <div class="info-row">
-
-                        <span class="info-label">
-                            استان
-                        </span>
-
-                        <span class="info-value">
-                            <?= e(
-                                $invoice['shipping_province']
-                                    ?? '—'
-                            ) ?>
-                        </span>
-
-                    </div>
-
-
-                    <div class="info-row">
-
-                        <span class="info-label">
-                            آدرس
-                        </span>
-
-                        <span class="info-value">
-                            <?= e(
-                                $invoice['shipping_address']
-                                    ?? '—'
-                            ) ?>
-                        </span>
-
+                    <div class="info-value">
+                        <?= fa(count($items)) ?>
                     </div>
 
                 </div>
@@ -1101,253 +892,315 @@ $pageTitle = 'فاکتور ' . $invoiceNumber;
             </section>
 
 
-            <!-- Items -->
+            <!-- Desktop -->
 
-            <section class="section">
+            <div class="desktop-items">
 
-                <h2 class="section-title">
-                    اقلام فاکتور
-                </h2>
+                <table class="items">
 
-                <div class="table-wrap">
+                    <thead>
 
-                    <table class="items-table">
+                        <tr>
 
-                        <thead>
+                            <th class="col-number">
+                                #
+                            </th>
+
+                            <th>
+                                کالا
+                            </th>
+
+                            <th class="col-qty">
+                                تعداد
+                            </th>
+
+                            <th class="col-price">
+                                قیمت واحد
+                            </th>
+
+                            <th class="col-total">
+                                مبلغ
+                            </th>
+
+                        </tr>
+
+                    </thead>
+
+                    <tbody>
+
+                        <?php foreach ($items as $index => $item): ?>
 
                             <tr>
 
-                                <th style="width:50px;">
-                                    ردیف
-                                </th>
+                                <td class="col-number">
+                                    <?= fa($index + 1) ?>
+                                </td>
 
-                                <th>
-                                    کالا
-                                </th>
+                                <td>
 
-                                <th>
-                                    رنگ
-                                </th>
+                                    <div class="product-name">
+                                        <?= e(
+                                            $item['product_name']
+                                                ?? 'محصول'
+                                        ) ?>
+                                    </div>
 
-                                <th>
-                                    سایز
-                                </th>
+                                    <?php if (!empty($item['product_code'])): ?>
 
-                                <th>
-                                    تعداد
-                                </th>
+                                        <div class="product-code">
+                                            <?= e($item['product_code']) ?>
+                                        </div>
 
-                                <th>
-                                    قیمت واحد
-                                </th>
+                                    <?php endif; ?>
 
-                                <th>
-                                    مبلغ
-                                </th>
+                                    <div class="product-detail">
+
+                                        <?php
+                                        $details = array_filter([
+                                            $item['variant_name'] ?? '',
+                                            $item['color_name'] ?? '',
+                                            $item['size_label'] ?? '',
+                                        ]);
+                                        ?>
+
+                                        <?= e(
+                                            implode(' · ', $details)
+                                                ?: '—'
+                                        ) ?>
+
+                                    </div>
+
+                                </td>
+
+                                <td class="col-qty">
+                                    <?= fa((int)$item['qty']) ?>
+                                </td>
+
+                                <td class="col-price number">
+                                    <?= e(
+                                        moneyFa(
+                                            $item['unit_price']
+                                                ?? 0
+                                        )
+                                    ) ?>
+                                </td>
+
+                                <td class="col-total number">
+                                    <?= e(
+                                        moneyFa(
+                                            $item['subtotal']
+                                                ?? 0
+                                        )
+                                    ) ?>
+                                </td>
 
                             </tr>
 
-                        </thead>
+                        <?php endforeach; ?>
 
-                        <tbody>
+                    </tbody>
 
-                            <?php if (!$items): ?>
+                </table>
 
-                                <tr>
+            </div>
 
-                                    <td
-                                        colspan="7"
-                                        style="text-align:center;padding:30px;">
-                                        کالایی برای این فاکتور ثبت نشده است.
-                                    </td>
 
-                                </tr>
+            <!-- Mobile -->
 
-                            <?php else: ?>
+            <div class="mobile-items">
 
-                                <?php foreach ($items as $index => $item): ?>
+                <?php foreach ($items as $index => $item): ?>
 
-                                    <?php
+                    <article class="mobile-item">
 
-                                    $qty = (float)(
-                                        $item['quantity']
-                                        ?? $item['qty']
-                                        ?? 0
-                                    );
+                        <div class="mobile-item-head">
 
-                                    $unitPrice = (float)(
-                                        $item['unit_price']
-                                        ?? $item['price']
-                                        ?? 0
-                                    );
+                            <div>
 
-                                    $lineTotal = $qty * $unitPrice;
-
-                                    $productName =
+                                <div class="mobile-item-name">
+                                    <?= e(
                                         $item['product_name']
-                                        ?? $item['name']
-                                        ?? $item['title']
-                                        ?? 'کالا';
+                                            ?? 'محصول'
+                                    ) ?>
+                                </div>
 
-                                    $productCode =
-                                        $item['product_code']
-                                        ?? $item['sku']
-                                        ?? '';
+                                <?php if (!empty($item['product_code'])): ?>
 
-                                    $color =
-                                        $item['color_name']
-                                        ?? $item['color']
-                                        ?? '—';
+                                    <div class="mobile-item-code">
+                                        <?= e($item['product_code']) ?>
+                                    </div>
 
-                                    $size =
-                                        $item['size_name']
-                                        ?? $item['size']
-                                        ?? '—';
+                                <?php endif; ?>
 
-                                    ?>
+                                <?php
+                                $details = array_filter([
+                                    $item['variant_name'] ?? '',
+                                    $item['color_name'] ?? '',
+                                    $item['size_label'] ?? '',
+                                ]);
+                                ?>
 
-                                    <tr>
+                                <div class="mobile-item-detail">
+                                    <?= e(
+                                        implode(' · ', $details)
+                                            ?: '—'
+                                    ) ?>
+                                </div>
 
-                                        <td>
-                                            <?= faDigits((string)($index + 1)) ?>
-                                        </td>
+                            </div>
 
-                                        <td>
+                            <div class="mobile-item-number">
+                                <?= fa($index + 1) ?>
+                            </div>
 
-                                            <span class="product-name">
-                                                <?= e($productName) ?>
-                                            </span>
+                        </div>
 
-                                            <?php if ($productCode !== ''): ?>
 
-                                                <span
-                                                    class="product-code"
-                                                    dir="ltr">
-                                                    <?= e($productCode) ?>
-                                                </span>
+                        <div class="mobile-item-bottom">
 
-                                            <?php endif; ?>
+                            <div>
 
-                                        </td>
+                                <div class="mobile-stat-label">
+                                    تعداد
+                                </div>
 
-                                        <td>
-                                            <?= e($color) ?>
-                                        </td>
+                                <div class="mobile-stat-value">
+                                    <?= fa((int)$item['qty']) ?>
+                                </div>
 
-                                        <td>
-                                            <?= e($size) ?>
-                                        </td>
+                            </div>
 
-                                        <td>
-                                            <?= faDigits(
-                                                number_format($qty, 0, '.', '')
-                                            ) ?>
-                                        </td>
+                            <div>
 
-                                        <td>
-                                            <?= moneyFa($unitPrice) ?>
-                                        </td>
+                                <div class="mobile-stat-label">
+                                    قیمت واحد
+                                </div>
 
-                                        <td>
-                                            <strong>
-                                                <?= moneyFa($lineTotal) ?>
-                                            </strong>
-                                        </td>
+                                <div class="mobile-stat-value number">
+                                    <?= e(
+                                        moneyFa(
+                                            $item['unit_price']
+                                                ?? 0
+                                        )
+                                    ) ?>
+                                </div>
 
-                                    </tr>
+                            </div>
 
-                                <?php endforeach; ?>
+                            <div>
 
-                            <?php endif; ?>
+                                <div class="mobile-stat-label">
+                                    مبلغ
+                                </div>
 
-                        </tbody>
+                                <div class="mobile-stat-value number">
+                                    <?= e(
+                                        moneyFa(
+                                            $item['subtotal']
+                                                ?? 0
+                                        )
+                                    ) ?>
+                                </div>
 
-                    </table>
+                            </div>
+
+                        </div>
+
+                    </article>
+
+                <?php endforeach; ?>
+
+            </div>
+
+
+            <section class="bottom-grid">
+
+                <div class="note-box">
+
+                    <div class="note-title">
+                        توضیحات
+                    </div>
+
+                    <div>
+                        <?= nl2br(
+                            e(
+                                (string)(
+                                    $invoice['order_note']
+                                    ?? ''
+                                )
+                            )
+                        ) ?: '—' ?>
+                    </div>
 
                 </div>
 
-            </section>
 
-
-            <!-- Totals -->
-
-            <section class="totals">
-
-                <div class="totals-box">
+                <div class="totals">
 
                     <div class="total-row">
 
-                        <span class="label">
+                        <span>
                             جمع کالاها
                         </span>
 
-                        <span class="value">
-                            <?= moneyFa($subtotal) ?>
-                        </span>
+                        <strong class="number">
+                            <?= e(
+                                moneyFa(
+                                    $totals['subtotal'] ?? 0
+                                )
+                            ) ?>
+                        </strong>
 
                     </div>
 
 
-                    <?php if ($discountAmount > 0): ?>
+                    <div class="total-row">
 
-                        <div class="total-row">
+                        <span>
+                            تخفیف
+                        </span>
 
-                            <span class="label">
-                                تخفیف
-                            </span>
+                        <strong class="number">
+                            <?= e(
+                                moneyFa(
+                                    $totals['discount'] ?? 0
+                                )
+                            ) ?>
+                        </strong>
 
-                            <span class="value">
-                                <?= moneyFa($discountAmount) ?>
-                            </span>
-
-                        </div>
-
-                    <?php endif; ?>
-
-
-                    <?php if ($shippingAmount > 0): ?>
-
-                        <div class="total-row">
-
-                            <span class="label">
-                                هزینه ارسال
-                            </span>
-
-                            <span class="value">
-                                <?= moneyFa($shippingAmount) ?>
-                            </span>
-
-                        </div>
-
-                    <?php endif; ?>
+                    </div>
 
 
-                    <?php if ($taxAmount > 0): ?>
+                    <div class="total-row">
 
-                        <div class="total-row">
+                        <span>
+                            مالیات
+                        </span>
 
-                            <span class="label">
-                                مالیات
-                            </span>
+                        <strong class="number">
+                            <?= e(
+                                moneyFa(
+                                    $totals['tax'] ?? 0
+                                )
+                            ) ?>
+                        </strong>
 
-                            <span class="value">
-                                <?= moneyFa($taxAmount) ?>
-                            </span>
-
-                        </div>
-
-                    <?php endif; ?>
+                    </div>
 
 
-                    <div class="grand-total">
+                    <div class="total-row total-final">
 
                         <span>
                             مبلغ نهایی
                         </span>
 
-                        <span class="value">
-                            <?= moneyFa($totalAmount) ?>
-                        </span>
+                        <strong class="number">
+                            <?= e(
+                                moneyFa(
+                                    $totals['total'] ?? 0
+                                )
+                            ) ?>
+                        </strong>
 
                     </div>
 
@@ -1356,43 +1209,22 @@ $pageTitle = 'فاکتور ' . $invoiceNumber;
             </section>
 
 
-            <!-- Footer -->
-
             <footer class="invoice-footer">
 
-                <div>
-                    این فاکتور به صورت سیستمی صادر شده است.
-                </div>
+                <span>
+                    این فاکتور به‌صورت الکترونیکی صادر شده است.
+                </span>
 
-                <div dir="ltr">
+                <span>
+                    شماره فاکتور:
                     <?= e($invoice['invoice_number']) ?>
-                </div>
-
-
-                <div class="footer-actions no-print">
-
-                    <button
-                        type="button"
-                        class="btn btn-primary"
-                        onclick="window.print()">
-                        🖨 چاپ
-                    </button>
-
-                    <a
-                        href="<?= e($pdfUrl) ?>"
-                        class="btn btn-pdf"
-                        target="_blank"
-                        rel="noopener">
-                        📄 PDF
-                    </a>
-
-                </div>
+                </span>
 
             </footer>
 
-        </main>
+        </div>
 
-    </div>
+    </main>
 
 </body>
 
