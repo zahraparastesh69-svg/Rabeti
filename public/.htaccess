@@ -65,3 +65,7 @@ RewriteRule ^checkout-review/?$ checkout-review.php [L,QSA]
 
 RewriteRule ^payment/?$ payment.php [L,QSA]
 
+RewriteRule ^invoice-print/?$ invoice-print.php [L,QSA]
+
+RewriteRule ^invoice-pdf/?$ invoice-pdf.php [L,QSA]
+

@@ -9,8 +9,8 @@ final class InvoiceService
     /**
      * دریافت فاکتور با کنترل مالکیت.
      *
-     * اگر $isAdmin برابر true باشد، فاکتور بدون محدودیت user_id
-     * برای پنل مدیریت قابل دریافت است.
+     * مشتری فقط فاکتورهای خودش را می‌بیند.
+     * ادمین می‌تواند فاکتور هر مشتری را مشاهده کند.
      */
     public static function find(
         string $invoiceNumber,
@@ -28,31 +28,39 @@ final class InvoiceService
         $sql = "
             SELECT
                 i.id AS invoice_id,
+                i.invoice_number,
                 i.order_id AS invoice_order_id,
                 i.user_id AS invoice_user_id,
-                i.invoice_number,
-                i.issue_date,
-                i.due_date,
+
                 i.total AS invoice_total,
-                i.tax AS invoice_tax,
-                i.discount AS invoice_discount,
+                i.paid_total AS invoice_paid_total,
                 i.status AS invoice_status,
-                i.pdf_path,
+                i.issued_at AS invoice_issued_at,
 
                 o.id AS order_id,
                 o.order_number,
                 o.status AS order_status,
-                o.shipping_method_id,
-                o.shipping_time_id,
-                o.total_amount AS order_total_amount,
-                o.note AS order_note,
-                o.is_custom_order,
+
+                o.subtotal AS order_subtotal,
+                o.shipping_cost,
+                o.shipping_fee,
+                o.total AS order_total,
+
+                o.shipping_name,
+                o.shipping_mobile,
+                o.shipping_province,
+                o.shipping_city,
+                o.shipping_address,
+                o.shipping_postal,
+                o.customer_note,
+
                 o.created_at AS order_created_at,
+                o.updated_at AS order_updated_at,
 
                 u.id AS customer_id,
                 u.full_name AS customer_name,
-                u.phone AS customer_mobile,
-                u.company_name AS customer_company
+                u.company_name AS customer_company,
+                u.mobile AS customer_mobile
 
             FROM invoices i
 
@@ -98,11 +106,8 @@ final class InvoiceService
     /**
      * دریافت اقلام فاکتور.
      *
-     * ساختار order_items طبق schema:
-     * id, order_id, size_id, qty, unit_price, subtotal
-     *
-     * برای نمایش بهتر، اطلاعات سایز/رنگ/واریانت نیز در صورت وجود
-     * از روابط محصولات خوانده می‌شود.
+     * اطلاعات محصول در خود order_items ذخیره شده
+     * و برای نمایش فاکتور نیازی به جدول‌های variant/color/size نیست.
      */
     public static function getItems(int $orderId): array
     {
@@ -116,35 +121,14 @@ final class InvoiceService
             SELECT
                 oi.id,
                 oi.order_id,
-                oi.size_id,
+                oi.product_id,
+                oi.product_code,
+                oi.product_name,
                 oi.qty,
                 oi.unit_price,
-                oi.subtotal,
-
-                ps.size_label,
-
-                pc.color_name,
-                pc.color_hex,
-
-                pv.name AS variant_name,
-
-                p.id AS product_id,
-                p.name AS product_name,
-                p.code AS product_code
+                oi.line_total
 
             FROM order_items oi
-
-            LEFT JOIN product_sizes ps
-                ON ps.id = oi.size_id
-
-            LEFT JOIN product_colors pc
-                ON pc.id = ps.color_id
-
-            LEFT JOIN product_variants pv
-                ON pv.id = pc.variant_id
-
-            LEFT JOIN products p
-                ON p.id = pv.product_id
 
             WHERE oi.order_id = ?
 
@@ -158,10 +142,12 @@ final class InvoiceService
     }
 
     /**
-     * محاسبه نهایی مبالغ.
+     * محاسبه مبالغ فاکتور.
      *
-     * مبلغ اقلام از order_items گرفته می‌شود.
-     * تخفیف و مالیات از invoices گرفته می‌شود.
+     * subtotal از مجموع line_total اقلام محاسبه می‌شود.
+     *
+     * مبلغ نهایی مرجع:
+     * invoices.total
      */
     public static function calculateTotals(
         array $invoice,
@@ -170,26 +156,34 @@ final class InvoiceService
         $itemsSubtotal = 0;
 
         foreach ($items as $item) {
-            $itemsSubtotal += (float)($item['subtotal'] ?? 0);
+            $itemsSubtotal += (int)($item['line_total'] ?? 0);
         }
 
-        $discount = (float)($invoice['invoice_discount'] ?? 0);
-        $tax      = (float)($invoice['invoice_tax'] ?? 0);
-        $total    = (float)($invoice['invoice_total'] ?? 0);
+        $invoiceTotal = (int)($invoice['invoice_total'] ?? 0);
+        $paidTotal    = (int)($invoice['invoice_paid_total'] ?? 0);
 
         /*
-         * اگر total فاکتور در دیتابیس معتبر باشد همان مرجع نهایی است.
-         * subtotal برای نمایش قبل از تخفیف/مالیات محاسبه می‌شود.
+         * اگر total فاکتور موجود باشد،
+         * همان مبلغ نهایی مرجع است.
+         *
+         * در غیر این صورت از مجموع اقلام استفاده می‌کنیم.
          */
-        if ($total <= 0) {
-            $total = max(0, $itemsSubtotal - $discount + $tax);
-        }
+        $total = $invoiceTotal > 0
+            ? $invoiceTotal
+            : $itemsSubtotal;
+
+        $paid = max(0, $paidTotal);
+
+        /*
+         * مانده نباید منفی نمایش داده شود.
+         */
+        $remaining = max(0, $total - $paid);
 
         return [
-            'subtotal' => $itemsSubtotal,
-            'discount' => $discount,
-            'tax'      => $tax,
-            'total'    => $total,
+            'subtotal'  => $itemsSubtotal,
+            'total'     => $total,
+            'paid'      => $paid,
+            'remaining' => $remaining,
         ];
     }
 
@@ -218,7 +212,7 @@ final class InvoiceService
             'partial' => 'پرداخت جزئی',
             'unpaid'  => 'پرداخت‌نشده',
             'void'    => 'باطل',
-            default   => 'در انتظار بررسی',
+            default   => 'نامشخص',
         };
     }
 
@@ -228,17 +222,18 @@ final class InvoiceService
     public static function orderStatusLabel(string $status): string
     {
         return match ($status) {
-            'pending'   => 'در انتظار بررسی',
-            'confirmed' => 'تأیید شده',
-            'producing' => 'در حال آماده‌سازی',
-            'shipped'   => 'ارسال شده',
-            'done'      => 'تکمیل شده',
-            default     => 'نامشخص',
+            'pending_review' => 'در انتظار بررسی',
+            'processing'     => 'در حال پردازش',
+            'packed'         => 'بسته‌بندی شده',
+            'shipped'        => 'ارسال شده',
+            'delivered'      => 'تحویل شده',
+            'cancelled'      => 'لغو شده',
+            default          => 'نامشخص',
         };
     }
 
     /**
-     * فرمت مبلغ.
+     * فرمت مبلغ به تومان.
      */
     public static function money(float|int|string $amount): string
     {
@@ -274,13 +269,13 @@ final class InvoiceService
     }
 
     /**
-     * تاریخ میلادی دیتابیس → نمایش فارسی.
+     * تاریخ صدور فاکتور.
      *
-     * برای جلوگیری از وابستگی اجباری به کتابخانه جلالی،
-     * فعلاً تاریخ خام را با ارقام فارسی نمایش می‌دهیم.
+     * منبع واقعی دیتابیس:
+     * invoices.issued_at
      *
-     * اگر Time پروژه تبدیل جلالی داشته باشد، در مرحله بعد
-     * این متد به Time::toJalali متصل می‌شود.
+     * فعلاً تاریخ میلادی با ارقام فارسی نمایش داده می‌شود.
+     * اتصال به Time/Jalali را می‌توان در مرحله بعد انجام داد.
      */
     public static function dateFa(?string $date): string
     {
@@ -297,5 +292,49 @@ final class InvoiceService
         return self::faDigits(
             date('Y/m/d', $timestamp)
         );
+    }
+
+    /**
+     * ساعت.
+     */
+    public static function timeFa(?string $date): string
+    {
+        if (!$date) {
+            return '—';
+        }
+
+        $timestamp = strtotime($date);
+
+        if ($timestamp === false) {
+            return '—';
+        }
+
+        return self::faDigits(
+            date('H:i', $timestamp)
+        );
+    }
+
+    /**
+     * وضعیت پرداخت بر اساس مبلغ پرداخت‌شده.
+     *
+     * این متد برای نمایش امن‌تر وضعیت نیز قابل استفاده است.
+     */
+    public static function paymentState(
+        int $total,
+        int $paid
+    ): string {
+        if ($total <= 0) {
+            return 'unpaid';
+        }
+
+        if ($paid >= $total) {
+            return 'paid';
+        }
+
+        if ($paid > 0) {
+            return 'partial';
+        }
+
+        return 'unpaid';
     }
 }

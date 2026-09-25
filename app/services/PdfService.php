@@ -6,6 +6,9 @@ final class PdfService
 {
     private static bool $loaded = false;
 
+    /**
+     * بارگذاری TCPDF از Composer
+     */
     private static function loadTcpdf(): void
     {
         if (self::$loaded) {
@@ -31,9 +34,11 @@ final class PdfService
         self::$loaded = true;
     }
 
-    public static function output(
-        array $invoice
-    ): void {
+    /**
+     * تولید و نمایش مستقیم PDF
+     */
+    public static function output(array $invoice): void
+    {
         self::loadTcpdf();
 
         $pdf = new TCPDF(
@@ -47,13 +52,28 @@ final class PdfService
 
         $pdf->SetCreator('sock-b2b');
         $pdf->SetAuthor('sock-b2b');
+
         $pdf->SetTitle(
             'فاکتور ' .
-                (string)$invoice['invoice_number']
+                (string)($invoice['invoice_number'] ?? '')
         );
 
+        $pdf->SetSubject('فاکتور فروش');
+
+        /*
+         * حذف Header و Footer پیش‌فرض TCPDF
+         */
+        $pdf->setPrintHeader(false);
+        $pdf->setPrintFooter(false);
+
+        /*
+         * RTL
+         */
         $pdf->setRTL(true);
 
+        /*
+         * حاشیه‌ها
+         */
         $pdf->SetMargins(
             10,
             10,
@@ -65,20 +85,21 @@ final class PdfService
             10
         );
 
-        $pdf->setPrintHeader(false);
-        $pdf->setPrintFooter(false);
-
+        /*
+         * فونت فعلی.
+         *
+         * در مرحله بعد فونت فارسی واقعی پروژه
+         * به این بخش اضافه می‌شود.
+         */
         $pdf->SetFont(
             'dejavusans',
             '',
-            9
+            8.5
         );
 
         $pdf->AddPage();
 
-        $html = self::buildHtml(
-            $invoice
-        );
+        $html = self::buildHtml($invoice);
 
         $pdf->writeHTML(
             $html,
@@ -89,195 +110,548 @@ final class PdfService
             ''
         );
 
-        $filename =
-            'invoice-' .
-            preg_replace(
-                '/[^A-Za-z0-9\-_]/',
-                '',
-                (string)$invoice['invoice_number']
-            ) .
-            '.pdf';
+        /*
+         * جلوگیری از نام فایل نامعتبر
+         */
+        $invoiceNumber = (string)(
+            $invoice['invoice_number'] ?? 'invoice'
+        );
 
+        $safeNumber = preg_replace(
+            '/[^A-Za-z0-9\-_]/',
+            '',
+            $invoiceNumber
+        );
+
+        if ($safeNumber === '') {
+            $safeNumber = 'invoice';
+        }
+
+        $filename = 'invoice-' . $safeNumber . '.pdf';
+
+        /*
+         * I = نمایش مستقیم در مرورگر
+         *
+         * هیچ فایل مشترکی روی سرور ذخیره نمی‌شود.
+         */
         $pdf->Output(
             $filename,
             'I'
         );
     }
 
+    /**
+     * ساخت HTML مخصوص PDF
+     *
+     * این HTML مستقل از invoice-print.php است.
+     */
     private static function buildHtml(
         array $invoice
     ): string {
         $e = static function ($value): string {
             return htmlspecialchars(
                 (string)$value,
-                ENT_QUOTES,
+                ENT_QUOTES | ENT_SUBSTITUTE,
                 'UTF-8'
             );
         };
 
         $money = static function ($value): string {
-            return number_format(
-                (float)$value,
-                0,
-                '.',
-                ','
+            return InvoiceService::faDigits(
+                number_format(
+                    (float)$value,
+                    0,
+                    '.',
+                    ','
+                )
             ) . ' تومان';
         };
 
-        $status =
-            InvoiceService::statusLabel(
-                (string)$invoice['invoice_status']
+        $number = static function ($value): string {
+            return InvoiceService::faDigits(
+                number_format(
+                    (float)$value,
+                    0,
+                    '.',
+                    ','
+                )
             );
+        };
 
+        /*
+         * اطلاعات اصلی
+         */
+        $invoiceNumber = $e(
+            $invoice['invoice_number'] ?? '—'
+        );
+
+        $orderNumber = $e(
+            $invoice['order_number'] ?? '—'
+        );
+
+        $customerName = $e(
+            $invoice['customer_name'] ?? '—'
+        );
+
+        $companyName = trim(
+            (string)($invoice['customer_company'] ?? '')
+        );
+
+        $customerMobile = $e(
+            $invoice['customer_mobile'] ?? '—'
+        );
+
+        /*
+         * وضعیت‌ها
+         */
+        $invoiceStatus = InvoiceService::statusLabel(
+            (string)(
+                $invoice['invoice_status'] ?? ''
+            )
+        );
+
+        $orderStatus = InvoiceService::orderStatusLabel(
+            (string)(
+                $invoice['order_status'] ?? ''
+            )
+        );
+
+        /*
+         * تاریخ
+         */
+        $issuedAt = InvoiceService::dateFa(
+            $invoice['invoice_issued_at'] ?? null
+        );
+
+        $issuedTime = InvoiceService::timeFa(
+            $invoice['invoice_issued_at'] ?? null
+        );
+
+        /*
+         * مبالغ
+         */
+        $totals = $invoice['totals'] ?? [];
+
+        $subtotal = (int)(
+            $totals['subtotal'] ?? 0
+        );
+
+        $total = (int)(
+            $totals['total'] ??
+            $invoice['invoice_total'] ??
+            0
+        );
+
+        $paid = (int)(
+            $totals['paid'] ??
+            $invoice['invoice_paid_total'] ??
+            0
+        );
+
+        $remaining = (int)(
+            $totals['remaining'] ??
+            max(0, $total - $paid)
+        );
+
+        /*
+         * اقلام
+         */
         $itemsHtml = '';
 
-        foreach (
-            ($invoice['items'] ?? [])
-            as $index => $item
-        ) {
-            $details = array_filter([
-                $item['variant_name'] ?? '',
-                $item['color_name'] ?? '',
-                $item['size_label'] ?? '',
-            ]);
+        $items = $invoice['items'] ?? [];
+
+        foreach ($items as $index => $item) {
+
+            $productName = $e(
+                $item['product_name'] ?? 'محصول'
+            );
+
+            $productCode = trim(
+                (string)(
+                    $item['product_code'] ?? ''
+                )
+            );
+
+            $qty = (int)(
+                $item['qty'] ?? 0
+            );
+
+            $unitPrice = (int)(
+                $item['unit_price'] ?? 0
+            );
+
+            $lineTotal = (int)(
+                $item['line_total'] ?? 0
+            );
+
+            $codeHtml = '';
+
+            if ($productCode !== '') {
+                $codeHtml = '
+                    <br>
+                    <span class="product-code">
+                        کد: ' . $e($productCode) . '
+                    </span>
+                ';
+            }
 
             $itemsHtml .= '
                 <tr>
-                    <td align="center">'
-                . ($index + 1) .
-                '</td>
 
-                    <td>
-                        <b>'
-                . $e(
-                    $item['product_name']
-                        ?? 'محصول'
-                ) .
-                '</b>
-                        <br>
-                        <small>'
-                . $e(
-                    implode(
-                        ' · ',
-                        $details
-                    ) ?: '—'
-                ) .
-                '</small>
+                    <td class="center">
+                        ' . $number($index + 1) . '
                     </td>
 
-                    <td align="center">'
-                . (int)(
-                    $item['qty'] ?? 0
-                ) .
-                '</td>
+                    <td class="product">
+                        <strong>
+                            ' . $productName . '
+                        </strong>
+                        ' . $codeHtml . '
+                    </td>
 
-                    <td align="right">'
-                . $e(
-                    $money(
-                        $item['unit_price']
-                            ?? 0
-                    )
-                ) .
-                '</td>
+                    <td class="center">
+                        ' . $number($qty) . '
+                    </td>
 
-                    <td align="right">'
-                . $e(
-                    $money(
-                        $item['subtotal']
-                            ?? 0
-                    )
-                ) .
-                '</td>
+                    <td class="money">
+                        ' . $money($unitPrice) . '
+                    </td>
+
+                    <td class="money">
+                        ' . $money($lineTotal) . '
+                    </td>
+
                 </tr>
             ';
         }
 
-        $totals = $invoice['totals'] ?? [];
+        if ($itemsHtml === '') {
+            $itemsHtml = '
+                <tr>
+                    <td
+                        colspan="5"
+                        class="empty"
+                    >
+                        موردی برای نمایش وجود ندارد.
+                    </td>
+                </tr>
+            ';
+        }
+
+        /*
+         * اطلاعات شرکت
+         */
+        $companyHtml = '';
+
+        if ($companyName !== '') {
+            $companyHtml = '
+                <tr>
+                    <td class="label">
+                        شرکت
+                    </td>
+
+                    <td>
+                        ' . $e($companyName) . '
+                    </td>
+                </tr>
+            ';
+        }
+
+        /*
+         * آدرس
+         */
+        $shippingAddress = trim(
+            implode('، ', array_filter([
+                $invoice['shipping_province'] ?? '',
+                $invoice['shipping_city'] ?? '',
+                $invoice['shipping_address'] ?? '',
+            ]))
+        );
+
+        $addressHtml = '';
+
+        if ($shippingAddress !== '') {
+            $addressHtml = '
+                <tr>
+                    <td class="label">
+                        آدرس ارسال
+                    </td>
+
+                    <td>
+                        ' . $e($shippingAddress) . '
+                    </td>
+                </tr>
+            ';
+        }
+
+        /*
+         * یادداشت
+         */
+        $noteHtml = '';
+
+        $note = trim(
+            (string)(
+                $invoice['customer_note'] ?? ''
+            )
+        );
+
+        if ($note !== '') {
+            $noteHtml = '
+                <div class="note-title">
+                    یادداشت سفارش
+                </div>
+
+                <div class="note">
+                    ' . nl2br($e($note)) . '
+                </div>
+            ';
+        }
 
         return '
         <style>
 
-            h1 {
-                font-size: 18px;
+            body {
+                font-family: dejavusans;
+                font-size: 8.5pt;
+                color: #222222;
+                line-height: 1.5;
             }
 
-            .muted {
-                color: #666;
+            .header {
+                border-bottom: 2px solid #222222;
+                padding-bottom: 8px;
+                margin-bottom: 10px;
             }
 
-            .box {
-                border: 1px solid #ddd;
-                padding: 7px;
+            .title {
+                font-size: 18pt;
+                font-weight: bold;
             }
 
-            table {
+            .subtitle {
+                color: #666666;
+                font-size: 8pt;
+            }
+
+            .meta {
+                border: 1px solid #d7d7d7;
+                background-color: #f7f7f7;
+            }
+
+            .meta td {
+                padding: 5px;
+                border-bottom: 1px solid #e5e5e5;
+            }
+
+            .meta tr:last-child td {
+                border-bottom: none;
+            }
+
+            .label {
+                color: #666666;
+                font-weight: bold;
+            }
+
+            .section-title {
+                font-size: 10pt;
+                font-weight: bold;
+                padding-bottom: 4px;
+            }
+
+            .customer {
+                border: 1px solid #d7d7d7;
+            }
+
+            .customer td {
+                padding: 5px;
+                border-bottom: 1px solid #e5e5e5;
+            }
+
+            .customer tr:last-child td {
+                border-bottom: none;
+            }
+
+            .items {
                 border-collapse: collapse;
+                margin-top: 5px;
             }
 
-            th {
-                background-color: #f2f2f2;
+            .items th {
+                background-color: #eeeeee;
+                border: 1px solid #cfcfcf;
+                padding: 5px;
+                font-weight: bold;
+                font-size: 8pt;
+            }
+
+            .items td {
+                border: 1px solid #d8d8d8;
+                padding: 5px;
+                font-size: 8pt;
+            }
+
+            .items .center {
+                text-align: center;
+            }
+
+            .items .money {
+                text-align: right;
+                white-space: nowrap;
+            }
+
+            .items .product {
+                text-align: right;
+            }
+
+            .product-code {
+                color: #777777;
+                font-size: 7pt;
+            }
+
+            .empty {
+                text-align: center;
+                color: #777777;
+                padding: 10px;
+            }
+
+            .totals {
+                margin-top: 8px;
+            }
+
+            .totals td {
+                padding: 4px;
+            }
+
+            .totals .total-label {
+                font-weight: bold;
+                font-size: 10pt;
+            }
+
+            .totals .total-value {
+                font-weight: bold;
+                font-size: 10pt;
+            }
+
+            .remaining {
+                border: 1px solid #bbbbbb;
+                background-color: #f7f7f7;
                 font-weight: bold;
             }
 
-            th,
-            td {
-                border: 1px solid #ddd;
+            .note-title {
+                font-weight: bold;
+                margin-top: 8px;
+            }
+
+            .note {
+                border: 1px solid #d7d7d7;
                 padding: 6px;
+                margin-top: 3px;
             }
 
-            .total {
-                font-size: 13px;
-                font-weight: bold;
+            .footer-text {
+                text-align: center;
+                color: #777777;
+                font-size: 7.5pt;
+                margin-top: 10px;
             }
 
         </style>
 
-        <h1>
-            فاکتور فروش
-        </h1>
+        <!-- HEADER -->
 
-        <table width="100%" cellpadding="4">
+        <table
+            width="100%"
+            cellpadding="0"
+            cellspacing="0"
+            class="header"
+        >
+            <tr>
+
+                <td width="65%">
+
+                    <span class="title">
+                        فاکتور فروش
+                    </span>
+
+                    <br>
+
+                    <span class="subtitle">
+                        سند فروش و سفارش مشتری
+                    </span>
+
+                </td>
+
+                <td
+                    width="35%"
+                    align="left"
+                >
+
+                    <strong>
+                        ' . $invoiceNumber . '
+                    </strong>
+
+                    <br>
+
+                    تاریخ:
+                    ' . $e($issuedAt) . '
+
+                    <br>
+
+                    ساعت:
+                    ' . $e($issuedTime) . '
+
+                </td>
+
+            </tr>
+        </table>
+
+
+        <!-- META -->
+
+        <table
+            width="100%"
+            cellpadding="0"
+            cellspacing="0"
+            class="meta"
+        >
 
             <tr>
 
-                <td width="50%">
-                    <b>شماره فاکتور:</b>
-                    '
-            . $e(
-                $invoice['invoice_number']
-            ) .
-            '
+                <td width="25%" class="label">
+                    شماره فاکتور
                 </td>
 
-                <td width="50%">
-                    <b>وضعیت:</b>
-                    '
-            . $e($status) .
-            '
+                <td width="25%">
+                    ' . $invoiceNumber . '
+                </td>
+
+                <td width="25%" class="label">
+                    شماره سفارش
+                </td>
+
+                <td width="25%">
+                    ' . $orderNumber . '
                 </td>
 
             </tr>
 
             <tr>
 
-                <td>
-                    <b>مشتری:</b>
-                    '
-            . $e(
-                $invoice['customer_name']
-                    ?? '—'
-            ) .
-            '
+                <td class="label">
+                    وضعیت فاکتور
                 </td>
 
                 <td>
-                    <b>شماره سفارش:</b>
-                    '
-            . $e(
-                $invoice['order_number']
-                    ?? '—'
-            ) .
-            '
+                    ' . $e($invoiceStatus) . '
+                </td>
+
+                <td class="label">
+                    وضعیت سفارش
+                </td>
+
+                <td>
+                    ' . $e($orderStatus) . '
                 </td>
 
             </tr>
@@ -286,14 +660,74 @@ final class PdfService
 
         <br>
 
-        <table width="100%">
+
+        <!-- CUSTOMER -->
+
+        <div class="section-title">
+            اطلاعات مشتری
+        </div>
+
+        <table
+            width="100%"
+            cellpadding="0"
+            cellspacing="0"
+            class="customer"
+        >
+
+            <tr>
+
+                <td
+                    width="25%"
+                    class="label"
+                >
+                    نام مشتری
+                </td>
+
+                <td width="25%">
+                    ' . $customerName . '
+                </td>
+
+                <td
+                    width="25%"
+                    class="label"
+                >
+                    موبایل
+                </td>
+
+                <td width="25%">
+                    ' . $customerMobile . '
+                </td>
+
+            </tr>
+
+            ' . $companyHtml . '
+
+            ' . $addressHtml . '
+
+        </table>
+
+        <br>
+
+
+        <!-- ITEMS -->
+
+        <div class="section-title">
+            اقلام سفارش
+        </div>
+
+        <table
+            width="100%"
+            cellpadding="0"
+            cellspacing="0"
+            class="items"
+        >
 
             <thead>
 
                 <tr>
 
                     <th width="7%">
-                        #
+                        ردیف
                     </th>
 
                     <th width="38%">
@@ -317,34 +751,36 @@ final class PdfService
             </thead>
 
             <tbody>
-                '
-            . $itemsHtml .
-            '
+
+                ' . $itemsHtml . '
+
             </tbody>
 
         </table>
 
-        <br>
 
-        <table width="100%">
+        <!-- TOTALS -->
+
+        <table
+            width="100%"
+            cellpadding="0"
+            cellspacing="0"
+            class="totals"
+        >
 
             <tr>
 
-                <td width="60%"></td>
+                <td width="65%"></td>
 
                 <td width="20%">
                     جمع کالاها
                 </td>
 
-                <td width="20%" align="right">
-                    '
-            . $e(
-                $money(
-                    $totals['subtotal']
-                        ?? 0
-                )
-            ) .
-            '
+                <td
+                    width="15%"
+                    align="right"
+                >
+                    ' . $money($subtotal) . '
                 </td>
 
             </tr>
@@ -353,69 +789,54 @@ final class PdfService
 
                 <td></td>
 
-                <td>
-                    تخفیف
-                </td>
-
-                <td align="right">
-                    '
-            . $e(
-                $money(
-                    $totals['discount']
-                        ?? 0
-                )
-            ) .
-            '
-                </td>
-
-            </tr>
-
-            <tr>
-
-                <td></td>
-
-                <td>
-                    مالیات
-                </td>
-
-                <td align="right">
-                    '
-            . $e(
-                $money(
-                    $totals['tax']
-                        ?? 0
-                )
-            ) .
-            '
-                </td>
-
-            </tr>
-
-            <tr>
-
-                <td></td>
-
-                <td class="total">
-                    مبلغ نهایی
+                <td class="total-label">
+                    مبلغ کل
                 </td>
 
                 <td
                     align="right"
-                    class="total"
+                    class="total-value"
                 >
-                    '
-            . $e(
-                $money(
-                    $totals['total']
-                        ?? 0
-                )
-            ) .
-            '
+                    ' . $money($total) . '
+                </td>
+
+            </tr>
+
+            <tr>
+
+                <td></td>
+
+                <td>
+                    پرداخت‌شده
+                </td>
+
+                <td align="right">
+                    ' . $money($paid) . '
+                </td>
+
+            </tr>
+
+            <tr class="remaining">
+
+                <td></td>
+
+                <td>
+                    مانده قابل پرداخت
+                </td>
+
+                <td align="right">
+                    ' . $money($remaining) . '
                 </td>
 
             </tr>
 
         </table>
+
+        ' . $noteHtml . '
+
+        <div class="footer-text">
+            این سند به صورت الکترونیکی صادر شده است.
+        </div>
         ';
     }
 }
