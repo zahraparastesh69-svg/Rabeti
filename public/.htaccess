@@ -47,3 +47,9 @@ RewriteRule ^order-success/?$ order-success.php [L,QSA]
 RewriteRule ^admin/orders/?$ admin/orders.php [L,QSA]
 
 RewriteRule ^admin/order-detail/?$ admin/order-detail.php [L,QSA]
+
+RewriteRule ^payment/?$ payment.php [L,QSA]
+
+RewriteRule ^admin/payments/?$ admin/payments.php [L,QSA]
+
+RewriteRule ^invoice-print/?$ invoice-print.php [L,QSA]

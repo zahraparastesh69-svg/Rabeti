@@ -41,6 +41,12 @@ $menu = [
         'icon'  => 'dashboard'
     ],
     [
+        'key'   => 'payments',
+        'label' => 'تأیید پرداخت‌ها',
+        'href'  => '/admin/payments',
+        'icon'  => 'message',
+    ],
+    [
         'key'   => 'custom',
         'label' => 'سفارش‌های اختصاصی',
         'href'  => '/admin/custom-orders',
