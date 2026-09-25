@@ -244,11 +244,7 @@ ob_start();
                     <label>کد پستی</label>
                     <input type="text" name="postal" dir="ltr" value="<?= $h($_POST['postal'] ?? '') ?>" inputmode="numeric" maxlength="10">
                 </div>
-                <div class="form-field">
-                    <label>روش پرداخت</label>
-                    <input type="text" value="کارشناس پس از بررسی هماهنگ می‌کند" disabled>
-                </div>
-            </div>
+               </div>
 
             <div class="form-field">
                 <label>توضیحات سفارش</label>

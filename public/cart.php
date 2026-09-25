@@ -164,7 +164,7 @@ ob_start();
                     ⚠️ برخی اقلام مشکل تعداد/موجودی دارند — با فلش‌های روی هر قلم اصلاح کنید
                 </div>
             <?php else: ?>
-                <a href="/checkout" class="btn btn-primary cart-checkout-btn">ادامه و ثبت سفارش ←</a>
+                <a href="/checkout-address" class="btn btn-primary cart-checkout-btn">ادامه و ثبت سفارش ←</a>
             <?php endif; ?>
 
             <a href="/products" class="cart-continue">ادامه خرید</a>

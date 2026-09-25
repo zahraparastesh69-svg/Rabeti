@@ -915,7 +915,7 @@ if (is_logged_in()) {
 
     </div>
 
-    <script src="/assets/js/app.js?v=20"></script>
+    <script src="/assets/js/app.js?v=21"></script>
 
 </body>
 
