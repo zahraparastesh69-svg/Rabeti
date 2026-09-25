@@ -495,6 +495,9 @@ if (is_logged_in()) {
                 </strong>
 
             </div>
+            <?php if ($isCustomer): ?>
+                <a href="/account/orders" class="r6-drawer-link">سفارش‌های من</a>
+            <?php endif; ?>
 
         <?php endif; ?>
 
@@ -533,6 +536,7 @@ if (is_logged_in()) {
                 class="r6-drawer-link">
                 سفارش اختصاصی
             </a>
+
 
             <a
                 href="/contact"

@@ -5138,3 +5138,109 @@ html body .r6-cat.is-active > span:last-child {
   border-top: 1px dashed var(--line, #e6e2d8);
   padding-top: 14px;
 }
+/* ═══ سفارش‌های من ═══ */
+.my-orders {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  margin-top: 18px;
+}
+.my-order-card {
+  background: #fff;
+  border: 1px solid var(--line, #e6e2d8);
+  border-radius: 14px;
+  padding: 16px 18px;
+}
+.mo-head {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding-bottom: 10px;
+  border-bottom: 1px dashed var(--line, #e6e2d8);
+  margin-bottom: 10px;
+}
+.mo-head b {
+  font-size: 0.92rem;
+  color: var(--brand, #2a5f78);
+  display: block;
+}
+.mo-head small {
+  font-size: 0.68rem;
+  color: var(--muted-text, #7a868c);
+}
+.mo-row {
+  display: flex;
+  justify-content: space-between;
+  font-size: 0.82rem;
+  padding: 4px 0;
+  color: var(--muted-text, #7a868c);
+}
+.mo-row b {
+  color: var(--text, #23303a);
+}
+.mo-actions {
+  display: flex;
+  gap: 8px;
+  margin-top: 12px;
+  flex-wrap: wrap;
+}
+.mo-actions .btn {
+  min-height: 40px;
+  padding: 8px 20px;
+  font-size: 0.8rem;
+  flex: 1;
+  text-align: center;
+}
+/* ═══ سفارش‌های من ═══ */
+.my-orders {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  margin-top: 18px;
+}
+.my-order-card {
+  background: #fff;
+  border: 1px solid var(--line, #e6e2d8);
+  border-radius: 14px;
+  padding: 16px 18px;
+}
+.mo-head {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding-bottom: 10px;
+  border-bottom: 1px dashed var(--line, #e6e2d8);
+  margin-bottom: 10px;
+}
+.mo-head b {
+  font-size: 0.92rem;
+  color: var(--brand, #2a5f78);
+  display: block;
+}
+.mo-head small {
+  font-size: 0.68rem;
+  color: var(--muted-text, #7a868c);
+}
+.mo-row {
+  display: flex;
+  justify-content: space-between;
+  font-size: 0.82rem;
+  padding: 4px 0;
+  color: var(--muted-text, #7a868c);
+}
+.mo-row b {
+  color: var(--text, #23303a);
+}
+.mo-actions {
+  display: flex;
+  gap: 8px;
+  margin-top: 12px;
+  flex-wrap: wrap;
+}
+.mo-actions .btn {
+  min-height: 40px;
+  padding: 8px 20px;
+  font-size: 0.8rem;
+  flex: 1;
+  text-align: center;
+}
