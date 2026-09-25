@@ -1783,13 +1783,13 @@ img {
   background: var(--r6-cream);
   overflow: hidden;
 }
-.product-visual::before {
+/* .product-visual::before {
   content: "";
   position: absolute;
   inset: 15%;
   border-radius: 50%;
   background: rgba(255, 255, 255, 0.55);
-}
+} */
 .product-index {
   position: absolute;
   top: 12px;

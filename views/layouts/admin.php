@@ -178,7 +178,7 @@ function admin_icon(string $name): string
 
     <link
         rel="stylesheet"
-        href="/assets/css/app.css?v=21">
+        href="/assets/css/app.css?v=22">
 
     <link
         rel="stylesheet"

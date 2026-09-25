@@ -512,13 +512,13 @@ ob_start();
 
                         <?php else: ?>
 
-                            <!-- <div class="product-surface"></div> -->
+                            <div class="product-surface"></div>
 
-                            <!-- <div class="product-sock"> -->
+                            <div class="product-sock">
                                 🧦
                             </div>
 
-                            <!-- <div class="product-shadow"></div> -->
+                            <div class="product-shadow"></div>
 
                         <?php endif; ?>
 

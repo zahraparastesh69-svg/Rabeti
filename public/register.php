@@ -130,7 +130,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
     <link
         rel="stylesheet"
-        href="/assets/css/app.css?v=21>
+        href="/assets/css/app.css?v=22>
 
     <style>
         body.register-page {
@@ -307,7 +307,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
 </head>
 
-<body class="register-page">
+<body class=" register-page">
 
     <div class="register-screen">
 
@@ -469,6 +469,6 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
     </div>
 
-</body>
+    </body>
 
 </html>
