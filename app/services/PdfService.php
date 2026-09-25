@@ -7,7 +7,7 @@ final class PdfService
     private static bool $loaded = false;
 
     /**
-     * بارگذاری TCPDF از Composer
+     * Load TCPDF.
      */
     private static function loadTcpdf(): void
     {
@@ -18,9 +18,7 @@ final class PdfService
         $autoload = ROOT_PATH . '/vendor/autoload.php';
 
         if (!is_file($autoload)) {
-            throw new RuntimeException(
-                'Composer autoload پیدا نشد.'
-            );
+            throw new RuntimeException('Composer autoload پیدا نشد.');
         }
 
         require_once $autoload;
@@ -35,7 +33,7 @@ final class PdfService
     }
 
     /**
-     * تولید و نمایش مستقیم PDF
+     * Generate and stream invoice PDF.
      */
     public static function output(array $invoice): void
     {
@@ -54,42 +52,33 @@ final class PdfService
         $pdf->SetAuthor('sock-b2b');
 
         $pdf->SetTitle(
-            'فاکتور ' .
-                (string)($invoice['invoice_number'] ?? '')
+            'فاکتور ' . (string)($invoice['invoice_number'] ?? '')
         );
 
         $pdf->SetSubject('فاکتور فروش');
 
-        /*
-         * حذف Header و Footer پیش‌فرض TCPDF
-         */
         $pdf->setPrintHeader(false);
         $pdf->setPrintFooter(false);
 
-        /*
-         * RTL
-         */
         $pdf->setRTL(true);
 
         /*
-         * حاشیه‌ها
+         * Page margins
          */
         $pdf->SetMargins(
             10,
-            10,
+            9,
             10
         );
 
         $pdf->SetAutoPageBreak(
             true,
-            10
+            9
         );
 
         /*
-         * فونت فعلی.
-         *
-         * در مرحله بعد فونت فارسی واقعی پروژه
-         * به این بخش اضافه می‌شود.
+         * Current fallback font.
+         * بعداً فونت فارسی اصلی پروژه را اینجا قرار می‌دهیم.
          */
         $pdf->SetFont(
             'dejavusans',
@@ -111,7 +100,7 @@ final class PdfService
         );
 
         /*
-         * جلوگیری از نام فایل نامعتبر
+         * Safe filename
          */
         $invoiceNumber = (string)(
             $invoice['invoice_number'] ?? 'invoice'
@@ -130,9 +119,7 @@ final class PdfService
         $filename = 'invoice-' . $safeNumber . '.pdf';
 
         /*
-         * I = نمایش مستقیم در مرورگر
-         *
-         * هیچ فایل مشترکی روی سرور ذخیره نمی‌شود.
+         * Direct browser output.
          */
         $pdf->Output(
             $filename,
@@ -141,13 +128,13 @@ final class PdfService
     }
 
     /**
-     * ساخت HTML مخصوص PDF
-     *
-     * این HTML مستقل از invoice-print.php است.
+     * Build PDF HTML.
      */
-    private static function buildHtml(
-        array $invoice
-    ): string {
+    private static function buildHtml(array $invoice): string
+    {
+        /*
+         * Escape helper
+         */
         $e = static function ($value): string {
             return htmlspecialchars(
                 (string)$value,
@@ -156,17 +143,9 @@ final class PdfService
             );
         };
 
-        $money = static function ($value): string {
-            return InvoiceService::faDigits(
-                number_format(
-                    (float)$value,
-                    0,
-                    '.',
-                    ','
-                )
-            ) . ' تومان';
-        };
-
+        /*
+         * Number helper
+         */
         $number = static function ($value): string {
             return InvoiceService::faDigits(
                 number_format(
@@ -179,8 +158,25 @@ final class PdfService
         };
 
         /*
-         * اطلاعات اصلی
+         * Money helper
          */
+        $money = static function ($value): string {
+            return InvoiceService::faDigits(
+                number_format(
+                    (float)$value,
+                    0,
+                    '.',
+                    ','
+                )
+            ) . ' تومان';
+        };
+
+        /*
+         * =====================================================
+         * Invoice information
+         * =====================================================
+         */
+
         $invoiceNumber = $e(
             $invoice['invoice_number'] ?? '—'
         );
@@ -201,25 +197,15 @@ final class PdfService
             $invoice['customer_mobile'] ?? '—'
         );
 
-        /*
-         * وضعیت‌ها
-         */
         $invoiceStatus = InvoiceService::statusLabel(
-            (string)(
-                $invoice['invoice_status'] ?? ''
-            )
+            (string)($invoice['invoice_status'] ?? '')
         );
 
         $orderStatus = InvoiceService::orderStatusLabel(
-            (string)(
-                $invoice['order_status'] ?? ''
-            )
+            (string)($invoice['order_status'] ?? '')
         );
 
-        /*
-         * تاریخ
-         */
-        $issuedAt = InvoiceService::dateFa(
+        $issuedDate = InvoiceService::dateFa(
             $invoice['invoice_issued_at'] ?? null
         );
 
@@ -228,8 +214,11 @@ final class PdfService
         );
 
         /*
-         * مبالغ
+         * =====================================================
+         * Totals
+         * =====================================================
          */
+
         $totals = $invoice['totals'] ?? [];
 
         $subtotal = (int)(
@@ -237,25 +226,78 @@ final class PdfService
         );
 
         $total = (int)(
-            $totals['total'] ??
-            $invoice['invoice_total'] ??
-            0
+            $totals['total']
+            ?? $invoice['invoice_total']
+            ?? 0
         );
 
         $paid = (int)(
-            $totals['paid'] ??
-            $invoice['invoice_paid_total'] ??
-            0
+            $totals['paid']
+            ?? $invoice['invoice_paid_total']
+            ?? 0
         );
 
         $remaining = (int)(
-            $totals['remaining'] ??
-            max(0, $total - $paid)
+            $totals['remaining']
+            ?? max(0, $total - $paid)
         );
 
         /*
-         * اقلام
+         * =====================================================
+         * LOGO
+         * =====================================================
+         *
+         * Logo source:
+         *
+         * public/Image/logo2.jpg
+         *
+         * Maximum visual area:
+         *
+         * 35mm × 16mm
+         *
+         * تصویر با نسبت خودش داخل این محدوده قرار می‌گیرد.
          */
+
+        $logoPath = ROOT_PATH . '/public/Image/logo2.jpg';
+
+        $logoHtml = '';
+
+        if (is_file($logoPath)) {
+
+            $logoPathForPdf = str_replace(
+                '\\',
+                '/',
+                $logoPath
+            );
+
+            $logoHtml = '
+                <td
+                    class="logo-area"
+                    width="38%"
+                >
+                    <div class="logo-box">
+
+                        <img
+                            src="' . $e($logoPathForPdf) . '"
+                            width="35"
+                            height="16"
+                            style="
+                                max-width:35mm;
+                                max-height:16mm;
+                            "
+                        >
+
+                    </div>
+                </td>
+            ';
+        }
+
+        /*
+         * =====================================================
+         * ITEMS
+         * =====================================================
+         */
+
         $itemsHtml = '';
 
         $items = $invoice['items'] ?? [];
@@ -267,9 +309,7 @@ final class PdfService
             );
 
             $productCode = trim(
-                (string)(
-                    $item['product_code'] ?? ''
-                )
+                (string)($item['product_code'] ?? '')
             );
 
             $qty = (int)(
@@ -287,37 +327,54 @@ final class PdfService
             $codeHtml = '';
 
             if ($productCode !== '') {
+
                 $codeHtml = '
-                    <br>
-                    <span class="product-code">
+                    <div class="product-code">
                         کد: ' . $e($productCode) . '
-                    </span>
+                    </div>
                 ';
             }
 
             $itemsHtml .= '
                 <tr>
 
-                    <td class="center">
+                    <td
+                        class="item-cell center"
+                        width="8%"
+                    >
                         ' . $number($index + 1) . '
                     </td>
 
-                    <td class="product">
-                        <strong>
+                    <td
+                        class="item-cell product"
+                        width="37%"
+                    >
+                        <div class="product-name">
                             ' . $productName . '
-                        </strong>
+                        </div>
+
                         ' . $codeHtml . '
+
                     </td>
 
-                    <td class="center">
+                    <td
+                        class="item-cell center"
+                        width="12%"
+                    >
                         ' . $number($qty) . '
                     </td>
 
-                    <td class="money">
+                    <td
+                        class="item-cell money"
+                        width="21.5%"
+                    >
                         ' . $money($unitPrice) . '
                     </td>
 
-                    <td class="money">
+                    <td
+                        class="item-cell money strong"
+                        width="21.5%"
+                    >
                         ' . $money($lineTotal) . '
                     </td>
 
@@ -326,477 +383,824 @@ final class PdfService
         }
 
         if ($itemsHtml === '') {
+
             $itemsHtml = '
                 <tr>
+
                     <td
                         colspan="5"
-                        class="empty"
+                        class="empty-cell"
                     >
                         موردی برای نمایش وجود ندارد.
                     </td>
+
                 </tr>
             ';
         }
 
         /*
-         * اطلاعات شرکت
+         * =====================================================
+         * COMPANY
+         * =====================================================
          */
+
         $companyHtml = '';
 
         if ($companyName !== '') {
+
             $companyHtml = '
                 <tr>
-                    <td class="label">
+
+                    <td class="info-label">
                         شرکت
                     </td>
 
-                    <td>
+                    <td class="info-value">
                         ' . $e($companyName) . '
                     </td>
+
                 </tr>
             ';
         }
 
         /*
-         * آدرس
+         * =====================================================
+         * ADDRESS
+         * =====================================================
          */
+
         $shippingAddress = trim(
-            implode('، ', array_filter([
-                $invoice['shipping_province'] ?? '',
-                $invoice['shipping_city'] ?? '',
-                $invoice['shipping_address'] ?? '',
-            ]))
+            implode(
+                '، ',
+                array_filter([
+                    $invoice['shipping_province'] ?? '',
+                    $invoice['shipping_city'] ?? '',
+                    $invoice['shipping_address'] ?? '',
+                ])
+            )
         );
 
         $addressHtml = '';
 
         if ($shippingAddress !== '') {
+
             $addressHtml = '
                 <tr>
-                    <td class="label">
+
+                    <td class="info-label">
                         آدرس ارسال
                     </td>
 
-                    <td>
+                    <td class="info-value address">
                         ' . $e($shippingAddress) . '
                     </td>
+
                 </tr>
             ';
         }
 
         /*
-         * یادداشت
+         * =====================================================
+         * CUSTOMER NOTE
+         * =====================================================
          */
+
         $noteHtml = '';
 
         $note = trim(
-            (string)(
-                $invoice['customer_note'] ?? ''
-            )
+            (string)($invoice['customer_note'] ?? '')
         );
 
         if ($note !== '') {
+
             $noteHtml = '
-                <div class="note-title">
+
+                <div class="section-title">
                     یادداشت سفارش
                 </div>
 
-                <div class="note">
+                <div class="note-box">
                     ' . nl2br($e($note)) . '
                 </div>
+
             ';
         }
 
+        /*
+         * =====================================================
+         * HTML
+         * =====================================================
+         */
+
         return '
-        <style>
+<!DOCTYPE html>
 
-            body {
-                font-family: dejavusans;
-                font-size: 8.5pt;
-                color: #222222;
-                line-height: 1.5;
-            }
+<html lang="fa" dir="rtl">
 
-            .header {
-                border-bottom: 2px solid #222222;
-                padding-bottom: 8px;
-                margin-bottom: 10px;
-            }
+<head>
 
-            .title {
-                font-size: 18pt;
-                font-weight: bold;
-            }
+<meta charset="UTF-8">
 
-            .subtitle {
-                color: #666666;
-                font-size: 8pt;
-            }
+<style>
 
-            .meta {
-                border: 1px solid #d7d7d7;
-                background-color: #f7f7f7;
-            }
+    body {
 
-            .meta td {
-                padding: 5px;
-                border-bottom: 1px solid #e5e5e5;
-            }
+        direction: rtl;
 
-            .meta tr:last-child td {
-                border-bottom: none;
-            }
+        font-family: dejavusans;
 
-            .label {
-                color: #666666;
-                font-weight: bold;
-            }
+        font-size: 8.5pt;
 
-            .section-title {
-                font-size: 10pt;
-                font-weight: bold;
-                padding-bottom: 4px;
-            }
+        color: #222222;
 
-            .customer {
-                border: 1px solid #d7d7d7;
-            }
+        line-height: 1.65;
 
-            .customer td {
-                padding: 5px;
-                border-bottom: 1px solid #e5e5e5;
-            }
+    }
 
-            .customer tr:last-child td {
-                border-bottom: none;
-            }
+    table {
 
-            .items {
-                border-collapse: collapse;
-                margin-top: 5px;
-            }
+        border-collapse: collapse;
 
-            .items th {
-                background-color: #eeeeee;
-                border: 1px solid #cfcfcf;
-                padding: 5px;
-                font-weight: bold;
-                font-size: 8pt;
-            }
+    }
 
-            .items td {
-                border: 1px solid #d8d8d8;
-                padding: 5px;
-                font-size: 8pt;
-            }
+    /*
+     * =================================================
+     * HEADER
+     * =================================================
+     */
 
-            .items .center {
-                text-align: center;
-            }
+    .header {
 
-            .items .money {
-                text-align: right;
-                white-space: nowrap;
-            }
+        width: 100%;
 
-            .items .product {
-                text-align: right;
-            }
+        border-bottom: 0.7mm solid #222222;
 
-            .product-code {
-                color: #777777;
-                font-size: 7pt;
-            }
+        padding-bottom: 4mm;
 
-            .empty {
-                text-align: center;
-                color: #777777;
-                padding: 10px;
-            }
+        margin-bottom: 5mm;
 
-            .totals {
-                margin-top: 8px;
-            }
+    }
 
-            .totals td {
-                padding: 4px;
-            }
+    .header-table {
 
-            .totals .total-label {
-                font-weight: bold;
-                font-size: 10pt;
-            }
+        width: 100%;
 
-            .totals .total-value {
-                font-weight: bold;
-                font-size: 10pt;
-            }
+    }
 
-            .remaining {
-                border: 1px solid #bbbbbb;
-                background-color: #f7f7f7;
-                font-weight: bold;
-            }
+    .logo-area {
 
-            .note-title {
-                font-weight: bold;
-                margin-top: 8px;
-            }
+        vertical-align: middle;
 
-            .note {
-                border: 1px solid #d7d7d7;
-                padding: 6px;
-                margin-top: 3px;
-            }
+        text-align: right;
 
-            .footer-text {
-                text-align: center;
-                color: #777777;
-                font-size: 7.5pt;
-                margin-top: 10px;
-            }
+    }
 
-        </style>
+    /*
+     * محدوده واقعی لوگو
+     *
+     * 35 × 16 mm
+     */
 
-        <!-- HEADER -->
+    .logo-box {
 
-        <table
-            width="100%"
-            cellpadding="0"
-            cellspacing="0"
-            class="header"
-        >
+        width: 35mm;
+
+        height: 16mm;
+
+        text-align: right;
+
+        vertical-align: middle;
+
+    }
+
+    .logo-box img {
+
+        max-width: 35mm;
+
+        max-height: 16mm;
+
+    }
+
+    .title-area {
+
+        width: 62%;
+
+        vertical-align: middle;
+
+        text-align: left;
+
+    }
+
+    .invoice-title {
+
+        font-size: 15pt;
+
+        font-weight: bold;
+
+        line-height: 1.3;
+
+        margin-bottom: 2mm;
+
+    }
+
+    .invoice-subtitle {
+
+        font-size: 8pt;
+
+        color: #777777;
+
+        line-height: 1.5;
+
+    }
+
+    /*
+     * =================================================
+     * META
+     * =================================================
+     */
+
+    .meta {
+
+        width: 100%;
+
+        margin-bottom: 5mm;
+
+    }
+
+    .meta td {
+
+        border: 0.25mm solid #dddddd;
+
+        padding-top: 3mm;
+
+        padding-bottom: 3mm;
+
+        padding-left: 3mm;
+
+        padding-right: 3mm;
+
+        vertical-align: middle;
+
+        line-height: 1.5;
+
+    }
+
+    .meta-label {
+
+        width: 15%;
+
+        background-color: #f5f5f5;
+
+        font-weight: bold;
+
+    }
+
+    .meta-value {
+
+        width: 35%;
+
+    }
+
+    /*
+     * =================================================
+     * SECTION TITLE
+     * =================================================
+     */
+
+    .section-title {
+
+        font-size: 9.5pt;
+
+        font-weight: bold;
+
+        margin-top: 4mm;
+
+        margin-bottom: 2.5mm;
+
+        padding-bottom: 2mm;
+
+        border-bottom: 0.35mm solid #222222;
+
+        line-height: 1.5;
+
+    }
+
+    /*
+     * =================================================
+     * CUSTOMER
+     * =================================================
+     */
+
+    .customer {
+
+        width: 100%;
+
+        margin-bottom: 5mm;
+
+    }
+
+    .customer td {
+
+        border: 0.25mm solid #dddddd;
+
+        padding-top: 3mm;
+
+        padding-bottom: 3mm;
+
+        padding-left: 3mm;
+
+        padding-right: 3mm;
+
+        vertical-align: middle;
+
+        line-height: 1.7;
+
+    }
+
+    .info-label {
+
+        width: 20%;
+
+        background-color: #f7f7f7;
+
+        font-weight: bold;
+
+    }
+
+    .info-value {
+
+        width: 80%;
+
+    }
+
+    .address {
+
+        line-height: 1.9;
+
+    }
+
+    /*
+     * =================================================
+     * ITEMS
+     * =================================================
+     */
+
+    .items {
+
+        width: 100%;
+
+        margin-top: 2mm;
+
+    }
+
+    .items th {
+
+        background-color: #222222;
+
+        color: #ffffff;
+
+        border: 0.25mm solid #222222;
+
+        padding-top: 3mm;
+
+        padding-bottom: 3mm;
+
+        padding-left: 2mm;
+
+        padding-right: 2mm;
+
+        vertical-align: middle;
+
+        font-size: 8pt;
+
+        line-height: 1.5;
+
+    }
+
+    /*
+     * فاصله بیشتر بین خطوط و ردیف‌ها
+     */
+
+    .item-cell {
+
+        border: 0.25mm solid #d5d5d5;
+
+        padding-top: 4.5mm;
+
+        padding-bottom: 4.5mm;
+
+        padding-left: 2.5mm;
+
+        padding-right: 2.5mm;
+
+        vertical-align: middle;
+
+        line-height: 1.8;
+
+    }
+
+    .center {
+
+        text-align: center;
+
+    }
+
+    .product {
+
+        text-align: right;
+
+    }
+
+    .product-name {
+
+        font-size: 8.5pt;
+
+        line-height: 1.8;
+
+    }
+
+    .product-code {
+
+        font-size: 7pt;
+
+        color: #777777;
+
+        margin-top: 1.5mm;
+
+        line-height: 1.8;
+
+    }
+
+    .money {
+
+        text-align: center;
+
+        direction: rtl;
+
+        line-height: 1.7;
+
+    }
+
+    .strong {
+
+        font-weight: bold;
+
+    }
+
+    .empty-cell {
+
+        text-align: center;
+
+        padding-top: 6mm;
+
+        padding-bottom: 6mm;
+
+        color: #777777;
+
+    }
+
+    /*
+     * =================================================
+     * TOTALS
+     * =================================================
+     */
+
+    .totals-wrapper {
+
+        width: 100%;
+
+        margin-top: 6mm;
+
+    }
+
+    .totals {
+
+        width: 55%;
+
+        margin-left: 0;
+
+    }
+
+    .totals td {
+
+        border-bottom: 0.25mm solid #dddddd;
+
+        padding-top: 3mm;
+
+        padding-bottom: 3mm;
+
+        padding-left: 3mm;
+
+        padding-right: 3mm;
+
+        line-height: 1.6;
+
+    }
+
+    .totals-label {
+
+        width: 48%;
+
+        background-color: #f7f7f7;
+
+        font-weight: bold;
+
+    }
+
+    .totals-value {
+
+        width: 52%;
+
+        text-align: left;
+
+        font-weight: bold;
+
+    }
+
+    .grand-total td {
+
+        border-top: 0.7mm solid #222222;
+
+        border-bottom: 0.7mm solid #222222;
+
+        padding-top: 3.5mm;
+
+        padding-bottom: 3.5mm;
+
+        font-size: 9.5pt;
+
+    }
+
+    .remaining td {
+
+        background-color: #f1f1f1;
+
+    }
+
+    /*
+     * =================================================
+     * NOTE
+     * =================================================
+     */
+
+    .note-box {
+
+        border: 0.25mm solid #dddddd;
+
+        background-color: #fafafa;
+
+        padding-top: 3.5mm;
+
+        padding-bottom: 3.5mm;
+
+        padding-left: 3.5mm;
+
+        padding-right: 3.5mm;
+
+        line-height: 1.9;
+
+    }
+
+    /*
+     * =================================================
+     * FOOTER
+     * =================================================
+     */
+
+    .footer {
+
+        width: 100%;
+
+        border-top: 0.25mm solid #dddddd;
+
+        margin-top: 7mm;
+
+        padding-top: 3mm;
+
+        text-align: center;
+
+        color: #777777;
+
+        font-size: 7pt;
+
+        line-height: 1.8;
+
+    }
+
+</style>
+
+</head>
+
+<body>
+
+    <!-- HEADER -->
+
+    <div class="header">
+
+        <table class="header-table">
+
             <tr>
 
-                <td width="65%">
+                ' . $logoHtml . '
 
-                    <span class="title">
+                <td
+                    class="title-area"
+                    width="62%"
+                >
+
+                    <div class="invoice-title">
                         فاکتور فروش
-                    </span>
+                    </div>
 
-                    <br>
+                    <div class="invoice-subtitle">
+                        فروش عمده جوراب
+                    </div>
 
-                    <span class="subtitle">
-                        سند فروش و سفارش مشتری
-                    </span>
-
-                </td>
-
-                <td
-                    width="35%"
-                    align="left"
-                >
-
-                    <strong>
-                        ' . $invoiceNumber . '
-                    </strong>
-
-                    <br>
-
-                    تاریخ:
-                    ' . $e($issuedAt) . '
-
-                    <br>
-
-                    ساعت:
-                    ' . $e($issuedTime) . '
-
-                </td>
-
-            </tr>
-        </table>
-
-
-        <!-- META -->
-
-        <table
-            width="100%"
-            cellpadding="0"
-            cellspacing="0"
-            class="meta"
-        >
-
-            <tr>
-
-                <td width="25%" class="label">
-                    شماره فاکتور
-                </td>
-
-                <td width="25%">
-                    ' . $invoiceNumber . '
-                </td>
-
-                <td width="25%" class="label">
-                    شماره سفارش
-                </td>
-
-                <td width="25%">
-                    ' . $orderNumber . '
-                </td>
-
-            </tr>
-
-            <tr>
-
-                <td class="label">
-                    وضعیت فاکتور
-                </td>
-
-                <td>
-                    ' . $e($invoiceStatus) . '
-                </td>
-
-                <td class="label">
-                    وضعیت سفارش
-                </td>
-
-                <td>
-                    ' . $e($orderStatus) . '
                 </td>
 
             </tr>
 
         </table>
 
-        <br>
+    </div>
 
 
-        <!-- CUSTOMER -->
+    <!-- META -->
 
-        <div class="section-title">
-            اطلاعات مشتری
-        </div>
+    <table class="meta">
 
-        <table
-            width="100%"
-            cellpadding="0"
-            cellspacing="0"
-            class="customer"
-        >
+        <tr>
+
+            <td class="meta-label">
+                شماره فاکتور
+            </td>
+
+            <td class="meta-value">
+                ' . $invoiceNumber . '
+            </td>
+
+            <td class="meta-label">
+                تاریخ
+            </td>
+
+            <td class="meta-value">
+                ' . $issuedDate . '
+            </td>
+
+        </tr>
+
+        <tr>
+
+            <td class="meta-label">
+                شماره سفارش
+            </td>
+
+            <td class="meta-value">
+                ' . $orderNumber . '
+            </td>
+
+            <td class="meta-label">
+                ساعت صدور
+            </td>
+
+            <td class="meta-value">
+                ' . $issuedTime . '
+            </td>
+
+        </tr>
+
+        <tr>
+
+            <td class="meta-label">
+                وضعیت فاکتور
+            </td>
+
+            <td class="meta-value">
+                ' . $e($invoiceStatus) . '
+            </td>
+
+            <td class="meta-label">
+                وضعیت سفارش
+            </td>
+
+            <td class="meta-value">
+                ' . $e($orderStatus) . '
+            </td>
+
+        </tr>
+
+    </table>
+
+
+    <!-- CUSTOMER -->
+
+    <div class="section-title">
+        مشخصات مشتری
+    </div>
+
+    <table class="customer">
+
+        <tr>
+
+            <td class="info-label">
+                نام مشتری
+            </td>
+
+            <td class="info-value">
+                ' . $customerName . '
+            </td>
+
+        </tr>
+
+        ' . $companyHtml . '
+
+        <tr>
+
+            <td class="info-label">
+                شماره موبایل
+            </td>
+
+            <td class="info-value">
+                ' . $customerMobile . '
+            </td>
+
+        </tr>
+
+        ' . $addressHtml . '
+
+    </table>
+
+
+    <!-- ITEMS -->
+
+    <div class="section-title">
+        جزئیات اقلام
+    </div>
+
+    <table class="items">
+
+        <thead>
 
             <tr>
 
-                <td
-                    width="25%"
-                    class="label"
-                >
-                    نام مشتری
-                </td>
+                <th width="8%">
+                    ردیف
+                </th>
 
-                <td width="25%">
-                    ' . $customerName . '
-                </td>
+                <th width="37%">
+                    محصول
+                </th>
 
-                <td
-                    width="25%"
-                    class="label"
-                >
-                    موبایل
-                </td>
+                <th width="12%">
+                    تعداد
+                </th>
 
-                <td width="25%">
-                    ' . $customerMobile . '
-                </td>
+                <th width="21.5%">
+                    قیمت واحد
+                </th>
+
+                <th width="21.5%">
+                    مبلغ
+                </th>
 
             </tr>
 
-            ' . $companyHtml . '
+        </thead>
 
-            ' . $addressHtml . '
+        <tbody>
 
-        </table>
+            ' . $itemsHtml . '
 
-        <br>
+        </tbody>
 
-
-        <!-- ITEMS -->
-
-        <div class="section-title">
-            اقلام سفارش
-        </div>
-
-        <table
-            width="100%"
-            cellpadding="0"
-            cellspacing="0"
-            class="items"
-        >
-
-            <thead>
-
-                <tr>
-
-                    <th width="7%">
-                        ردیف
-                    </th>
-
-                    <th width="38%">
-                        کالا
-                    </th>
-
-                    <th width="12%">
-                        تعداد
-                    </th>
-
-                    <th width="21%">
-                        قیمت واحد
-                    </th>
-
-                    <th width="22%">
-                        مبلغ
-                    </th>
-
-                </tr>
-
-            </thead>
-
-            <tbody>
-
-                ' . $itemsHtml . '
-
-            </tbody>
-
-        </table>
+    </table>
 
 
-        <!-- TOTALS -->
+    <!-- TOTALS -->
 
-        <table
-            width="100%"
-            cellpadding="0"
-            cellspacing="0"
-            class="totals"
-        >
+    <div class="totals-wrapper">
+
+        <table class="totals">
 
             <tr>
 
-                <td width="65%"></td>
-
-                <td width="20%">
-                    جمع کالاها
+                <td class="totals-label">
+                    جمع اقلام
                 </td>
 
-                <td
-                    width="15%"
-                    align="right"
-                >
+                <td class="totals-value">
                     ' . $money($subtotal) . '
                 </td>
 
             </tr>
 
-            <tr>
+            <tr class="grand-total">
 
-                <td></td>
-
-                <td class="total-label">
+                <td class="totals-label">
                     مبلغ کل
                 </td>
 
-                <td
-                    align="right"
-                    class="total-value"
-                >
+                <td class="totals-value">
                     ' . $money($total) . '
                 </td>
 
@@ -804,13 +1208,11 @@ final class PdfService
 
             <tr>
 
-                <td></td>
-
-                <td>
+                <td class="totals-label">
                     پرداخت‌شده
                 </td>
 
-                <td align="right">
+                <td class="totals-value">
                     ' . $money($paid) . '
                 </td>
 
@@ -818,13 +1220,11 @@ final class PdfService
 
             <tr class="remaining">
 
-                <td></td>
-
-                <td>
+                <td class="totals-label">
                     مانده قابل پرداخت
                 </td>
 
-                <td align="right">
+                <td class="totals-value">
                     ' . $money($remaining) . '
                 </td>
 
@@ -832,11 +1232,26 @@ final class PdfService
 
         </table>
 
-        ' . $noteHtml . '
+    </div>
 
-        <div class="footer-text">
-            این سند به صورت الکترونیکی صادر شده است.
-        </div>
-        ';
+
+    ' . $noteHtml . '
+
+
+    <!-- FOOTER -->
+
+    <div class="footer">
+
+        این فاکتور به‌صورت الکترونیکی صادر شده است.
+
+        <br>
+
+        sock-b2b
+
+    </div>
+
+</body>
+
+</html>';
     }
 }
