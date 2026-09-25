@@ -54,4 +54,8 @@ RewriteRule ^admin/payments/?$ admin/payments.php [L,QSA]
 
 RewriteRule ^invoice-print/?$ invoice-print.php [L,QSA]
 
+
+
+RewriteRule ^account/orders/?$ checkout-address.php [L,QSA]
+
 RewriteRule ^account/orders/?$ account-orders.php [L,QSA]
