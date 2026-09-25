@@ -83,6 +83,10 @@ ob_start();
     <p class="catalog-sub" style="margin-bottom:20px;">
         پس از تأیید مالی، سفارش شما وارد مرحله پردازش می‌شود.
     </p>
+        <a href="/invoice-print?inv=<?= $h($order['invoice_number']) ?>" target="_blank"
+       class="btn btn-outline" style="margin-bottom:10px;display:inline-block;">
+        🧾 مشاهده / چاپ فاکتور
+    </a><br>
     <a href="/" class="btn btn-primary">بازگشت به صفحه اصلی</a>
 </div>
 
