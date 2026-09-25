@@ -185,31 +185,6 @@ const enToFa = (number) => {
   return String(number).replace(/\d/g, (digit) => "۰۱۲۳۴۵۶۷۸۹"[digit]);
 };
 
-// ══════════ Stepper ══════════
-document.querySelectorAll(".r6-stepper").forEach((stepper) => {
-  const num = stepper.querySelector(".r6-num");
-
-  if (!num) return;
-
-  const min = parseInt(stepper.dataset.min || "1", 10);
-
-  let value = Math.max(min, parseInt(faToEn(num.textContent), 10) || min);
-
-  stepper.querySelector(".plus")?.addEventListener("click", () => {
-    value++;
-
-    num.textContent = enToFa(value);
-  });
-
-  stepper.querySelector(".minus")?.addEventListener("click", () => {
-    if (value > min) {
-      value--;
-
-      num.textContent = enToFa(value);
-    }
-  });
-});
-
 // ══════════ پیام خطای فرم ══════════
 function showFormError(element, message) {
   if (!element) return;
@@ -521,24 +496,7 @@ document.addEventListener("click", async (e) => {
     btn.disabled = false;
   }
 });
-// ══════════ سبد: تغییر تعداد با Stepper ══════════
-window.cartChange = function (itemId, delta) {
-  const numEl = document
-    .getElementById("qVal")
-    .closest("form")
-    .parentElement.querySelector(`[onsubmit] ~ * , *`); // placeholder
-  // ساده: مقدار فعلی از DOM همان ردیف
-  const row = document
-    .querySelector(`button[onclick*="cartChange(${itemId}, -1)"]`)
-    ?.closest(".cart-item-side");
-  const num = row?.querySelector(".step-num");
-  let val = parseInt(faToEn(num?.textContent || "1"), 10) || 1;
-  val = Math.max(1, val + delta);
 
-  document.getElementById("qItem").value = itemId;
-  document.getElementById("qVal").value = val;
-  document.getElementById("cartQtyForm").submit();
-};
 // ══════════ افزودن به سبد از صفحه محصول ══════════
 document
   .querySelector(".pd-order-btn[data-product-id]")
@@ -581,45 +539,43 @@ document
       btn.disabled = false;
     }
   });
-// ══════════ Stepper عمومی — دکمه + ورود دستی ══════════
+// ══════════ Stepper — دکمه + ورود دستی (همه صفحات) ══════════
 const faToEnS = (s) =>
   (s || "").replace(/[۰-۹]/g, (d) => "۰۱۲۳۴۵۶۷۸۹".indexOf(d));
 const enToFaS = (n) => String(n).replace(/\d/g, (d) => "۰۱۲۳۴۵۶۷۸۹"[d]);
 
-// دکمه‌های + و −
+function stepperRead(numEl) {
+  const raw = numEl.tagName === "INPUT" ? numEl.value : numEl.textContent;
+  return parseInt(faToEnS(raw), 10) || 1;
+}
+function stepperWrite(numEl, val) {
+  if (numEl.tagName === "INPUT") numEl.value = enToFaS(val);
+  else numEl.textContent = enToFaS(val);
+}
+
+/* دکمه‌های + و − */
 document.addEventListener("click", (e) => {
   const btn = e.target.closest(".step, .r6-step");
   if (!btn) return;
   const st = btn.closest(".stepper, .r6-stepper");
   const num = st?.querySelector(".step-num, .r6-num");
   if (!num) return;
-
-  const isInput = num.tagName === "INPUT";
   const min = parseInt(st.dataset.min || "1", 10) || 1;
-  let val = parseInt(faToEnS(isInput ? num.value : num.textContent), 10) || min;
-
-  if (
-    btn.classList.contains("plus") ||
-    (btn.classList.contains("r6-step") && !btn.classList.contains("minus"))
-  )
-    val++;
+  let val = stepperRead(num);
+  if (btn.classList.contains("plus")) val++;
   if (btn.classList.contains("minus")) val = Math.max(min, val - 1);
-  val = Math.max(min, val);
-
-  if (isInput) num.value = enToFaS(val);
-  else num.textContent = enToFaS(val);
+  stepperWrite(num, val);
 });
 
-// ورود دستی در input
+/* ورود دستی — فقط عدد */
 document.addEventListener("input", (e) => {
   const inp = e.target.closest(".step-input");
   if (!inp) return;
-  // فقط عدد — حروف/متن پاک می‌شود
   let v = faToEnS(inp.value).replace(/[^\d]/g, "");
   inp.value = v ? enToFaS(parseInt(v, 10)) : "";
 });
 
-// بلور: حداقل اعمال شود
+/* بلور — حداقل اعمال */
 document.addEventListener(
   "blur",
   (e) => {
@@ -629,35 +585,25 @@ document.addEventListener(
     const min = parseInt(st?.dataset.min || "1", 10) || 1;
     let v = parseInt(faToEnS(inp.value), 10);
     if (!v || v < min) v = min;
-    inp.value = enToFaS(v);
+    stepperWrite(inp, v);
   },
   true,
 );
-// ══════════ سبد: تغییر دستی تعداد → ارسال فرم ══════════
-document.addEventListener("change", (e) => {
-  const inp = e.target.closest(".step-input");
-  if (!inp || !document.getElementById("cartQtyForm")) return;
+// ══════════ سبد: تغییر تعداد → ذخیره خودکار ══════════
+document.addEventListener('change', e => {
+    const inp = e.target.closest('.step-input');
+    if (!inp) return;
+    const st = inp.closest('.stepper');
+    if (!st?.dataset.item) return;          // فقط در صفحه سبد
 
-  const row = inp.closest(".cart-item-side");
+    const itemId = st.dataset.item;
+    const qty = parseInt(faToEnS(inp.value), 10) || 1;
 
-  const minusBtn = row?.querySelector(
-    'button[onclick*="cartChange(-"]'
-  );
+    const fd = new FormData();
+    fd.append('do', 'update');
+    fd.append('item_id', itemId);
+    fd.append('qty', qty);
 
-  const itemId = minusBtn
-    ? (
-        minusBtn
-          .getAttribute("onclick")
-          .match(/cartChange\((\d+)/) || []
-      )[1]
-    : null;
-
-  if (!itemId) return;
-
-  document.getElementById("qItem").value = itemId;
-
-  document.getElementById("qVal").value =
-    parseInt(faToEnS(inp.value), 10) || 1;
-
-  document.getElementById("cartQtyForm").submit();
+    fetch('/cart', { method: 'POST', body: fd })
+        .then(() => location.reload());
 });

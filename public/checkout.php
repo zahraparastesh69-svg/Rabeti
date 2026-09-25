@@ -137,8 +137,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             ")->execute([$userId, $orderId, $_SERVER['REMOTE_ADDR'] ?? '0.0.0.0']);
 
             $db->commit();
-
             header('Location: /payment?order=' . urlencode($orderNumber));
+            exit;
         } catch (RuntimeException $e) {
             $db->rollBack();
             $errors[] = $e->getMessage();
