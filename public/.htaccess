@@ -61,4 +61,6 @@ RewriteRule ^account/orders/?$ account-orders.php [L,QSA]
 
 RewriteRule ^checkout-shipping/?$ checkout-shipping.php [L,QSA]
 
+RewriteRule ^checkout-review/?$ checkout-review.php [L,QSA]
+
 
