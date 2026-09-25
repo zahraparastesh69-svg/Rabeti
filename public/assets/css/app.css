@@ -5003,3 +5003,52 @@ html body .r6-cat.is-active > span:last-child {
   border-radius: 50%;
   background: var(--brand, #2a5f78);
 }
+
+/* ═══ Stepper — وسط‌چین و یکدست در همه صفحات ═══ */
+.stepper,
+.r6-stepper {
+  display: flex !important;
+  align-items: center !important;
+  justify-content: space-between !important;
+  margin-inline: auto !important; /* خود کادر وسطِ ستون والد */
+  width: 100% !important;
+  max-width: 200px !important;
+}
+
+.stepper .step,
+.stepper .r6-step {
+  display: flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+  line-height: 1 !important;
+}
+
+/* عدد/input دقیقاً وسط بین دو دکمه */
+.stepper .step-num,
+.stepper .r6-num,
+.stepper .step-input {
+  flex: 1 !important;
+  text-align: center !important;
+  width: auto !important;
+  min-width: 40px !important;
+  height: auto !important;
+  border: none !important;
+  background: transparent !important;
+  padding: 0 4px !important;
+  margin: 0 !important;
+  font-family: inherit !important;
+}
+
+/* در صفحه محصول — والدش وسط‌چین شود */
+.pd-info .stepper,
+.pd-info .r6-stepper {
+  margin-inline: auto !important;
+}
+/* حذف بقایای کامپوننت V5 از کارت‌های جدید */
+.prod-card .product-surface,
+.prod-card .product-shadow,
+.prod-card .product-sock,
+.r6-card .product-surface,
+.r6-card .product-shadow {
+  display: none !important;
+}

@@ -85,7 +85,14 @@ $stmt = db()->prepare("
         p.name,
         p.slug,
         p.code,
-        pr.price
+        pr.price,
+        (
+            SELECT pi.image_path
+            FROM product_images pi
+            WHERE pi.product_id = p.id
+            ORDER BY pi.is_main DESC, pi.sort_order ASC
+            LIMIT 1
+        ) AS img
     FROM products p
 
     LEFT JOIN product_prices pr
@@ -107,6 +114,7 @@ $stmt->execute([
 $related = $stmt->fetchAll();
 
 
+
 /* ─────────── عکس اصلی ─────────── */
 
 $stmt = db()->prepare("
@@ -122,9 +130,23 @@ $stmt->execute([$product['id']]);
 
 $mainImage = $stmt->fetch();
 
-$stmt = db()->prepare("SELECT spec_key, spec_value FROM product_specs WHERE product_id=? ORDER BY sort_order, id");
+
+/* ─────────── مشخصات محصول ─────────── */
+
+$stmt = db()->prepare("
+    SELECT
+        spec_key,
+        spec_value
+    FROM product_specs
+    WHERE product_id = ?
+    ORDER BY sort_order, id
+");
+
 $stmt->execute([$product['id']]);
+
 $specs = $stmt->fetchAll();
+
+
 /* ─────────── وضعیت موجودی ─────────── */
 
 $inStock = ((int)($product['qty_available'] ?? 0)) > 0;
@@ -165,6 +187,9 @@ ob_start();
 
 <section class="product-detail">
 
+
+    <!-- ▂▂▂ ستون سمت راست: تصویر + سفارش ▂▂▂ -->
+
     <div class="pd-gallery">
 
         <div class="pd-main-img premium-visual">
@@ -178,9 +203,9 @@ ob_start();
 
             <?php else: ?>
 
-                <div class="product-surface"></div>
+                <!-- <div class="product-surface"></div> -->
 
-                <span class="product-sock">🧦</span>
+                <!-- <span class="product-sock">🧦</span> -->
 
             <?php endif; ?>
 
@@ -195,10 +220,73 @@ ob_start();
 
         <?php endif; ?>
 
+
+        <!-- ▂▂▂ انتخاب تعداد — دقیقاً زیر عکس ▂▂▂ -->
+
+        <div
+            class="stepper"
+            data-min="<?= max(1, (int)$product['base_moq']) ?>"
+            style="max-width:220px; margin:16px auto 0;">
+
+            <button
+                type="button"
+                class="step plus">
+                +
+            </button>
+
+            <input
+                type="text"
+                inputmode="numeric"
+                class="r6-num step-input"
+                value="<?= max(1, (int)$product['base_moq']) ?>">
+
+            <button
+                type="button"
+                class="step minus">
+                −
+            </button>
+
+        </div>
+
+
+
+        <!-- ▂▂▂ عملیات محصول — زیر عکس ▂▂▂ -->
+
+        <div class="pd-actions">
+
+            <?php if ($inStock): ?>
+
+                <button
+                    type="button"
+                    class="r6-add pd-order-btn"
+                    data-product-id="<?= (int)$product['id'] ?>">
+                    افزودن به سبد سفارش
+                </button>
+
+            <?php else: ?>
+
+                <button
+                    type="button"
+                    class="btn pd-disabled"
+                    disabled>
+                    فعلاً ناموجود
+                </button>
+
+            <?php endif; ?>
+
+
+            <a
+                href="/custom-order"
+                class="pd-link">
+                درخواست تولید با برند اختصاصی ←
+            </a>
+
+        </div>
+
     </div>
 
 
-    <!-- ▂▂▂ اطلاعات محصول ▂▂▂ -->
+    <!-- ▂▂▂ ستون سمت چپ: اطلاعات محصول ▂▂▂ -->
 
     <div class="pd-info">
 
@@ -231,6 +319,7 @@ ob_start();
 
         </div>
 
+
         <!-- ▂▂▂ مشخصات ساختاریافته ▂▂▂ -->
 
         <?php if ($specs): ?>
@@ -257,6 +346,7 @@ ob_start();
             </div>
 
         <?php endif; ?>
+
 
         <!-- ▂▂▂ قیمت ▂▂▂ -->
 
@@ -385,69 +475,6 @@ ob_start();
 
         </div>
 
-
-        <!-- ▂▂▂ انتخاب تعداد ▂▂▂ -->
-
-        <div
-            class="stepper"
-            data-min="1"
-            style="max-width:220px;">
-
-            <button
-                type="button"
-                class="step plus">
-                +
-            </button>
-
-
-            <input
-                type="text"
-                inputmode="numeric"
-                class="r6-num step-input"
-                value="۱">
-
-
-            <button
-                type="button"
-                class="step minus">
-                −
-            </button>
-
-        </div>
-
-
-        <!-- ▂▂▂ عملیات محصول ▂▂▂ -->
-
-        <div class="pd-actions">
-
-            <?php if ($inStock): ?>
-
-                <button
-                    type="button"
-                    class="r6-add pd-order-btn"
-                    data-product-id="<?= (int)$product['id'] ?>">
-                    افزودن به سبد سفارش
-                </button>
-
-            <?php else: ?>
-
-                <button
-                    class="btn pd-disabled"
-                    disabled>
-                    فعلاً ناموجود
-                </button>
-
-            <?php endif; ?>
-
-
-            <a
-                href="/custom-order"
-                class="pd-link">
-                درخواست تولید با برند اختصاصی ←
-            </a>
-
-        </div>
-
     </div>
 
 </section>
@@ -476,15 +503,27 @@ ob_start();
 
                     <div class="product-visual">
 
-                        <div class="product-surface"></div>
+                        <?php if (!empty($r['img'])): ?>
 
-                        <div class="product-sock">
-                            🧦
-                        </div>
+                            <img
+                                src="<?= $h($r['img']) ?>"
+                                alt="<?= $h($r['name']) ?>"
+                                loading="lazy">
 
-                        <div class="product-shadow"></div>
+                        <?php else: ?>
+
+                            <!-- <div class="product-surface"></div> -->
+
+                            <!-- <div class="product-sock"> -->
+                                🧦
+                            </div>
+
+                            <!-- <div class="product-shadow"></div> -->
+
+                        <?php endif; ?>
 
                     </div>
+
 
 
                     <div class="premium-product-info">
