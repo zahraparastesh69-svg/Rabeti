@@ -6,6 +6,8 @@ require_once ROOT_PATH . '/config/auth.php';
 require_once ROOT_PATH . '/app/services/AddressService.php';
 require_once ROOT_PATH . '/app/services/ShippingService.php';
 
+require_once ROOT_PATH . '/app/services/ShippingService.php';
+
 if (!is_logged_in()) {
     header('Location: /');
     exit;

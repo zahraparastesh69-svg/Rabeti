@@ -63,4 +63,5 @@ RewriteRule ^checkout-shipping/?$ checkout-shipping.php [L,QSA]
 
 RewriteRule ^checkout-review/?$ checkout-review.php [L,QSA]
 
+RewriteRule ^payment/?$ payment.php [L,QSA]
 
