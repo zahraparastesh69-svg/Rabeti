@@ -3,6 +3,7 @@ require_once __DIR__ . '/../config/bootstrap.php';
 require_once ROOT_PATH . '/config/database.php';
 require_once ROOT_PATH . '/config/auth.php';
 require_once ROOT_PATH . '/app/services/AddressService.php';
+require_once ROOT_PATH . './checkout-shipping.php';
 
 if (!is_logged_in()) {
     header('Location: /');
@@ -30,7 +31,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && ($_POST['do'] ?? '') === 'pick') {
     $addr = AddressService::get($userId, $addressId);
     if ($addr) {
         $_SESSION['checkout_address_id'] = $addressId;
-        header('Location: /checkout/shipping');
+        header('Location: /checkout-shipping');
         exit;
     }
     $error = 'آدرس انتخابی یافت نشد';
@@ -55,7 +56,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && ($_POST['do'] ?? '') === 'add') {
             'is_default'    => isset($_POST['is_default']),
         ]);
         $_SESSION['checkout_address_id'] = $addressId;
-        header('Location: /checkout/shipping');
+        header('Location: /checkout-shipping');
         exit;
     } catch (RuntimeException $e) {
         $error = $e->getMessage();
