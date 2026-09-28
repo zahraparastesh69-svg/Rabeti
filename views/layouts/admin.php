@@ -286,8 +286,8 @@ $menuGroups = [
         href="https://fonts.googleapis.com/css2?family=Vazirmatn:wght@400;500;600;700;800&display=swap"
         rel="stylesheet">
 
-    <link rel="stylesheet" href="/assets/css/app.css?v=22">
-    <link rel="stylesheet" href="/assets/css/admin.css?v=6">
+    <link rel="stylesheet" href="/assets/css/app.css?v=30">
+    <link rel="stylesheet" href="/assets/css/admin.css?v=30">
 </head>
 
 <body class="admin-body">

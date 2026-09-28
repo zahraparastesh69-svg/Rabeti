@@ -1,6 +1,5 @@
 <?php
-
-declare(strict_types=1);
+/* [FILE] public/payment.php — Customer payment page */
 
 require_once __DIR__ . '/../config/bootstrap.php';
 require_once ROOT_PATH . '/config/database.php';
@@ -11,168 +10,83 @@ if (!is_logged_in()) {
     exit;
 }
 
-$h = static fn($v) =>
-htmlspecialchars((string)$v, ENT_QUOTES, 'UTF-8');
+$h = static fn($v): string => htmlspecialchars((string)$v, ENT_QUOTES, 'UTF-8');
 
-$userId = (int)(
-    $_SESSION['admin_id']
-    ?? $_SESSION['customer_id']
-    ?? 0
-);
-
+$userId = (int)($_SESSION['admin_id'] ?? $_SESSION['customer_id'] ?? 0);
 $db = db();
 
-$orderNumber = trim($_GET['order'] ?? '');
+$orderNumber = trim((string)($_GET['order'] ?? ''));
 
-if ($orderNumber === '' || $userId <= 0) {
+if ($orderNumber === '') {
     header('Location: /');
     exit;
 }
 
-/*
-|--------------------------------------------------------------------------
-| توابع کمکی
-|--------------------------------------------------------------------------
-*/
-
+/* ─── Helpers ─── */
 function moneyFa(int $amount): string
 {
     return number_format(max(0, $amount)) . ' تومان';
 }
 
-function paymentMethodLabel(string $method): string
-{
-    return match ($method) {
-        'sheba'        => 'انتقال با شبا',
-        'card_to_card' => 'کارت به کارت',
-        'cash_receipt' => 'فیش نقدی',
-        'online'       => 'درگاه پرداخت آنلاین',
-        default        => 'نامشخص',
-    };
-}
-
 function uploadReceipt(array $file): array
 {
-    if (
-        !isset($file['error'])
-        || $file['error'] === UPLOAD_ERR_NO_FILE
-    ) {
-        return [
-            'ok' => true,
-            'path' => null,
-        ];
+    if (!isset($file['error']) || $file['error'] === UPLOAD_ERR_NO_FILE) {
+        return ['ok' => true, 'path' => null, 'file' => null];
     }
-
     if ($file['error'] !== UPLOAD_ERR_OK) {
-        return [
-            'ok' => false,
-            'error' => 'بارگذاری فایل ناموفق بود.',
-        ];
+        return ['ok' => false, 'error' => 'بارگذاری فایل ناموفق بود.'];
     }
-
-    if (($file['size'] ?? 0) > 2 * 1024 * 1024) {
-        return [
-            'ok' => false,
-            'error' => 'حجم فیش نباید بیشتر از ۲ مگابایت باشد.',
-        ];
+    $size = (int)($file['size'] ?? 0);
+    if ($size <= 0 || $size > 2 * 1024 * 1024) {
+        return ['ok' => false, 'error' => 'حجم فیش حداکثر ۲ مگابایت است.'];
     }
-
-    $tmp = $file['tmp_name'] ?? '';
-
-    if (
-        $tmp === ''
-        || !is_uploaded_file($tmp)
-    ) {
-        return [
-            'ok' => false,
-            'error' => 'فایل ارسالی معتبر نیست.',
-        ];
+    $tmp = (string)($file['tmp_name'] ?? '');
+    if ($tmp === '' || !is_uploaded_file($tmp)) {
+        return ['ok' => false, 'error' => 'فایل ارسالی معتبر نیست.'];
     }
+    $mime = (new finfo(FILEINFO_MIME_TYPE))->file($tmp);
 
-    $finfo = new finfo(FILEINFO_MIME_TYPE);
-    $mime = $finfo->file($tmp);
-
-    $allowed = [
-        'image/jpeg' => 'jpg',
-        'image/png'  => 'png',
-        'image/webp' => 'webp',
-    ];
-
+    $allowed = ['image/jpeg' => 'jpg', 'image/png' => 'png', 'image/webp' => 'webp'];
     if (!isset($allowed[$mime])) {
-        return [
-            'ok' => false,
-            'error' => 'فرمت فیش باید JPG، PNG یا WEBP باشد.',
-        ];
+        return ['ok' => false, 'error' => 'فرمت فیش باید JPG، PNG یا WEBP باشد.'];
     }
 
-    $uploadDir = ROOT_PATH . '/public/uploads/receipts';
-
-    if (!is_dir($uploadDir)) {
-        if (!mkdir($uploadDir, 0755, true) && !is_dir($uploadDir)) {
-            return [
-                'ok' => false,
-                'error' => 'پوشه ذخیره فیش قابل ایجاد نیست.',
-            ];
-        }
+    $dir = PUBLIC_PATH . '/uploads/receipts';
+    if (!is_dir($dir) && !mkdir($dir, 0755, true) && !is_dir($dir)) {
+        return ['ok' => false, 'error' => 'پوشه ذخیره فیش قابل ایجاد نیست.'];
     }
 
-    $filename =
-        'receipt_'
-        . date('Ymd_His')
-        . '_'
-        . bin2hex(random_bytes(6))
-        . '.'
-        . $allowed[$mime];
-
-    $destination = $uploadDir . '/' . $filename;
-
-    if (!move_uploaded_file($tmp, $destination)) {
-        return [
-            'ok' => false,
-            'error' => 'ذخیره فیش ناموفق بود.',
-        ];
+    $filename = 'receipt_' . date('Ymd_His') . '_' . bin2hex(random_bytes(8)) . '.' . $allowed[$mime];
+    if (!move_uploaded_file($tmp, $dir . '/' . $filename)) {
+        return ['ok' => false, 'error' => 'ذخیره فیش ناموفق بود.'];
     }
-
-    return [
-        'ok' => true,
-        'path' => '/uploads/receipts/' . $filename,
-    ];
+    return ['ok' => true, 'path' => '/uploads/receipts/' . $filename, 'file' => $dir . '/' . $filename];
 }
 
-/*
-|--------------------------------------------------------------------------
-| دریافت سفارش + فاکتور
-|--------------------------------------------------------------------------
-*/
+function removeUploadedReceipt(?string $absolutePath): void
+{
+    if ($absolutePath !== null && $absolutePath !== '' && is_file($absolutePath)) {
+        @unlink($absolutePath);
+    }
+}
 
+/* ─── Settings ─── */
+$settings = [];
+foreach ($db->query("SELECT `key`,`value` FROM settings WHERE `key` LIKE 'payment_%'") as $s) {
+    $settings[(string)$s['key']] = (string)$s['value'];
+}
+
+/* ─── Order lookup ─── */
 $stmt = $db->prepare("
-    SELECT
-        o.*,
-
-        i.id AS invoice_id,
-        i.invoice_number,
-        i.total AS invoice_total,
-        i.paid_total,
-        i.status AS invoice_status,
-        i.reconciliation_type,
-        i.reconciliation_amount
-
+    SELECT o.id, o.order_number, o.user_id, o.status, o.total,
+           i.id AS invoice_id, i.invoice_number,
+           i.total AS invoice_total, i.paid_total, i.status AS invoice_status
     FROM orders o
-
-    LEFT JOIN invoices i
-        ON i.order_id = o.id
-
-    WHERE o.order_number = ?
-      AND o.user_id = ?
-
+    LEFT JOIN invoices i ON i.order_id = o.id
+    WHERE o.order_number = ? AND o.user_id = ?
     LIMIT 1
 ");
-
-$stmt->execute([
-    $orderNumber,
-    $userId,
-]);
-
+$stmt->execute([$orderNumber, $userId]);
 $order = $stmt->fetch();
 
 if (!$order) {
@@ -180,1459 +94,482 @@ if (!$order) {
     exit;
 }
 
-/*
-|--------------------------------------------------------------------------
-| ساخت فاکتور در صورت نبودن
-|--------------------------------------------------------------------------
-*/
-
-if (empty($order['invoice_id'])) {
-
-    $invoiceNumber =
-        'INV-'
-        . date('ymd')
-        . '-'
-        . str_pad(
-            (string)random_int(0, 9999),
-            4,
-            '0',
-            STR_PAD_LEFT
-        );
-
-    $invoiceStmt = $db->prepare("
-        INSERT INTO invoices
-            (
-                invoice_number,
-                order_id,
-                user_id,
-                total
-            )
-        VALUES
-            (?, ?, ?, ?)
-    ");
-
-    $invoiceStmt->execute([
-        $invoiceNumber,
-        (int)$order['id'],
-        $userId,
-        (int)$order['total'],
-    ]);
-
-    $order['invoice_id'] = (int)$db->lastInsertId();
-    $order['invoice_number'] = $invoiceNumber;
-    $order['invoice_total'] = (int)$order['total'];
-    $order['paid_total'] = 0;
-    $order['invoice_status'] = 'unpaid';
-    $order['reconciliation_type'] = 'settled';
-    $order['reconciliation_amount'] = 0;
-}
-
-/*
-|--------------------------------------------------------------------------
-| اطلاعات مالی فاکتور
-|--------------------------------------------------------------------------
-*/
-
-$invoiceId = (int)$order['invoice_id'];
-
-$invoiceTotal = (int)(
-    $order['invoice_total']
-    ?? $order['total']
-    ?? 0
-);
-
-$paidTotal = (int)(
-    $order['paid_total']
-    ?? 0
-);
-
-$reconciliationType = (string)(
-    $order['reconciliation_type']
-    ?? 'settled'
-);
-
-$reconciliationAmount = (int)(
-    $order['reconciliation_amount']
-    ?? 0
-);
-
-/*
-|--------------------------------------------------------------------------
-| پرداخت‌های این فاکتور
-|--------------------------------------------------------------------------
-*/
-
-$paymentsStmt = $db->prepare("
-    SELECT
-        id,
-        method,
-        amount,
-        status,
-        reference_no,
-        receipt_path,
-        created_at
-    FROM payments
-    WHERE invoice_id = ?
-      AND user_id = ?
-    ORDER BY id DESC
-");
-
-$paymentsStmt->execute([
-    $invoiceId,
-    $userId,
-]);
-
-$payments = $paymentsStmt->fetchAll();
-
-/*
-|--------------------------------------------------------------------------
-| محاسبه وضعیت
-|--------------------------------------------------------------------------
-*/
-
-$pendingAmount = 0;
-
-foreach ($payments as $payment) {
-
-    if ((string)$payment['status'] === 'pending') {
-        $pendingAmount += (int)$payment['amount'];
+/* ─── CSRF ─── */
+if (!function_exists('csrf_token')) {
+    function csrf_token(): string
+    {
+        if (empty($_SESSION['csrf_token'])) {
+            $_SESSION['csrf_token'] = bin2hex(random_bytes(32));
+        }
+        return $_SESSION['csrf_token'];
     }
 }
+$csrf = csrf_token();
 
-/*
-|--------------------------------------------------------------------------
-| مانده واقعی فاکتور
-|--------------------------------------------------------------------------
-*/
-
-$invoiceRemaining = max(
-    0,
-    $invoiceTotal - $paidTotal
-);
-
-/*
-|--------------------------------------------------------------------------
-| مبلغ مجاز برای پرداخت
-|
-| اگر حسابداری بدهکار اعلام کرده باشد،
-| reconciliation_amount مرجع مبلغ بدهی است.
-|--------------------------------------------------------------------------
-*/
-
-if ($reconciliationType === 'debtor') {
-
-    $payableAmount = $reconciliationAmount;
-
-    /*
-     * برای جلوگیری از پرداخت بیش از مانده واقعی فاکتور
-     */
-    if ($invoiceRemaining > 0) {
-        $payableAmount = min(
-            $payableAmount,
-            $invoiceRemaining
-        );
-    }
-} else {
-
-    $payableAmount = $invoiceRemaining;
-}
-
-/*
-|--------------------------------------------------------------------------
-| اگر pending وجود دارد، مشتری نباید دوباره پرداخت کند.
-|--------------------------------------------------------------------------
-*/
-
-$hasPending = $pendingAmount > 0;
-
-/*
-|--------------------------------------------------------------------------
-| بستانکار یعنی مشتری نباید پرداخت کند.
-|--------------------------------------------------------------------------
-*/
-
-$isCreditor =
-    $reconciliationType === 'creditor'
-    && $reconciliationAmount > 0;
-
-/*
-|--------------------------------------------------------------------------
-| تسویه کامل
-|--------------------------------------------------------------------------
-*/
-
-$isFullyPaid =
-    $invoiceRemaining <= 0
-    || $payableAmount <= 0;
-
-/*
-|--------------------------------------------------------------------------
-| ثبت پرداخت
-|--------------------------------------------------------------------------
-*/
-
-$success = false;
+$success = isset($_GET['submitted']) && $_GET['submitted'] === '1';
 $error = '';
 
+/* ─── POST: ثبت درخواست پرداخت ─── */
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
-    $method = trim(
-        (string)($_POST['method'] ?? '')
-    );
+    $postedCsrf = (string)($_POST['csrf_token'] ?? '');
+    $error = (!hash_equals($csrf, $postedCsrf))
+        ? 'درخواست نامعتبر است. صفحه را دوباره باز کنید.'
+        : '';
 
-    $referenceNo = trim(
-        (string)($_POST['reference_no'] ?? '')
-    );
+    if ($error === '') {
+        $method = trim((string)($_POST['method'] ?? ''));
+        $referenceNo = trim((string)($_POST['reference_no'] ?? ''));
+        $claimedAmount = (int)($_POST['amount'] ?? 0);
 
-    /*
-     * مبلغ فقط برای پرداخت دستی دریافت می‌شود.
-     * برای online هرگز مبلغ POST را قبول نمی‌کنیم.
-     */
-    $requestedAmount = (int)(
-        $_POST['amount'] ?? 0
-    );
+        $validMethods = ['sheba', 'card_to_card', 'cash_receipt'];
 
-    $validMethods = [
-        'sheba',
-        'card_to_card',
-        'cash_receipt',
-        'online',
-    ];
-
-    /*
-     * بررسی روش
-     */
-    if (!in_array($method, $validMethods, true)) {
-
-        $error = 'روش پرداخت نامعتبر است.';
-
-        /*
-     * بستانکار
-     */
-    } elseif ($isCreditor) {
-
-        $error =
-            'طبق نتیجه مالی ثبت‌شده، شما بستانکار هستید و مبلغی برای پرداخت ندارید.';
-
-        /*
-     * پرداخت کامل
-     */
-    } elseif ($isFullyPaid) {
-
-        $error =
-            'این فاکتور در حال حاضر مبلغ قابل پرداختی ندارد.';
-
-        /*
-     * پرداخت pending
-     */
-    } elseif ($hasPending) {
-
-        $error =
-            'یک پرداخت در انتظار بررسی برای این فاکتور وجود دارد. تا تعیین تکلیف آن، پرداخت جدید امکان‌پذیر نیست.';
-
-        /*
-     * IPG
-     *
-     * در نسخه فعلی API درگاه متصل نیست.
-     * اما مسیر داده و method از همین حالا آماده است.
-     */
-    } elseif ($method === 'online') {
-
-        /*
-         * بسیار مهم:
-         * مبلغ از فرم گرفته نمی‌شود.
-         *
-         * وقتی IPG اضافه شود:
-         *
-         * $payableAmount
-         *
-         * مستقیماً به سرویس درگاه ارسال خواهد شد.
-         */
-        $error =
-            'درگاه پرداخت آنلاین هنوز فعال نشده است.';
-    } else {
-
-        /*
-         * پرداخت دستی
-         */
-
-        if ($requestedAmount <= 0) {
-
-            $error =
-                'مبلغ پرداخت را وارد کنید.';
-        } elseif ($requestedAmount > $payableAmount) {
-
-            $error =
-                'مبلغ پرداخت نمی‌تواند بیشتر از '
-                . moneyFa($payableAmount)
-                . ' باشد.';
-        } elseif (
-            $referenceNo === ''
-            && empty($_FILES['receipt']['name'])
-        ) {
-
-            $error =
-                'شماره پیگیری یا تصویر فیش واریزی را وارد کنید.';
+        if (!in_array($method, $validMethods, true)) {
+            $error = 'روش پرداخت نامعتبر است.';
+        } elseif ($method === 'online') {
+            $error = 'درگاه پرداخت آنلاین هنوز فعال نشده است.';
         } else {
-
-            /*
-             * آپلود فیش
-             */
-            $upload = uploadReceipt(
-                $_FILES['receipt'] ?? []
-            );
+            $upload = uploadReceipt($_FILES['receipt'] ?? []);
 
             if (!$upload['ok']) {
-
-                $error = $upload['error'];
+                $error = (string)$upload['error'];
             } else {
-
-                $receiptPath =
-                    $upload['path'];
+                $receiptPath = $upload['path'];
+                $receiptAbs  = $upload['file'];
 
                 try {
-
-                    /*
-                     * تراکنش
-                     */
                     $db->beginTransaction();
 
-                    /*
-                     * فاکتور را قفل می‌کنیم تا دو درخواست همزمان
-                     * نتوانند پرداخت تکراری ثبت کنند.
-                     */
-                    $lockInvoice = $db->prepare("
-                        SELECT
-                            id,
-                            total,
-                            paid_total,
-                            reconciliation_type,
-                            reconciliation_amount
-                        FROM invoices
-                        WHERE id = ?
-                          AND user_id = ?
-                        FOR UPDATE
-                    ");
+                    /* قفل سفارش */
+                    $lock = $db->prepare("SELECT id, total FROM orders WHERE id=? AND user_id=? FOR UPDATE");
+                    $lock->execute([(int)$order['id'], $userId]);
+                    $lockedOrder = $lock->fetch();
+                    if (!$lockedOrder) throw new RuntimeException('order_not_found');
 
-                    $lockInvoice->execute([
-                        $invoiceId,
-                        $userId,
-                    ]);
+                    /* قفل/ساخت فاکتور */
+                    $lockInv = $db->prepare("SELECT id, invoice_number, total, paid_total FROM invoices
+                                             WHERE order_id=? AND user_id=? LIMIT 1 FOR UPDATE");
+                    $lockInv->execute([(int)$lockedOrder['id'], $userId]);
+                    $invoice = $lockInv->fetch();
 
-                    $lockedInvoice =
-                        $lockInvoice->fetch();
-
-                    if (!$lockedInvoice) {
-                        throw new RuntimeException(
-                            'invoice_not_found'
-                        );
-                    }
-
-                    /*
-                     * بررسی pending بعد از قفل
-                     */
-                    $pendingStmt = $db->prepare("
-                        SELECT
-                            id,
-                            amount
-                        FROM payments
-                        WHERE invoice_id = ?
-                          AND user_id = ?
-                          AND status = 'pending'
-                        LIMIT 1
-                        FOR UPDATE
-                    ");
-
-                    $pendingStmt->execute([
-                        $invoiceId,
-                        $userId,
-                    ]);
-
-                    $pendingPayment =
-                        $pendingStmt->fetch();
-
-                    if ($pendingPayment) {
-
-                        $db->rollBack();
-
-                        $error =
-                            'یک پرداخت در انتظار بررسی برای این فاکتور وجود دارد.';
-                    } else {
-
-                        /*
-                         * محاسبه مجدد سمت سرور
-                         */
-                        $lockedTotal =
-                            (int)$lockedInvoice['total'];
-
-                        $lockedPaid =
-                            (int)$lockedInvoice['paid_total'];
-
-                        $lockedRemaining =
-                            max(
-                                0,
-                                $lockedTotal - $lockedPaid
-                            );
-
-                        $lockedReconType =
-                            (string)$lockedInvoice['reconciliation_type'];
-
-                        $lockedReconAmount =
-                            (int)$lockedInvoice['reconciliation_amount'];
-
-                        if (
-                            $lockedReconType === 'creditor'
-                            && $lockedReconAmount > 0
-                        ) {
-
-                            $db->rollBack();
-
-                            $error =
-                                'طبق نتیجه مالی ثبت‌شده، شما بستانکار هستید و مبلغی برای پرداخت ندارید.';
-                        } else {
-
-                            if (
-                                $lockedReconType === 'debtor'
-                            ) {
-
-                                $lockedPayable =
-                                    $lockedReconAmount;
-
-                                if ($lockedRemaining > 0) {
-                                    $lockedPayable = min(
-                                        $lockedPayable,
-                                        $lockedRemaining
-                                    );
-                                }
-                            } else {
-
-                                $lockedPayable =
-                                    $lockedRemaining;
-                            }
-
-                            if (
-                                $requestedAmount <= 0
-                                || $requestedAmount > $lockedPayable
-                            ) {
-
-                                $db->rollBack();
-
-                                $error =
-                                    'مبلغ پرداخت معتبر نیست. مبلغ مجاز: '
-                                    . moneyFa($lockedPayable);
-                            } else {
-
-                                /*
-                                 * ثبت پرداخت
-                                 *
-                                 * مهم:
-                                 * paid_total اینجا تغییر نمی‌کند.
-                                 */
-                                $insert = $db->prepare("
-                                    INSERT INTO payments
-                                        (
-                                            invoice_id,
-                                            user_id,
-                                            method,
-                                            amount,
-                                            status,
-                                            reference_no,
-                                            receipt_path
-                                        )
-                                    VALUES
-                                        (
-                                            ?,
-                                            ?,
-                                            ?,
-                                            ?,
-                                            'pending',
-                                            ?,
-                                            ?
-                                        )
-                                ");
-
-                                $insert->execute([
-                                    $invoiceId,
-                                    $userId,
-                                    $method,
-                                    $requestedAmount,
-                                    $referenceNo !== ''
-                                        ? $referenceNo
-                                        : null,
-                                    $receiptPath,
-                                ]);
-
-                                $db->commit();
-
-                                $success = true;
+                    if (!$invoice) {
+                        $invNumber = null;
+                        for ($i = 0; $i < 5; $i++) {
+                            $candidate = 'INV-' . date('ymd') . '-' . str_pad((string)random_int(0, 9999), 4, '0', STR_PAD_LEFT);
+                            $chk = $db->prepare("SELECT id FROM invoices WHERE invoice_number=? LIMIT 1");
+                            $chk->execute([$candidate]);
+                            if (!$chk->fetch()) {
+                                $invNumber = $candidate;
+                                break;
                             }
                         }
+                        if ($invNumber === null) throw new RuntimeException('inv_generation_failed');
+
+                        $db->prepare("INSERT INTO invoices (invoice_number, order_id, user_id, total, paid_total, status) VALUES (?,?,?,?,0,'unpaid')")
+                            ->execute([$invNumber, (int)$lockedOrder['id'], $userId, (int)$lockedOrder['total']]);
+                        $invoiceId = (int)$db->lastInsertId();
+                        $invoice = ['invoice_number' => $invNumber, 'total' => (int)$lockedOrder['total'], 'paid_total' => 0];
+                    } else {
+                        $invoiceId = (int)$invoice['id'];
                     }
+
+                    /* مانده قطعی */
+                    $invoiceTotal = (int)$invoice['total'];
+                    $paidTotal    = (int)$invoice['paid_total'];
+                    $invoiceRemaining = max(0, $invoiceTotal - $paidTotal);
+
+                    /* pending submission موجود؟ */
+                    $pend = $db->prepare("SELECT id FROM payment_submissions
+                                          WHERE invoice_id=? AND user_id=? AND status='pending'
+                                          LIMIT 1 FOR UPDATE");
+                    $pend->execute([$invoiceId, $userId]);
+
+                    if ($pend->fetch()) {
+                        throw new RuntimeException('یک درخواست پرداخت در انتظار بررسی وجود دارد. تا تعیین تکلیف، پرداخت جدید امکان‌پذیر نیست.');
+                    }
+
+                    if ($invoiceRemaining <= 0) {
+                        throw new RuntimeException('این فاکتور مبلغ قابل پرداختی ندارد.');
+                    }
+
+                    if ($claimedAmount <= 0) {
+                        $error = 'مبلغ پرداخت را وارد کنید.';
+                    } elseif ($claimedAmount > $invoiceRemaining) {
+                        $error = 'مبلغ پرداخت نمی‌تواند بیشتر از ' . moneyFa($invoiceRemaining) . ' باشد.';
+                    } elseif ($referenceNo === '' && $receiptPath === null) {
+                        $error = 'شماره پیگیری یا تصویر فیش الزامی است.';
+                    }
+
+                    if ($error === '') {
+                        $db->prepare("INSERT INTO payment_submissions
+                            (invoice_id, user_id, method, claimed_amount, reference_no, receipt_path, status)
+                            VALUES (?,?,?,?,?,?,'pending')")
+                            ->execute([
+                                $invoiceId,
+                                $userId,
+                                $method,
+                                $claimedAmount,
+                                $referenceNo !== '' ? $referenceNo : null,
+                                $receiptPath
+                            ]);
+
+                        $subId = (int)$db->lastInsertId();
+
+                        $db->prepare("INSERT INTO audit_logs (user_id, action, entity, entity_id, ip)
+                                      VALUES (?, 'payment_submitted', 'payment_submission', ?, ?)")
+                            ->execute([$userId, $subId, $_SERVER['REMOTE_ADDR'] ?? null]);
+
+                        $db->commit();
+
+                        header('Location: /payment?order=' . rawurlencode($orderNumber) . '&submitted=1');
+                        exit;
+                    }
+
+                    $db->rollBack();
+                    removeUploadedReceipt($receiptAbs);
+                } catch (RuntimeException $re) {
+                    if ($db->inTransaction()) $db->rollBack();
+                    if (isset($receiptAbs)) removeUploadedReceipt($receiptAbs);
+                    $error = $re->getMessage();
                 } catch (Throwable $e) {
-
-                    if ($db->inTransaction()) {
-                        $db->rollBack();
-                    }
-
-                    $success = false;
-
-                    $error =
-                        'ثبت اطلاعات پرداخت انجام نشد. دوباره تلاش کنید.';
+                    if ($db->inTransaction()) $db->rollBack();
+                    if (isset($receiptAbs)) removeUploadedReceipt($receiptAbs);
+                    $error = 'ثبت اطلاعات پرداخت انجام نشد. لطفاً دوباره تلاش کنید.';
                 }
             }
         }
     }
 }
 
-/*
-|--------------------------------------------------------------------------
-| Settings
-|--------------------------------------------------------------------------
-*/
-
-$settings = [];
-
-$settingsStmt = $db->query("
-    SELECT
-        `key`,
-        `value`
-    FROM settings
-    WHERE `key` LIKE 'payment_%'
+/* ─── وضعیت نهایی برای نمایش ─── */
+$stmt = $db->prepare("
+    SELECT o.id, o.order_number, o.total,
+           i.id AS invoice_id, i.invoice_number,
+           i.total AS invoice_total, i.paid_total
+    FROM orders o
+    LEFT JOIN invoices i ON i.order_id = o.id
+    WHERE o.order_number = ? AND o.user_id = ?
+    LIMIT 1
 ");
+$stmt->execute([$orderNumber, $userId]);
+$order = $stmt->fetch();
 
-foreach ($settingsStmt as $setting) {
-
-    $settings[(string)$setting['key']] = $setting['value'];
+if (!$order) {
+    header('Location: /');
+    exit;
 }
 
-/*
-|--------------------------------------------------------------------------
-| اگر ثبت موفق بود
-|--------------------------------------------------------------------------
-*/
+$invoiceId    = (int)($order['invoice_id'] ?? 0);
+$invoiceTotal = (int)($order['invoice_total'] ?? $order['total'] ?? 0);
+$paidTotal    = (int)($order['paid_total'] ?? 0);
+$remaining    = max(0, $invoiceTotal - $paidTotal);
 
-if ($success) {
-
-    $successMessage =
-        'درخواست پرداخت شما با موفقیت ثبت شد و پس از بررسی مالی تعیین تکلیف می‌شود.';
+$submissions = [];
+if ($invoiceId > 0) {
+    $stmt = $db->prepare("SELECT * FROM payment_submissions WHERE invoice_id=? AND user_id=? ORDER BY id DESC");
+    $stmt->execute([$invoiceId, $userId]);
+    $submissions = $stmt->fetchAll();
 }
 
-/*
-|--------------------------------------------------------------------------
-| نمایش مجدد وضعیت بعد از POST
-|--------------------------------------------------------------------------
-*/
-
-if ($success) {
-
-    $hasPending = true;
+$pendingSubmission = null;
+foreach ($submissions as $s) {
+    if ($s['status'] === 'pending') {
+        $pendingSubmission = $s;
+        break;
+    }
 }
+$hasPending = $pendingSubmission !== null;
+$pendingAmount = $hasPending ? (int)$pendingSubmission['claimed_amount'] : 0;
 
-/*
-|--------------------------------------------------------------------------
-| عنوان صفحه
-|--------------------------------------------------------------------------
-*/
+$payableAmount = $remaining;
 
 $pageTitle = 'پرداخت سفارش | رابطی';
-
 ob_start();
-
 ?>
 
 <nav class="breadcrumb">
-    <a href="/">خانه</a>
-    <span>›</span>
-    <a href="/account-orders.php">سفارش‌های من</a>
-    <span>›</span>
+    <a href="/">خانه</a> <span>›</span>
+    <a href="/account-orders">سفارش‌های من</a> <span>›</span>
     <span>پرداخت</span>
 </nav>
-
 
 <section class="payment-page">
 
     <header class="payment-head">
-
         <div>
-            <span class="payment-eyebrow">
-                پرداخت سفارش
-            </span>
-
-            <h1>
-                تکمیل پرداخت
-            </h1>
-
-            <p>
-                سفارش
-                <b dir="ltr">
-                    <?= $h($order['order_number']) ?>
-                </b>
-            </p>
+            <span class="payment-eyebrow">پرداخت سفارش</span>
+            <h1>تکمیل پرداخت</h1>
+            <p>سفارش <b dir="ltr"><?= $h($order['order_number']) ?></b></p>
         </div>
-
         <?php if (!empty($order['invoice_number'])): ?>
-
             <div class="payment-invoice-number">
-
-                <span>
-                    شماره فاکتور
-                </span>
-
-                <b dir="ltr">
-                    <?= $h($order['invoice_number']) ?>
-                </b>
-
+                <span>شماره فاکتور</span>
+                <b dir="ltr"><?= $h($order['invoice_number']) ?></b>
             </div>
-
         <?php endif; ?>
-
     </header>
-
 
     <?php if ($success): ?>
 
         <div class="payment-result payment-result-success">
-
-            <div class="payment-result-icon">
-                ✓
-            </div>
-
+            <div class="payment-result-icon">✓</div>
             <div>
-
-                <h2>
-                    اطلاعات پرداخت ثبت شد
-                </h2>
-
+                <h2>درخواست پرداخت ثبت شد</h2>
                 <p>
-                    <?= $h($successMessage) ?>
+                    مبلغ اعلام‌شده شما ثبت شد و در انتظار بررسی مالی است.
+                    پس از تأیید، اگر مانده‌ای باقی بماند دکمه «پرداخت مانده بدهی» فعال می‌شود.
                 </p>
-
             </div>
-
         </div>
-
 
         <div class="payment-actions">
-
-            <a
-                href="/invoice-print.php?inv=<?= rawurlencode((string)$order['invoice_number']) ?>"
-                target="_blank"
-                class="btn btn-outline">
-                🧾 مشاهده / چاپ فاکتور
-            </a>
-
-            <a
-                href="/account-orders.php"
-                class="btn btn-primary">
-                بازگشت به سفارش‌ها
-            </a>
-
+            <?php if (!empty($order['invoice_number'])): ?>
+                <a href="/invoice-print?inv=<?= rawurlencode((string)$order['invoice_number']) ?>"
+                    target="_blank" class="btn btn-outline">🧾 مشاهده / چاپ فاکتور</a>
+            <?php endif; ?>
+            <a href="/account-orders" class="btn btn-primary">بازگشت به سفارش‌ها</a>
         </div>
-
 
     <?php else: ?>
 
-
         <?php if ($error): ?>
-
-            <div class="payment-alert payment-alert-error">
-                ⚠️
-                <?= $h($error) ?>
-            </div>
-
+            <div class="payment-alert payment-alert-error">⚠️ <?= $h($error) ?></div>
         <?php endif; ?>
 
-
-        <!-- خلاصه مالی -->
-
         <div class="payment-summary">
-
             <div class="payment-summary-row">
-
-                <span>
-                    مبلغ فاکتور
-                </span>
-
-                <strong>
-                    <?= moneyFa($invoiceTotal) ?>
-                </strong>
-
+                <span>مبلغ فاکتور</span>
+                <strong><?= moneyFa($invoiceTotal) ?></strong>
             </div>
-
-
             <div class="payment-summary-row">
-
-                <span>
-                    پرداخت تأییدشده
-                </span>
-
-                <strong class="payment-paid">
-                    <?= moneyFa($paidTotal) ?>
-                </strong>
-
+                <span>پرداخت تأییدشده</span>
+                <strong class="payment-paid"><?= moneyFa($paidTotal) ?></strong>
             </div>
-
-
             <?php if ($pendingAmount > 0): ?>
-
                 <div class="payment-summary-row">
-
-                    <span>
-                        پرداخت در انتظار بررسی
-                    </span>
-
-                    <strong class="payment-pending">
-                        <?= moneyFa($pendingAmount) ?>
-                    </strong>
-
+                    <span>درخواست در انتظار بررسی</span>
+                    <strong class="payment-pending"><?= moneyFa($pendingAmount) ?></strong>
                 </div>
-
             <?php endif; ?>
-
-
             <div class="payment-summary-row payment-summary-total">
-
-                <span>
-                    مبلغ قابل پرداخت
-                </span>
-
-                <strong>
-                    <?= moneyFa($payableAmount) ?>
-                </strong>
-
+                <span>مبلغ قابل پرداخت</span>
+                <strong><?= moneyFa($payableAmount) ?></strong>
             </div>
-
         </div>
 
-
-        <?php if ($isCreditor): ?>
-
-            <div class="payment-result payment-result-info">
-
-                <div class="payment-result-icon">
-                    ℹ️
-                </div>
-
-                <div>
-
-                    <h2>
-                        شما بستانکار هستید
-                    </h2>
-
-                    <p>
-                        طبق ثبت مالی، مبلغ
-                        <b>
-                            <?= moneyFa($reconciliationAmount) ?>
-                        </b>
-                        به نفع شما ثبت شده است و در حال حاضر نیازی به پرداخت ندارید.
-                    </p>
-
-                </div>
-
-            </div>
-
-
-        <?php elseif ($hasPending): ?>
+        <?php if ($hasPending): ?>
 
             <div class="payment-result payment-result-warning">
-
-                <div class="payment-result-icon">
-                    ⏳
-                </div>
-
+                <div class="payment-result-icon">⏳</div>
                 <div>
-
-                    <h2>
-                        پرداخت شما در انتظار بررسی است
-                    </h2>
-
-                    <p>
-                        تا زمانی که این پرداخت تعیین تکلیف نشود،
-                        امکان ثبت پرداخت دیگری برای این فاکتور وجود ندارد.
-                    </p>
-
+                    <h2>پرداخت شما در انتظار بررسی مالی است</h2>
+                    <p>مبلغ اعلام‌شده: <b><?= moneyFa($pendingAmount) ?></b><br>
+                        تا تعیین تکلیف، امکان ثبت پرداخت دیگری برای این فاکتور وجود ندارد.</p>
                 </div>
-
             </div>
 
-
-        <?php elseif ($isFullyPaid): ?>
+        <?php elseif ($payableAmount <= 0): ?>
 
             <div class="payment-result payment-result-success">
-
-                <div class="payment-result-icon">
-                    ✓
-                </div>
-
+                <div class="payment-result-icon">✓</div>
                 <div>
-
-                    <h2>
-                        این فاکتور تسویه شده است
-                    </h2>
-
-                    <p>
-                        مبلغ دیگری برای پرداخت وجود ندارد.
-                    </p>
-
+                    <h2>این فاکتور تسویه شده است</h2>
+                    <p>مبلغ دیگری برای پرداخت وجود ندارد.</p>
                 </div>
-
             </div>
-
 
         <?php else: ?>
 
-
-            <form
-                method="post"
-                class="payment-form"
-                enctype="multipart/form-data"
-                id="paymentForm">
-
+            <form method="post" class="payment-form" enctype="multipart/form-data">
+                <input type="hidden" name="csrf_token" value="<?= $h($csrf) ?>">
 
                 <section class="payment-section">
-
                     <div class="payment-section-head">
-
-                        <span class="payment-step">
-                            ۱
-                        </span>
-
+                        <span class="payment-step">۱</span>
                         <div>
-
-                            <h2>
-                                انتخاب روش پرداخت
-                            </h2>
-
-                            <p>
-                                روش پرداخت خود را انتخاب کنید.
-                            </p>
-
+                            <h2>انتخاب روش پرداخت</h2>
+                            <p>مبلغ دقیق قابل پرداخت: <b><?= moneyFa($payableAmount) ?></b></p>
                         </div>
-
                     </div>
-
 
                     <div class="payment-method-grid">
-
-
-                        <!-- شبا -->
-
                         <label class="payment-method-card">
-
-                            <input
-                                type="radio"
-                                name="method"
-                                value="sheba"
-                                required>
-
-                            <span class="payment-method-icon">
-                                🏦
-                            </span>
-
+                            <input type="radio" name="method" value="sheba" required>
+                            <span class="payment-method-icon">🏦</span>
                             <span class="payment-method-content">
-
-                                <strong>
-                                    انتقال با شبا
-                                </strong>
-
-                                <small>
-                                    واریز بانکی به شماره شبا
-                                </small>
-
+                                <strong>انتقال با شبا</strong>
+                                <small>واریز بانکی به شماره شبا</small>
                             </span>
-
-                            <span class="payment-method-check">
-                                ✓
-                            </span>
-
+                            <span class="payment-method-check">✓</span>
                         </label>
 
-
-                        <!-- کارت به کارت -->
-
                         <label class="payment-method-card">
-
-                            <input
-                                type="radio"
-                                name="method"
-                                value="card_to_card">
-
-                            <span class="payment-method-icon">
-                                💳
-                            </span>
-
+                            <input type="radio" name="method" value="card_to_card">
+                            <span class="payment-method-icon">💳</span>
                             <span class="payment-method-content">
-
-                                <strong>
-                                    کارت به کارت
-                                </strong>
-
-                                <small>
-                                    انتقال مستقیم کارت به کارت
-                                </small>
-
+                                <strong>کارت به کارت</strong>
+                                <small>انتقال مستقیم کارت به کارت</small>
                             </span>
-
-                            <span class="payment-method-check">
-                                ✓
-                            </span>
-
+                            <span class="payment-method-check">✓</span>
                         </label>
 
-
-                        <!-- فیش نقدی -->
-
                         <label class="payment-method-card">
-
-                            <input
-                                type="radio"
-                                name="method"
-                                value="cash_receipt">
-
-                            <span class="payment-method-icon">
-                                🧾
-                            </span>
-
+                            <input type="radio" name="method" value="cash_receipt">
+                            <span class="payment-method-icon">🧾</span>
                             <span class="payment-method-content">
-
-                                <strong>
-                                    فیش نقدی
-                                </strong>
-
-                                <small>
-                                    واریز نقدی و ارسال فیش
-                                </small>
-
+                                <strong>فیش نقدی</strong>
+                                <small>واریز نقدی و ارسال فیش</small>
                             </span>
-
-                            <span class="payment-method-check">
-                                ✓
-                            </span>
-
+                            <span class="payment-method-check">✓</span>
                         </label>
-
-
-                        <!-- IPG -->
 
                         <label class="payment-method-card payment-method-card-online">
-
-                            <input
-                                type="radio"
-                                name="method"
-                                value="online"
-                                disabled>
-
-                            <span class="payment-method-icon">
-                                🔒
-                            </span>
-
+                            <input type="radio" name="method" value="online" disabled>
+                            <span class="payment-method-icon">🔒</span>
                             <span class="payment-method-content">
-
-                                <strong>
-                                    درگاه پرداخت آنلاین
-                                </strong>
-
-                                <small>
-                                    به‌زودی فعال می‌شود
-                                </small>
-
+                                <strong>درگاه پرداخت آنلاین</strong>
+                                <small>به‌زودی</small>
                             </span>
-
                         </label>
-
-
                     </div>
-
                 </section>
 
-
-                <!-- اطلاعات حساب -->
-
-                <section
-                    class="payment-section payment-bank-info"
-                    id="bankInfo"
-                    hidden>
-
+                <section class="payment-section payment-bank-info" id="bankInfo" hidden>
                     <div class="payment-section-head">
-
-                        <span class="payment-step">
-                            ۲
-                        </span>
-
+                        <span class="payment-step">۲</span>
                         <div>
-
-                            <h2>
-                                اطلاعات واریز
-                            </h2>
-
-                            <p>
-                                مبلغ دقیق قابل پرداخت:
-                                <b>
-                                    <?= moneyFa($payableAmount) ?>
-                                </b>
-                            </p>
-
+                            <h2>اطلاعات واریز</h2>
                         </div>
-
                     </div>
 
-
-                    <div
-                        class="bank-detail"
-                        id="shebaBox"
-                        hidden>
-
-                        <span>
-                            شماره شبا
-                        </span>
-
+                    <div class="bank-detail" id="shebaBox" hidden>
+                        <span>شماره شبا</span>
                         <div class="bank-value-row">
-
-                            <code dir="ltr">
-                                <?= $h($settings['payment_sheba'] ?? '-') ?>
-                            </code>
-
-                            <button
-                                type="button"
-                                class="btn-copy"
-                                data-copy="<?= $h($settings['payment_sheba'] ?? '') ?>">
-                                کپی
-                            </button>
-
+                            <code dir="ltr"><?= $h($settings['payment_sheba'] ?? '-') ?></code>
+                            <button type="button" class="btn-copy" data-copy="<?= $h($settings['payment_sheba'] ?? '') ?>">کپی</button>
                         </div>
-
-                        <small>
-                            به نام
-                            <?= $h($settings['payment_card_name'] ?? '') ?>
-                        </small>
-
+                        <small>به نام <?= $h($settings['payment_card_name'] ?? '') ?></small>
                     </div>
 
-
-                    <div
-                        class="bank-detail"
-                        id="cardBox"
-                        hidden>
-
-                        <span>
-                            شماره کارت
-                        </span>
-
+                    <div class="bank-detail" id="cardBox" hidden>
+                        <span>شماره کارت</span>
                         <div class="bank-value-row">
-
-                            <code dir="ltr">
-                                <?= $h($settings['payment_card'] ?? '-') ?>
-                            </code>
-
-                            <button
-                                type="button"
-                                class="btn-copy"
-                                data-copy="<?= $h($settings['payment_card'] ?? '') ?>">
-                                کپی
-                            </button>
-
+                            <code dir="ltr"><?= $h($settings['payment_card'] ?? '-') ?></code>
+                            <button type="button" class="btn-copy" data-copy="<?= $h($settings['payment_card'] ?? '') ?>">کپی</button>
                         </div>
-
-                        <small>
-                            به نام
-                            <?= $h($settings['payment_card_name'] ?? '') ?>
-                        </small>
-
+                        <small>به نام <?= $h($settings['payment_card_name'] ?? '') ?></small>
                     </div>
-
                 </section>
 
-
-                <!-- مبلغ -->
-
-                <section
-                    class="payment-section"
-                    id="amountSection"
-                    hidden>
-
+                <section class="payment-section" id="amountSection" hidden>
                     <div class="payment-section-head">
-
-                        <span class="payment-step">
-                            ۳
-                        </span>
-
+                        <span class="payment-step">۳</span>
                         <div>
-
-                            <h2>
-                                مبلغ واریزی
-                            </h2>
-
-                            <p>
-                                مبلغی که واقعاً واریز کرده‌اید را وارد کنید.
-                            </p>
-
+                            <h2>مبلغ واریزی</h2>
+                            <p>مبلغی که واقعاً واریز کرده‌اید را وارد کنید.</p>
                         </div>
-
                     </div>
-
 
                     <div class="payment-amount-box">
-
-                        <label for="paymentAmount">
-                            مبلغ پرداخت
-                        </label>
-
+                        <label for="paymentAmount">مبلغ پرداخت</label>
                         <div class="payment-amount-input">
-
-                            <input
-                                type="number"
-                                id="paymentAmount"
-                                name="amount"
-                                min="1"
-                                max="<?= (int)$payableAmount ?>"
-                                step="1"
-                                inputmode="numeric"
-                                placeholder="<?= (int)$payableAmount ?>">
-
-                            <span>
-                                تومان
-                            </span>
-
+                            <input type="number" id="paymentAmount" name="amount"
+                                min="1" max="<?= (int)$payableAmount ?>" step="1"
+                                inputmode="numeric" placeholder="<?= (int)$payableAmount ?>">
+                            <span>تومان</span>
                         </div>
-
-                        <small>
-                            حداکثر قابل پرداخت:
-                            <b>
-                                <?= moneyFa($payableAmount) ?>
-                            </b>
-                        </small>
-
+                        <small>حداکثر قابل پرداخت: <b><?= moneyFa($payableAmount) ?></b></small>
                     </div>
-
                 </section>
 
-
-                <!-- اثبات -->
-
-                <section
-                    class="payment-section"
-                    id="proofSection"
-                    hidden>
-
+                <section class="payment-section" id="proofSection" hidden>
                     <div class="payment-section-head">
-
-                        <span class="payment-step">
-                            ۴
-                        </span>
-
+                        <span class="payment-step">۴</span>
                         <div>
-
-                            <h2>
-                                اثبات واریز
-                            </h2>
-
-                            <p>
-                                شماره پیگیری یا تصویر فیش را ثبت کنید.
-                            </p>
-
+                            <h2>اثبات واریز</h2>
+                            <p>شماره پیگیری یا تصویر فیش را ثبت کنید.</p>
                         </div>
-
                     </div>
-
 
                     <div class="payment-proof-grid">
-
                         <div class="payment-field">
-
-                            <label for="referenceNo">
-                                شماره پیگیری
-                            </label>
-
-                            <input
-                                type="text"
-                                id="referenceNo"
-                                name="reference_no"
-                                dir="ltr"
-                                autocomplete="off"
-                                placeholder="مثلاً 840512">
-
+                            <label for="referenceNo">شماره پیگیری</label>
+                            <input type="text" id="referenceNo" name="reference_no"
+                                dir="ltr" maxlength="100" placeholder="مثلاً 840512">
                         </div>
-
-
                         <div class="payment-field">
-
-                            <label for="receipt">
-                                تصویر فیش
-                            </label>
-
-                            <input
-                                type="file"
-                                id="receipt"
-                                name="receipt"
+                            <label for="receipt">تصویر فیش</label>
+                            <input type="file" id="receipt" name="receipt"
                                 accept="image/jpeg,image/png,image/webp">
-
-                            <small>
-                                JPG / PNG / WEBP — حداکثر ۲MB
-                            </small>
-
+                            <small>JPG / PNG / WEBP — حداکثر ۲MB</small>
                         </div>
-
                     </div>
-
-
-                    <div class="payment-proof-note">
-                        حداقل یکی از «شماره پیگیری» یا «تصویر فیش» الزامی است.
-                    </div>
-
+                    <div class="payment-proof-note">حداقل یکی از «شماره پیگیری» یا «تصویر فیش» الزامی است.</div>
                 </section>
 
-
                 <div class="payment-submit-row">
-
-                    <button
-                        type="submit"
-                        class="btn btn-primary payment-submit"
-                        id="paymentSubmit"
-                        disabled>
-
+                    <button type="submit" class="btn btn-primary payment-submit" id="paymentSubmit" disabled>
                         ثبت درخواست پرداخت
-
                     </button>
-
                 </div>
-
 
             </form>
 
-
         <?php endif; ?>
-
 
     <?php endif; ?>
 
 </section>
 
-
 <script>
     (function() {
-
-        const methods = document.querySelectorAll(
-            'input[name="method"]'
-        );
-
-        const bankInfo = document.getElementById(
-            'bankInfo'
-        );
-
-        const shebaBox = document.getElementById(
-            'shebaBox'
-        );
-
-        const cardBox = document.getElementById(
-            'cardBox'
-        );
-
-        const amountSection = document.getElementById(
-            'amountSection'
-        );
-
-        const proofSection = document.getElementById(
-            'proofSection'
-        );
-
-        const amountInput = document.getElementById(
-            'paymentAmount'
-        );
-
-        const referenceInput = document.getElementById(
-            'referenceNo'
-        );
-
-        const receiptInput = document.getElementById(
-            'receipt'
-        );
-
-        const submitButton = document.getElementById(
-            'paymentSubmit'
-        );
-
-
-        function updatePaymentForm() {
-
-            const selected =
-                document.querySelector(
-                    'input[name="method"]:checked'
-                );
-
-            if (!selected) {
-                return;
-            }
-
-            const method = selected.value;
-
-            bankInfo.hidden = false;
-            amountSection.hidden = false;
-            proofSection.hidden = false;
-
-            shebaBox.hidden =
-                method !== 'sheba';
-
-            cardBox.hidden =
-                method !== 'card_to_card';
-
-            /*
-             * درگاه آنلاین بعداً:
-             *
-             * amountSection و proofSection
-             * برای IPG نمایش داده نمی‌شوند.
-             *
-             * مبلغ مستقیماً از PHP به gateway
-             * ارسال خواهد شد.
-             */
-
-            if (method === 'online') {
-
-                bankInfo.hidden = true;
-                amountSection.hidden = true;
-                proofSection.hidden = true;
-
-                if (submitButton) {
-                    submitButton.disabled = false;
-                }
-
-                return;
-            }
-
-            validateForm();
-        }
-
+        const methods = document.querySelectorAll('input[name="method"]');
+        const bankInfo = document.getElementById('bankInfo');
+        const shebaBox = document.getElementById('shebaBox');
+        const cardBox = document.getElementById('cardBox');
+        const amountSection = document.getElementById('amountSection');
+        const proofSection = document.getElementById('proofSection');
+        const amountInput = document.getElementById('paymentAmount');
+        const referenceInput = document.getElementById('referenceNo');
+        const receiptInput = document.getElementById('receipt');
+        const submitButton = document.getElementById('paymentSubmit');
 
         function validateForm() {
-
-            if (!submitButton) {
-                return;
-            }
-
-            const selected =
-                document.querySelector(
-                    'input[name="method"]:checked'
-                );
-
+            if (!submitButton) return;
+            const selected = document.querySelector('input[name="method"]:checked');
             if (!selected) {
                 submitButton.disabled = true;
                 return;
             }
 
-            const amount =
-                Number(
-                    amountInput?.value || 0
-                );
+            const amount = Number(amountInput?.value || 0);
+            const max = Number(amountInput?.max || 0);
+            const ref = (referenceInput?.value || '').trim();
+            const hasReceipt = !!(receiptInput?.files?.length > 0);
 
-            const max =
-                Number(
-                    amountInput?.max || 0
-                );
-
-            const reference =
-                (
-                    referenceInput?.value || ''
-                ).trim();
-
-            const hasReceipt = !!(
-                receiptInput &&
-                receiptInput.files &&
-                receiptInput.files.length
-            );
-
-            const validAmount =
-                amount > 0 &&
-                amount <= max;
-
-            const validProof =
-                reference !== '' ||
-                hasReceipt;
-
-            submitButton.disabled = !validAmount ||
-                !validProof;
+            submitButton.disabled = !(amount > 0 && amount <= max && (ref !== '' || hasReceipt));
         }
 
+        function updatePaymentForm() {
+            const selected = document.querySelector('input[name="method"]:checked');
+            if (!selected) return;
 
-        methods.forEach(function(radio) {
+            if (bankInfo) bankInfo.hidden = false;
+            if (shebaBox) shebaBox.hidden = selected.value !== 'sheba';
+            if (cardBox) cardBox.hidden = selected.value !== 'card_to_card';
+            if (amountSection) amountSection.hidden = false;
+            if (proofSection) proofSection.hidden = false;
 
-            radio.addEventListener(
-                'change',
-                updatePaymentForm
-            );
+            if (amountInput && !amountInput.value) amountInput.value = '<?= (int)$payableAmount ?>';
+            validateForm();
+        }
 
-        });
-
-
-        [
-            amountInput,
-            referenceInput,
-            receiptInput
-        ].forEach(function(element) {
-
-            if (!element) {
-                return;
-            }
-
-            element.addEventListener(
-                'input',
-                validateForm
-            );
-
-            element.addEventListener(
-                'change',
-                validateForm
-            );
-
-        });
-
-
-        document
-            .querySelectorAll('.btn-copy')
-            .forEach(function(button) {
-
-                button.addEventListener(
-                    'click',
-                    function() {
-
-                        const value =
-                            button.dataset.copy || '';
-
-                        if (!value) {
-                            return;
-                        }
-
-                        if (
-                            navigator.clipboard &&
-                            navigator.clipboard.writeText
-                        ) {
-
-                            navigator.clipboard
-                                .writeText(value)
-                                .then(function() {
-
-                                    if (
-                                        typeof showToast ===
-                                        'function'
-                                    ) {
-                                        showToast(
-                                            '✓ کپی شد'
-                                        );
-                                    }
-
-                                });
-
-                        }
-
-                    }
-                );
-
-            });
-
+        methods.forEach(m => m.addEventListener('change', updatePaymentForm));
+        [amountInput, referenceInput].forEach(i => i?.addEventListener('input', validateForm));
+        receiptInput?.addEventListener('change', validateForm);
     })();
 </script>
 
-
 <?php
-
 $content = ob_get_clean();
-
 require ROOT_PATH . '/views/layouts/main.php';

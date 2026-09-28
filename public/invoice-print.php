@@ -230,29 +230,44 @@ if (!$isAdmin && $invoiceUserId !== $userId) {
     exit;
 }
 
-
 /*
 |--------------------------------------------------------------------------
-| IMPORTANT:
-| Read payment history directly from database on every request.
+| Payment history
+|--------------------------------------------------------------------------
+| Financial truth:
+| - invoices.paid_total = total actually verified/recorded as paid
+| - payment_submissions = customer payment requests/history
+| - payment_verifications = financial verification details
 |--------------------------------------------------------------------------
 */
 
 $paymentStmt = $db->prepare("
     SELECT
-        id,
-        method,
-        amount,
-        status,
-        reference_no,
-        receipt_path,
-        admin_note,
-        confirmed_by,
-        confirmed_at,
-        created_at
-    FROM payments
-    WHERE invoice_id = ?
-    ORDER BY created_at ASC, id ASC
+        ps.id,
+        ps.method,
+        ps.claimed_amount,
+        ps.reference_no,
+        ps.receipt_path,
+        ps.transaction_date,
+        ps.customer_note,
+        ps.status,
+        ps.created_at,
+        ps.updated_at,
+
+        pv.verified_amount,
+        pv.status AS verification_status,
+        pv.note AS verification_note,
+        pv.verified_by,
+        pv.verified_at
+
+    FROM payment_submissions ps
+
+    LEFT JOIN payment_verifications pv
+        ON pv.payment_submission_id = ps.id
+
+    WHERE ps.invoice_id = ?
+
+    ORDER BY ps.created_at ASC, ps.id ASC
 ");
 
 $paymentStmt->execute([
@@ -266,37 +281,67 @@ $payments = $paymentStmt->fetchAll(PDO::FETCH_ASSOC);
 |--------------------------------------------------------------------------
 | Payment calculations
 |--------------------------------------------------------------------------
+| Do NOT calculate confirmed paid amount from submissions.
+| The authoritative value is invoices.paid_total.
+|--------------------------------------------------------------------------
 */
 
-$confirmedPaidFromPayments = 0;
-$pendingAmount             = 0;
-$rejectedAmount            = 0;
+$confirmedPaidFromPayments = max(
+    0,
+    (int)($invoice['paid_total'] ?? 0)
+);
+
+$pendingAmount  = 0;
+$rejectedAmount = 0;
 
 $hasPendingPayment = false;
 
-foreach ($payments as $payment) {
+foreach ($payments as &$payment) {
 
-    $amount = max(
+    $claimedAmount = max(
         0,
-        (int)($payment['amount'] ?? 0)
+        (int)($payment['claimed_amount'] ?? 0)
     );
 
-    $status = (string)(
+    $verifiedAmount = $payment['verified_amount'] !== null
+        ? max(0, (int)$payment['verified_amount'])
+        : null;
+
+    $submissionStatus = (string)(
         $payment['status'] ?? ''
     );
 
-    if ($status === 'confirmed') {
+    $verificationStatus = (string)(
+        $payment['verification_status'] ?? ''
+    );
 
-        $confirmedPaidFromPayments += $amount;
-    } elseif ($status === 'pending') {
+    /*
+     * Pending is determined from the customer's submission.
+     */
+    if ($submissionStatus === 'pending') {
 
-        $pendingAmount += $amount;
+        $pendingAmount += $claimedAmount;
         $hasPendingPayment = true;
-    } elseif ($status === 'rejected') {
-
-        $rejectedAmount += $amount;
     }
+
+    /*
+     * Rejected submissions are historical only.
+     */
+    if ($submissionStatus === 'rejected') {
+
+        $rejectedAmount += $claimedAmount;
+    }
+
+    /*
+     * Keep normalized values available to the invoice template.
+     */
+    $payment['_claimed_amount'] = $claimedAmount;
+    $payment['_verified_amount'] = $verifiedAmount;
+    $payment['_submission_status'] = $submissionStatus;
+    $payment['_verification_status'] = $verificationStatus;
 }
+
+unset($payment);
 
 
 /*
