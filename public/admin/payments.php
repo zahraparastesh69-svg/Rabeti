@@ -13,13 +13,13 @@ require_once ROOT_PATH . '/config/auth.php';
 
 require_admin();
 
- $db = db();
+$db = db();
 
- $h = static function ($value): string {
+$h = static function ($value): string {
     return htmlspecialchars((string)$value, ENT_QUOTES, 'UTF-8');
 };
 
- $adminId = (int)($_SESSION['admin_id'] ?? 0);
+$adminId = (int)($_SESSION['admin_id'] ?? 0);
 
 /* ─── CSRF (تعریف محافظت‌شده — اگر در auth.php هم هست تداخلی ندارد) ─── */
 if (!function_exists('csrf_token')) {
@@ -50,7 +50,7 @@ function invoicePaymentState(array $inv): array
     if ($pendingCount > 0) {
         return [
             'label' => 'در انتظار بررسی مالی'
-                     . ($pendingClaim > 0 ? ' (' . number_format($pendingClaim) . ' تومان)' : ''),
+                . ($pendingClaim > 0 ? ' (' . number_format($pendingClaim) . ' تومان)' : ''),
             'class' => 'is-pending',
         ];
     }
@@ -170,12 +170,16 @@ function getFlash(): ?array
     return is_array($flash) ? $flash : null;
 }
 
-function auditFinancial(PDO $db, int $userId, string $action,
-    ?string $entity = null, ?int $entityId = null): void
-{
+function auditFinancial(
+    PDO $db,
+    int $userId,
+    string $action,
+    ?string $entity = null,
+    ?int $entityId = null
+): void {
     $db->prepare("INSERT INTO audit_logs (user_id, action, entity, entity_id, ip)
                   VALUES (?,?,?,?,?)")
-       ->execute([$userId, $action, $entity, $entityId, $_SERVER['REMOTE_ADDR'] ?? null]);
+        ->execute([$userId, $action, $entity, $entityId, $_SERVER['REMOTE_ADDR'] ?? null]);
 }
 
 /* ═══════════ POST actions ═══════════ */
@@ -202,9 +206,18 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         $verifiedAmount = $normalizeAmount((string)($_POST['verified_amount'] ?? ''));
         $note = trim((string)($_POST['verification_note'] ?? ''));
 
-        if ($paymentId <= 0) { flash('error', 'شناسه پرداخت نامعتبر است.'); redirectBack(); }
-        if ($verifiedAmount === false) { flash('error', 'مبلغ واقعی تأییدشده باید بیشتر از صفر باشد.'); redirectBack(); }
-        if (mb_strlen($note) > 500) { flash('error', 'توضیح مالی حداکثر ۵۰۰ کاراکتر است.'); redirectBack(); }
+        if ($paymentId <= 0) {
+            flash('error', 'شناسه پرداخت نامعتبر است.');
+            redirectBack();
+        }
+        if ($verifiedAmount === false) {
+            flash('error', 'مبلغ واقعی تأییدشده باید بیشتر از صفر باشد.');
+            redirectBack();
+        }
+        if (mb_strlen($note) > 500) {
+            flash('error', 'توضیح مالی حداکثر ۵۰۰ کاراکتر است.');
+            redirectBack();
+        }
 
         try {
             $db->beginTransaction();
@@ -247,9 +260,17 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             $db->prepare("INSERT INTO payment_verification_history
                 (payment_id, invoice_id, old_amount, new_amount, old_status, new_status, reason, changed_by, ip)
                 VALUES (?,?,?,?,?,?,?,?,?)")
-               ->execute([$paymentId, $invoiceId, $oldVerified, $verifiedAmount,
-                          'pending', 'confirmed', $reason !== '' ? $reason : null,
-                          $adminId, $_SERVER['REMOTE_ADDR'] ?? null]);
+                ->execute([
+                    $paymentId,
+                    $invoiceId,
+                    $oldVerified,
+                    $verifiedAmount,
+                    'pending',
+                    'confirmed',
+                    $reason !== '' ? $reason : null,
+                    $adminId,
+                    $_SERVER['REMOTE_ADDR'] ?? null
+                ]);
 
             /* paid_total فقط از verified_amount */
             $stmt = $db->prepare("SELECT COALESCE(SUM(verified_amount),0) FROM payments
@@ -259,15 +280,15 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
             $invoiceTotal = (int)$invoice['total'];
             $invStatus = ($paidTotal >= $invoiceTotal && $paidTotal > 0) ? 'paid'
-                       : (($paidTotal > 0) ? 'partial' : 'unpaid');
+                : (($paidTotal > 0) ? 'partial' : 'unpaid');
 
             $db->prepare("UPDATE invoices SET paid_total = ?, status = ? WHERE id = ?")
-               ->execute([$paidTotal, $invStatus, $invoiceId]);
+                ->execute([$paidTotal, $invStatus, $invoiceId]);
 
             /* سفارش کامل پرداخت شد → processing */
             if ($invStatus === 'paid') {
                 $db->prepare("UPDATE orders SET status='processing' WHERE id=? AND status='pending_review'")
-                   ->execute([(int)$invoice['order_id']]);
+                    ->execute([(int)$invoice['order_id']]);
             }
 
             auditFinancial($db, $adminId, 'payment.confirm', 'payment', $paymentId);
@@ -276,7 +297,6 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             flash('success', $claimedAmount !== $verifiedAmount
                 ? 'پرداخت تأیید شد؛ ادعای مشتری ' . toman($claimedAmount) . '، تأییدشده ' . toman($verifiedAmount)
                 : 'پرداخت با مبلغ ' . toman($verifiedAmount) . ' تأیید شد.');
-
         } catch (Throwable $e) {
             if ($db->inTransaction()) $db->rollBack();
             flash('error', 'تأیید پرداخت انجام نشد: ' . $e->getMessage());
@@ -291,9 +311,18 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         $verifiedAmount = $normalizeAmount((string)($_POST['verified_amount'] ?? ''));
         $reason = trim((string)($_POST['reason'] ?? ''));
 
-        if ($paymentId <= 0) { flash('error', 'شناسه نامعتبر.'); redirectBack(); }
-        if ($verifiedAmount === false) { flash('error', 'مبلغ جدید باید بیشتر از صفر باشد.'); redirectBack(); }
-        if ($reason === '') { flash('error', 'ثبت دلیل برای اصلاح الزامی است.'); redirectBack(); }
+        if ($paymentId <= 0) {
+            flash('error', 'شناسه نامعتبر.');
+            redirectBack();
+        }
+        if ($verifiedAmount === false) {
+            flash('error', 'مبلغ جدید باید بیشتر از صفر باشد.');
+            redirectBack();
+        }
+        if ($reason === '') {
+            flash('error', 'ثبت دلیل برای اصلاح الزامی است.');
+            redirectBack();
+        }
 
         try {
             $db->beginTransaction();
@@ -317,13 +346,22 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                             verified_amount = ?, verification_status = 'adjusted',
                             verification_note = ?, verified_by = ?, verified_at = NOW()
                           WHERE id = ? AND status = 'confirmed'")
-               ->execute([$verifiedAmount, $reason, $adminId, $paymentId]);
+                ->execute([$verifiedAmount, $reason, $adminId, $paymentId]);
 
             $db->prepare("INSERT INTO payment_verification_history
                 (payment_id, invoice_id, old_amount, new_amount, old_status, new_status, reason, changed_by, ip)
                 VALUES (?,?,?,?,?,?,?,?,?)")
-               ->execute([$paymentId, $invoiceId, $oldVerified, $verifiedAmount,
-                          'confirmed', 'confirmed', $reason, $adminId, $_SERVER['REMOTE_ADDR'] ?? null]);
+                ->execute([
+                    $paymentId,
+                    $invoiceId,
+                    $oldVerified,
+                    $verifiedAmount,
+                    'confirmed',
+                    'confirmed',
+                    $reason,
+                    $adminId,
+                    $_SERVER['REMOTE_ADDR'] ?? null
+                ]);
 
             $stmt = $db->prepare("SELECT COALESCE(SUM(verified_amount),0) FROM payments
                                   WHERE invoice_id = ? AND status = 'confirmed'");
@@ -331,16 +369,15 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             $paidTotal = (int)$stmt->fetchColumn();
             $invoiceTotal = (int)$invoice['total'];
             $invStatus = ($paidTotal >= $invoiceTotal && $paidTotal > 0) ? 'paid'
-                       : (($paidTotal > 0) ? 'partial' : 'unpaid');
+                : (($paidTotal > 0) ? 'partial' : 'unpaid');
 
             $db->prepare("UPDATE invoices SET paid_total=?, status=? WHERE id=?")
-               ->execute([$paidTotal, $invStatus, $invoiceId]);
+                ->execute([$paidTotal, $invStatus, $invoiceId]);
 
             auditFinancial($db, $adminId, 'payment.adjust', 'payment', $paymentId);
             $db->commit();
 
             flash('success', 'مبلغ اصلاح شد: ' . toman($oldVerified) . ' ← ' . toman($verifiedAmount));
-
         } catch (Throwable $e) {
             if ($db->inTransaction()) $db->rollBack();
             flash('error', 'اصلاح انجام نشد: ' . $e->getMessage());
@@ -354,8 +391,14 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         $paymentId = (int)($_POST['payment_id'] ?? 0);
         $reason = trim((string)($_POST['reason'] ?? ''));
 
-        if ($paymentId <= 0) { flash('error', 'شناسه نامعتبر.'); redirectBack(); }
-        if ($reason === '') { flash('error', 'ثبت دلیل برای رد الزامی است.'); redirectBack(); }
+        if ($paymentId <= 0) {
+            flash('error', 'شناسه نامعتبر.');
+            redirectBack();
+        }
+        if ($reason === '') {
+            flash('error', 'ثبت دلیل برای رد الزامی است.');
+            redirectBack();
+        }
 
         try {
             $db->beginTransaction();
@@ -374,19 +417,27 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                             verification_note = ?, verified_by = ?, verified_at = NOW(),
                             status = 'rejected'
                           WHERE id = ? AND status = 'pending'")
-               ->execute([$reason, $adminId, $paymentId]);
+                ->execute([$reason, $adminId, $paymentId]);
 
             $db->prepare("INSERT INTO payment_verification_history
                 (payment_id, invoice_id, old_amount, new_amount, old_status, new_status, reason, changed_by, ip)
                 VALUES (?,?,?,?,?,?,?,?,?)")
-               ->execute([$paymentId, $invoiceId, $oldVerified, 0,
-                          'pending', 'rejected', $reason, $adminId, $_SERVER['REMOTE_ADDR'] ?? null]);
+                ->execute([
+                    $paymentId,
+                    $invoiceId,
+                    $oldVerified,
+                    0,
+                    'pending',
+                    'rejected',
+                    $reason,
+                    $adminId,
+                    $_SERVER['REMOTE_ADDR'] ?? null
+                ]);
 
             auditFinancial($db, $adminId, 'payment.reject', 'payment', $paymentId);
             $db->commit();
 
             flash('success', 'پرداخت رد شد و دلیل آن در سابقه ثبت شد.');
-
         } catch (Throwable $e) {
             if ($db->inTransaction()) $db->rollBack();
             flash('error', 'رد پرداخت انجام نشد: ' . $e->getMessage());
@@ -404,9 +455,18 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         $refNo  = trim((string)($_POST['settlement_reference_no'] ?? ''));
         $desc   = trim((string)($_POST['settlement_description'] ?? ''));
 
-        if ($invoiceId <= 0) { flash('error', 'فاکتور نامعتبر.'); redirectBack(); }
-        if ($amount === false) { flash('error', 'مبلغ تسویه باید بیشتر از صفر باشد.'); redirectBack(); }
-        if (!in_array($method, ['sheba','card_to_card','cash'], true)) { flash('error', 'روش تسویه نامعتبر.'); redirectBack(); }
+        if ($invoiceId <= 0) {
+            flash('error', 'فاکتور نامعتبر.');
+            redirectBack();
+        }
+        if ($amount === false) {
+            flash('error', 'مبلغ تسویه باید بیشتر از صفر باشد.');
+            redirectBack();
+        }
+        if (!in_array($method, ['sheba', 'card_to_card', 'cash'], true)) {
+            flash('error', 'روش تسویه نامعتبر.');
+            redirectBack();
+        }
 
         try {
             $db->beginTransaction();
@@ -433,8 +493,16 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             $db->prepare("INSERT INTO financial_transactions
                 (invoice_id, user_id, type, amount, method, document_no, reference_no, description, status, created_by, completed_at)
                 VALUES (?,?, 'creditor_settlement', ?,?,?,?,?, 'completed', ?, NOW())")
-               ->execute([$invoiceId, (int)$invoice['user_id'], $amount, $method,
-                          $docNo ?: null, $refNo ?: null, $desc ?: null, $adminId]);
+                ->execute([
+                    $invoiceId,
+                    (int)$invoice['user_id'],
+                    $amount,
+                    $method,
+                    $docNo ?: null,
+                    $refNo ?: null,
+                    $desc ?: null,
+                    $adminId
+                ]);
 
             $txnId = (int)$db->lastInsertId();
             auditFinancial($db, $adminId, 'financial.creditor_settlement', 'financial_transaction', $txnId);
@@ -443,7 +511,6 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             flash('success', ($remaining - $amount) === 0
                 ? 'بستانکاری کاملاً تسویه شد.'
                 : 'تسویه ثبت شد. مانده: ' . toman($remaining - $amount));
-
         } catch (Throwable $e) {
             if ($db->inTransaction()) $db->rollBack();
             flash('error', 'تسویه انجام نشد: ' . $e->getMessage());
@@ -457,42 +524,53 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
 /* ═══════════ فیلتر و لیست ═══════════ */
 
- $filter = trim((string)($_GET['filter'] ?? ''));
- $allowedFilters = ['', 'pending', 'paid', 'partial', 'settled', 'debtor', 'creditor', 'rejected'];
+$filter = trim((string)($_GET['filter'] ?? ''));
+$allowedFilters = ['', 'pending', 'paid', 'partial', 'settled', 'debtor', 'creditor', 'rejected'];
 if (!in_array($filter, $allowedFilters, true)) $filter = '';
 
- $search  = trim((string)($_GET['q'] ?? ''));
- $perPage = 30;
- $page    = max(1, (int)($_GET['page'] ?? 1));
- $offset  = ($page - 1) * $perPage;
+$search  = trim((string)($_GET['q'] ?? ''));
+$perPage = 30;
+$page    = max(1, (int)($_GET['page'] ?? 1));
+$offset  = ($page - 1) * $perPage;
 
 /* خلاصه */
- $summary = ['pending'=>0,'paid'=>0,'partial'=>0,'settled'=>0,'debtor'=>0,'creditor'=>0,'rejected'=>0];
- $summary['pending'] = (int)$db->query("SELECT COUNT(DISTINCT invoice_id) FROM payments WHERE status='pending'")->fetchColumn();
- $summary['paid']    = (int)$db->query("SELECT COUNT(*) FROM invoices WHERE status='paid'")->fetchColumn();
- $summary['partial'] = (int)$db->query("SELECT COUNT(*) FROM invoices WHERE status='partial'")->fetchColumn();
- $summary['debtor']  = (int)$db->query("SELECT COUNT(*) FROM invoices WHERE reconciliation_type='debtor' AND reconciliation_amount>0")->fetchColumn();
- $summary['creditor']= (int)$db->query("
+$summary = ['pending' => 0, 'paid' => 0, 'partial' => 0, 'settled' => 0, 'debtor' => 0, 'creditor' => 0, 'rejected' => 0];
+$summary['pending'] = (int)$db->query("SELECT COUNT(DISTINCT invoice_id) FROM payments WHERE status='pending'")->fetchColumn();
+$summary['paid']    = (int)$db->query("SELECT COUNT(*) FROM invoices WHERE status='paid'")->fetchColumn();
+$summary['partial'] = (int)$db->query("SELECT COUNT(*) FROM invoices WHERE status='partial'")->fetchColumn();
+$summary['debtor']  = (int)$db->query("SELECT COUNT(*) FROM invoices WHERE reconciliation_type='debtor' AND reconciliation_amount>0")->fetchColumn();
+$summary['creditor'] = (int)$db->query("
     SELECT COUNT(*) FROM invoices i
     WHERE i.reconciliation_type='creditor' AND i.reconciliation_amount>0
       AND i.reconciliation_amount > COALESCE((SELECT SUM(ft.amount) FROM financial_transactions ft
           WHERE ft.invoice_id=i.id AND ft.type='creditor_settlement' AND ft.status='completed'),0)")->fetchColumn();
- $summary['settled'] = (int)$db->query("
+$summary['settled'] = (int)$db->query("
     SELECT COUNT(*) FROM invoices i
     WHERE i.reconciliation_type='settled'
        OR (i.reconciliation_type='creditor' AND i.reconciliation_amount>0
            AND i.reconciliation_amount <= COALESCE((SELECT SUM(ft.amount) FROM financial_transactions ft
                WHERE ft.invoice_id=i.id AND ft.type='creditor_settlement' AND ft.status='completed'),0))")->fetchColumn();
- $summary['rejected']= (int)$db->query("SELECT COUNT(DISTINCT invoice_id) FROM payments WHERE status='rejected'")->fetchColumn();
+$summary['rejected'] = (int)$db->query("SELECT COUNT(DISTINCT invoice_id) FROM payments WHERE status='rejected'")->fetchColumn();
 
 /* فیلتر */
- $where = []; $params = [];
+$where = [];
+$params = [];
 switch ($filter) {
-    case 'pending':  $where[] = "EXISTS (SELECT 1 FROM payments fp WHERE fp.invoice_id=i.id AND fp.status='pending')"; break;
-    case 'paid':     $where[] = "i.status='paid'"; break;
-    case 'partial':  $where[] = "i.status='partial'"; break;
-    case 'debtor':   $where[] = "i.reconciliation_type='debtor' AND i.reconciliation_amount>0"; break;
-    case 'rejected': $where[] = "EXISTS (SELECT 1 FROM payments rp WHERE rp.invoice_id=i.id AND rp.status='rejected')"; break;
+    case 'pending':
+        $where[] = "EXISTS (SELECT 1 FROM payments fp WHERE fp.invoice_id=i.id AND fp.status='pending')";
+        break;
+    case 'paid':
+        $where[] = "i.status='paid'";
+        break;
+    case 'partial':
+        $where[] = "i.status='partial'";
+        break;
+    case 'debtor':
+        $where[] = "i.reconciliation_type='debtor' AND i.reconciliation_amount>0";
+        break;
+    case 'rejected':
+        $where[] = "EXISTS (SELECT 1 FROM payments rp WHERE rp.invoice_id=i.id AND rp.status='rejected')";
+        break;
     case 'creditor':
     case 'settled':
         $sub = "COALESCE((SELECT SUM(ft.amount) FROM financial_transactions ft
@@ -507,18 +585,21 @@ if ($search !== '') {
     $like = '%' . $search . '%';
     array_push($params, $like, $like, $like, $like, $like);
 }
- $whereSql = $where ? 'WHERE ' . implode(' AND ', $where) : '';
+$whereSql = $where ? 'WHERE ' . implode(' AND ', $where) : '';
 
- $stmt = $db->prepare("SELECT COUNT(*) FROM invoices i
+$stmt = $db->prepare("SELECT COUNT(*) FROM invoices i
     INNER JOIN orders o ON o.id=i.order_id
     INNER JOIN users u ON u.id=i.user_id
     $whereSql");
- $stmt->execute($params);
- $totalRows = (int)$stmt->fetchColumn();
- $totalPages = max(1, (int)ceil($totalRows / $perPage));
-if ($page > $totalPages) { $page = $totalPages; $offset = ($page - 1) * $perPage; }
+$stmt->execute($params);
+$totalRows = (int)$stmt->fetchColumn();
+$totalPages = max(1, (int)ceil($totalRows / $perPage));
+if ($page > $totalPages) {
+    $page = $totalPages;
+    $offset = ($page - 1) * $perPage;
+}
 
- $stmt = $db->prepare("
+$stmt = $db->prepare("
     SELECT i.id, i.invoice_number, i.order_id, i.user_id, i.total, i.paid_total, i.status,
            i.reconciliation_type, i.reconciliation_amount, i.issued_at,
            o.order_number, u.full_name, u.mobile, u.company_name,
@@ -538,13 +619,13 @@ if ($page > $totalPages) { $page = $totalPages; $offset = ($page - 1) * $perPage
              i.issued_at DESC
     LIMIT $perPage OFFSET $offset
 ");
- $stmt->execute($params);
- $invoices = $stmt->fetchAll();
+$stmt->execute($params);
+$invoices = $stmt->fetchAll();
 
- $flash = getFlash();
+$flash = getFlash();
 
- $adminPageTitle = 'مرکز مالی';
- $activeMenu = 'payments';
+$adminPageTitle = 'مرکز مالی';
+$activeMenu = 'payments';
 
 ob_start();
 ?>
@@ -552,9 +633,9 @@ ob_start();
 <div class="financial-page">
 
     <?php if ($flash): ?>
-    <div class="financial-flash <?= $flash['type'] === 'success' ? 'is-success' : 'is-error' ?>">
-        <?= $h($flash['message']) ?>
-    </div>
+        <div class="financial-flash <?= $flash['type'] === 'success' ? 'is-success' : 'is-error' ?>">
+            <?= $h($flash['message']) ?>
+        </div>
     <?php endif; ?>
 
     <!-- ═══ خلاصه ═══ -->
@@ -612,9 +693,16 @@ ob_start();
         </form>
         <nav class="financial-filters">
             <?php
-            $filters = ['' => 'همه', 'pending' => 'در انتظار بررسی', 'paid' => 'پرداخت کامل',
-                        'partial' => 'پرداخت قسمتی', 'settled' => 'تسویه',
-                        'debtor' => 'بدهکار', 'creditor' => 'بستانکار', 'rejected' => 'رد شده'];
+            $filters = [
+                '' => 'همه',
+                'pending' => 'در انتظار بررسی',
+                'paid' => 'پرداخت کامل',
+                'partial' => 'پرداخت قسمتی',
+                'settled' => 'تسویه',
+                'debtor' => 'بدهکار',
+                'creditor' => 'بستانکار',
+                'rejected' => 'رد شده'
+            ];
             foreach ($filters as $key => $label):
                 $url = '/admin/payments';
                 $qs = [];
@@ -622,7 +710,7 @@ ob_start();
                 if ($search !== '') $qs['q'] = $search;
                 if ($qs) $url .= '?' . http_build_query($qs);
             ?>
-            <a href="<?= $h($url) ?>" class="<?= $filter === $key ? 'is-active' : '' ?>"><?= $h($label) ?></a>
+                <a href="<?= $h($url) ?>" class="<?= $filter === $key ? 'is-active' : '' ?>"><?= $h($label) ?></a>
             <?php endforeach; ?>
         </nav>
     </section>
@@ -638,229 +726,234 @@ ob_start();
         </div>
 
         <?php if (!$invoices): ?>
-        <div class="financial-empty">
-            <div class="financial-empty-icon">◌</div>
-            <h3>موردی پیدا نشد</h3>
-            <p>با فیلتر یا جستجوی فعلی، فاکتوری وجود ندارد.</p>
-        </div>
+            <div class="financial-empty">
+                <div class="financial-empty-icon">◌</div>
+                <h3>موردی پیدا نشد</h3>
+                <p>با فیلتر یا جستجوی فعلی، فاکتوری وجود ندارد.</p>
+            </div>
         <?php else: ?>
 
-        <?php foreach ($invoices as $invoice):
-            $invoiceId     = (int)$invoice['id'];
-            $invoiceTotal  = (int)$invoice['total'];
-            $claimedTotal  = (int)$invoice['claimed_total'];
-            $verifiedTotal = (int)$invoice['verified_total'];
-            $pendingClaimed= (int)$invoice['pending_claimed_total'];
-            $pendingCount  = (int)$invoice['pending_count'];
-            $rejectedCount = (int)$invoice['rejected_count'];
+            <?php foreach ($invoices as $invoice):
+                $invoiceId     = (int)$invoice['id'];
+                $invoiceTotal  = (int)$invoice['total'];
+                $claimedTotal  = (int)$invoice['claimed_total'];
+                $verifiedTotal = (int)$invoice['verified_total'];
+                $pendingClaimed = (int)$invoice['pending_claimed_total'];
+                $pendingCount  = (int)$invoice['pending_count'];
+                $rejectedCount = (int)$invoice['rejected_count'];
 
-            $paymentProgress = ($invoiceTotal > 0)
-                ? min(100, (int)round(($verifiedTotal / $invoiceTotal) * 100)) : 0;
+                $paymentProgress = ($invoiceTotal > 0)
+                    ? min(100, (int)round(($verifiedTotal / $invoiceTotal) * 100)) : 0;
 
-            /* اختلاف — فقط بعد از بررسی */
-            $diffLabel = '—';
-            $diffClass = 'is-muted';
-            if ($pendingCount === 0 && $verifiedTotal !== $claimedTotal) {
-                $diff = $verifiedTotal - $claimedTotal;
-                $diffLabel = number_format($diff) . ' تومان';
-                $diffClass = $diff < 0 ? 'is-danger' : 'is-success';
-            }
+                /* اختلاف — فقط بعد از بررسی */
+                $diffLabel = '—';
+                $diffClass = 'is-muted';
+                if ($pendingCount === 0 && $verifiedTotal !== $claimedTotal) {
+                    $diff = $verifiedTotal - $claimedTotal;
+                    $diffLabel = number_format($diff) . ' تومان';
+                    $diffClass = $diff < 0 ? 'is-danger' : 'is-success';
+                }
 
-            /* پرداخت‌های این فاکتور */
-            $stmt = $db->prepare("SELECT * FROM payments WHERE invoice_id=? ORDER BY id DESC");
-            $stmt->execute([$invoiceId]);
-            $invPayments = $stmt->fetchAll();
+                /* پرداخت‌های این فاکتور */
+                $stmt = $db->prepare("SELECT * FROM payments WHERE invoice_id=? ORDER BY id DESC");
+                $stmt->execute([$invoiceId]);
+                $invPayments = $stmt->fetchAll();
 
-            /* تاریخچه بررسی */
-            $stmt = $db->prepare("SELECT h.*, u.full_name AS changer FROM payment_verification_history h
+                /* تاریخچه بررسی */
+                $stmt = $db->prepare("SELECT h.*, u.full_name AS changer FROM payment_verification_history h
                                   LEFT JOIN users u ON u.id = h.changed_by
                                   WHERE h.invoice_id=? ORDER BY h.id DESC LIMIT 10");
-            $stmt->execute([$invoiceId]);
-            $history = $stmt->fetchAll();
+                $stmt->execute([$invoiceId]);
+                $history = $stmt->fetchAll();
 
-            $creditorRemaining = 0;
-            if (($invoice['reconciliation_type'] ?? '') === 'creditor') {
-                $creditorRemaining = max(0, (int)$invoice['reconciliation_amount'] - 0);
-            }
-        ?>
+                $creditorRemaining = 0;
+                if (($invoice['reconciliation_type'] ?? '') === 'creditor') {
+                    $creditorRemaining = max(0, (int)$invoice['reconciliation_amount'] - 0);
+                }
+            ?>
 
-        <article class="financial-invoice-card" data-invoice="<?= $invoiceId ?>">
+                <article class="financial-invoice-card" data-invoice="<?= $invoiceId ?>">
 
-            <!-- سر کارت -->
-            <div class="fic-head">
-                <div>
-                    <b dir="ltr" class="fic-inv"><?= $h($invoice['invoice_number']) ?></b>
-                    <small dir="ltr">سفارش: <?= $h($invoice['order_number']) ?></small>
-                </div>
-                <div class="fic-customer">
-                    <b><?= $h($invoice['full_name']) ?></b>
-                    <small><?= $h($invoice['company_name'] ?: '') ?> · <span dir="ltr"><?= $h($invoice['mobile']) ?></span></small>
-                </div>
-                <div class="fic-date"><?= $h(formatDateTime($invoice['issued_at'])) ?></div>
-            </div>
-
-            <!-- ⭐ بلوک مالی — منطق اصلاح‌شده -->
-            <div class="fin-block">
-                <div class="fin-row">
-                    <span class="fin-k">مبلغ فاکتور</span>
-                    <span class="fin-v b"><?= number_format($invoiceTotal) ?> تومان</span>
-                </div>
-                <div class="fin-row">
-                    <span class="fin-k">ادعای مشتری</span>
-                    <span class="fin-v"><?= number_format($claimedTotal) ?> تومان</span>
-                </div>
-                <div class="fin-row">
-                    <span class="fin-k">تأیید مالی</span>
-                    <span class="fin-v <?= $verifiedTotal > 0 ? '' : 'is-pending' ?>">
-                        <?= $verifiedTotal > 0 ? number_format($verifiedTotal) . ' تومان' : 'در انتظار بررسی' ?>
-                    </span>
-                </div>
-                <div class="fin-row">
-                    <span class="fin-k">اختلاف</span>
-                    <span class="fin-v <?= $diffClass ?>"><?= $diffLabel ?></span>
-                </div>
-                <div class="fin-row fin-state">
-                    <span class="fin-k">وضعیت پرداخت</span>
-                    <?php $payState = invoicePaymentState([
-                        'pending_count' => $pendingCount, 'paid_total' => $verifiedTotal,
-                        'pending_claimed_total' => $pendingClaimed, 'total' => $invoiceTotal,
-                    ]); ?>
-                    <span class="fin-v <?= $payState['class'] ?>"><?= $h($payState['label']) ?></span>
-                </div>
-                <div class="fin-row fin-state">
-                    <span class="fin-k">نتیجه مالی (ثبت ادمین)</span>
-                    <span class="fin-v <?= reconciliationClass($invoice['reconciliation_type'] ?? '') ?>">
-                        <?= $h(reconciliationLabel($invoice['reconciliation_type'] ?? '')) ?>
-                    </span>
-                </div>
-                <div class="fin-row">
-                    <span class="fin-k">مانده فاکتور</span>
-                    <span class="fin-v b"><?= number_format(max(0, $invoiceTotal - $verifiedTotal)) ?> تومان</span>
-                </div>
-            </div>
-
-            <!-- ═══ پرداخت‌ها ═══ -->
-            <div class="fic-payments">
-                <?php foreach ($invPayments as $p): ?>
-                <div class="fic-payment <?= $p['status'] === 'pending' ? 'is-pending-row' : '' ?>">
-                    <div class="fic-payment-info">
-                        <b><?= $h(paymentMethodLabel($p['method'])) ?></b>
-                        <span><?= number_format((int)($p['claimed_amount'] ?? $p['amount'])) ?> تومان
-                            <?= ($p['claimed_amount'] ?? null) !== null && (int)$p['claimed_amount'] !== (int)$p['amount'] ? '' : '' ?>
-                        </span>
-                        <?php if ($p['reference_no']): ?>
-                            <span dir="ltr">پیگیری: <?= $h($p['reference_no']) ?></span>
-                        <?php endif; ?>
-                        <?php if ($p['receipt_path']): ?>
-                            <a href="<?= $h($p['receipt_path']) ?>" target="_blank">🖼 فیش</a>
-                        <?php endif; ?>
-                        <small><?= $h(formatDateTime($p['created_at'])) ?></small>
+                    <!-- سر کارت -->
+                    <div class="fic-head">
+                        <div>
+                            <b dir="ltr" class="fic-inv"><?= $h($invoice['invoice_number']) ?></b>
+                            <small dir="ltr">سفارش: <?= $h($invoice['order_number']) ?></small>
+                        </div>
+                        <div class="fic-customer">
+                            <b><?= $h($invoice['full_name']) ?></b>
+                            <small><?= $h($invoice['company_name'] ?: '') ?> · <span dir="ltr"><?= $h($invoice['mobile']) ?></span></small>
+                        </div>
+                        <div class="fic-date"><?= $h(formatDateTime($invoice['issued_at'])) ?></div>
                     </div>
-                    <span class="st-badge <?= $p['status']==='pending' ? 'st-new' : ($p['status']==='confirmed' ? 'st-converted' : 'st-rejected') ?>">
-                        <?= financialStatusLabel($p['status']) ?>
-                    </span>
 
-                    <?php if ($p['status'] === 'pending'): ?>
-                    <div class="fic-payment-forms">
-                        <form method="post" class="inline-form">
-                            <?= csrf_field() ?>
-                            <input type="hidden" name="action" value="confirm_payment">
-                            <input type="hidden" name="payment_id" value="<?= (int)$p['id'] ?>">
-                            <input type="number" name="verified_amount" dir="ltr"
-                                   value="<?= (int)($p['claimed_amount'] ?? $p['amount']) ?>" min="1" required
-                                   placeholder="مبلغ واقعی">
-                            <input type="text" name="verification_note" placeholder="توضیح مالی (اختیاری)">
-                            <button class="btn btn-orange" style="padding:6px 12px;font-size:.72rem;">✓ تأیید</button>
-                        </form>
-                        <form method="post" class="inline-form" onsubmit="return confirm('رد شود؟');">
-                            <?= csrf_field() ?>
-                            <input type="hidden" name="action" value="reject_payment">
-                            <input type="hidden" name="payment_id" value="<?= (int)$p['id'] ?>">
-                            <input type="text" name="reason" required placeholder="دلیل رد (الزامی)">
-                            <button class="btn" style="padding:6px 12px;font-size:.72rem;background:#fff0f0;color:#c62828;">✗ رد</button>
-                        </form>
+                    <!-- ⭐ بلوک مالی — منطق اصلاح‌شده -->
+                    <div class="fin-block">
+                        <div class="fin-row">
+                            <span class="fin-k">مبلغ فاکتور</span>
+                            <span class="fin-v b"><?= number_format($invoiceTotal) ?> تومان</span>
+                        </div>
+                        <div class="fin-row">
+                            <span class="fin-k">ادعای مشتری</span>
+                            <span class="fin-v"><?= number_format($claimedTotal) ?> تومان</span>
+                        </div>
+                        <div class="fin-row">
+                            <span class="fin-k">تأیید مالی</span>
+                            <span class="fin-v <?= $verifiedTotal > 0 ? '' : 'is-pending' ?>">
+                                <?= $verifiedTotal > 0 ? number_format($verifiedTotal) . ' تومان' : 'در انتظار بررسی' ?>
+                            </span>
+                        </div>
+                        <div class="fin-row">
+                            <span class="fin-k">اختلاف</span>
+                            <span class="fin-v <?= $diffClass ?>"><?= $diffLabel ?></span>
+                        </div>
+                        <div class="fin-row fin-state">
+                            <span class="fin-k">وضعیت پرداخت</span>
+                            <?php $payState = invoicePaymentState([
+                                'pending_count' => $pendingCount,
+                                'paid_total' => $verifiedTotal,
+                                'pending_claimed_total' => $pendingClaimed,
+                                'total' => $invoiceTotal,
+                            ]); ?>
+                            <span class="fin-v <?= $payState['class'] ?>"><?= $h($payState['label']) ?></span>
+                        </div>
+                        <div class="fin-row fin-state">
+                            <span class="fin-k">نتیجه مالی (ثبت ادمین)</span>
+                            <span class="fin-v <?= reconciliationClass($invoice['reconciliation_type'] ?? '') ?>">
+                                <?= $h(reconciliationLabel($invoice['reconciliation_type'] ?? '')) ?>
+                            </span>
+                        </div>
+                        <div class="fin-row">
+                            <span class="fin-k">مانده فاکتور</span>
+                            <span class="fin-v b"><?= number_format(max(0, $invoiceTotal - $verifiedTotal)) ?> تومان</span>
+                        </div>
                     </div>
-                    <?php elseif ($p['status'] === 'confirmed'): ?>
-                    <details class="fic-adjust">
-                        <summary>✏️ اصلاح مبلغ تأییدشده</summary>
-                        <form method="post" class="inline-form">
-                            <?= csrf_field() ?>
-                            <input type="hidden" name="action" value="adjust_payment">
-                            <input type="hidden" name="payment_id" value="<?= (int)$p['id'] ?>">
-                            <input type="number" name="verified_amount" dir="ltr"
-                                   value="<?= (int)($p['verified_amount'] ?? 0) ?>" min="1" required>
-                            <input type="text" name="reason" required placeholder="دلیل اصلاح (الزامی)">
-                            <button class="btn" style="padding:6px 12px;font-size:.72rem;background:var(--teal-100);color:var(--teal-800);">ثبت اصلاح</button>
-                        </form>
-                    </details>
+
+                    <!-- ═══ پرداخت‌ها ═══ -->
+                    <div class="fic-payments">
+                        <?php foreach ($invPayments as $p): ?>
+                            <div class="fic-payment <?= $p['status'] === 'pending' ? 'is-pending-row' : '' ?>">
+                                <div class="fic-payment-info">
+                                    <b><?= $h(paymentMethodLabel($p['method'])) ?></b>
+                                    <span><?= number_format((int)($p['claimed_amount'] ?? $p['amount'])) ?> تومان
+                                        <?= ($p['claimed_amount'] ?? null) !== null && (int)$p['claimed_amount'] !== (int)$p['amount'] ? '' : '' ?>
+                                    </span>
+                                    <?php if ($p['reference_no']): ?>
+                                        <span dir="ltr">پیگیری: <?= $h($p['reference_no']) ?></span>
+                                    <?php endif; ?>
+                                    <?php if ($p['receipt_path']): ?>
+                                        <a href="<?= $h($p['receipt_path']) ?>" target="_blank">🖼 فیش</a>
+                                    <?php endif; ?>
+                                    <small><?= $h(formatDateTime($p['created_at'])) ?></small>
+                                </div>
+                                <span class="st-badge <?= $p['status'] === 'pending' ? 'st-new' : ($p['status'] === 'confirmed' ? 'st-converted' : 'st-rejected') ?>">
+                                    <?= financialStatusLabel($p['status']) ?>
+                                </span>
+
+                                <?php if ($p['status'] === 'pending'): ?>
+                                    <div class="fic-payment-forms">
+                                        <form method="post" class="inline-form">
+                                            <?= csrf_field() ?>
+                                            <input type="hidden" name="action" value="confirm_payment">
+                                            <input type="hidden" name="payment_id" value="<?= (int)$p['id'] ?>">
+                                            <input type="number" name="verified_amount" dir="ltr"
+                                                value="<?= (int)($p['claimed_amount'] ?? $p['amount']) ?>" min="1" required
+                                                placeholder="مبلغ واقعی">
+                                            <input type="text" name="verification_note" placeholder="توضیح مالی (اختیاری)">
+                                            <button class="btn btn-orange" style="padding:6px 12px;font-size:.72rem;">✓ تأیید</button>
+                                        </form>
+                                        <form method="post" class="inline-form" onsubmit="return confirm('رد شود؟');">
+                                            <?= csrf_field() ?>
+                                            <input type="hidden" name="action" value="reject_payment">
+                                            <input type="hidden" name="payment_id" value="<?= (int)$p['id'] ?>">
+                                            <input type="text" name="reason" required placeholder="دلیل رد (الزامی)">
+                                            <button class="btn" style="padding:6px 12px;font-size:.72rem;background:#fff0f0;color:#c62828;">✗ رد</button>
+                                        </form>
+                                    </div>
+                                <?php elseif ($p['status'] === 'confirmed'): ?>
+                                    <details class="fic-adjust">
+                                        <summary>✏️ اصلاح مبلغ تأییدشده</summary>
+                                        <form method="post" class="inline-form">
+                                            <?= csrf_field() ?>
+                                            <input type="hidden" name="action" value="adjust_payment">
+                                            <input type="hidden" name="payment_id" value="<?= (int)$p['id'] ?>">
+                                            <input type="number" name="verified_amount" dir="ltr"
+                                                value="<?= (int)($p['verified_amount'] ?? 0) ?>" min="1" required>
+                                            <input type="text" name="reason" required placeholder="دلیل اصلاح (الزامی)">
+                                            <button class="btn" style="padding:6px 12px;font-size:.72rem;background:var(--teal-100);color:var(--teal-800);">ثبت اصلاح</button>
+                                        </form>
+                                    </details>
+                                <?php endif; ?>
+                            </div>
+                        <?php endforeach; ?>
+                    </div>
+
+                    <!-- ═══ تاریخچه ═══ -->
+                    <?php if ($history): ?>
+                        <details class="fic-history">
+                            <summary>📜 تاریخچه بررسی (<?= count($history) ?>)</summary>
+                            <ul>
+                                <?php foreach ($history as $hh): ?>
+                                    <li>
+                                        <?= $h(formatDateTime($hh['changed_at'])) ?> —
+                                        <?= $h($hh['changer'] ?? '—') ?>:
+                                        <?= number_format((int)($hh['old_amount'] ?? 0)) ?> ←
+                                        <?= number_format((int)($hh['new_amount'] ?? 0)) ?>
+                                        <?= $hh['reason'] ? ' — ' . $h($hh['reason']) : '' ?>
+                                    </li>
+                                <?php endforeach; ?>
+                            </ul>
+                        </details>
                     <?php endif; ?>
-                </div>
-                <?php endforeach; ?>
-            </div>
 
-            <!-- ═══ تاریخچه ═══ -->
-            <?php if ($history): ?>
-            <details class="fic-history">
-                <summary>📜 تاریخچه بررسی (<?= count($history) ?>)</summary>
-                <ul>
-                    <?php foreach ($history as $hh): ?>
-                    <li>
-                        <?= $h(formatDateTime($hh['changed_at'])) ?> —
-                        <?= $h($hh['changer'] ?? '—') ?>:
-                        <?= number_format((int)($hh['old_amount'] ?? 0)) ?> ←
-                        <?= number_format((int)($hh['new_amount'] ?? 0)) ?>
-                        <?= $hh['reason'] ? ' — ' . $h($hh['reason']) : '' ?>
-                    </li>
-                    <?php endforeach; ?>
-                </ul>
-            </details>
-            <?php endif; ?>
+                    <!-- ═══ تسویه بستانکار ═══ -->
+                    <?php if (($invoice['reconciliation_type'] ?? '') === 'creditor'): ?>
+                        <details class="fic-settle">
+                            <summary>💰 تسویه بستانکاری</summary>
+                            <form method="post" class="inline-form">
+                                <?= csrf_field() ?>
+                                <input type="hidden" name="action" value="settle_creditor">
+                                <input type="hidden" name="invoice_id" value="<?= $invoiceId ?>">
+                                <input type="number" name="settlement_amount" dir="ltr" min="1" required placeholder="مبلغ تسویه">
+                                <select name="settlement_method">
+                                    <option value="sheba">شبا</option>
+                                    <option value="card_to_card">کارت به کارت</option>
+                                    <option value="cash">نقدی</option>
+                                </select>
+                                <input type="text" name="settlement_document_no" dir="ltr" placeholder="شماره سند">
+                                <input type="text" name="settlement_reference_no" dir="ltr" placeholder="شماره پیگیری">
+                                <input type="text" name="settlement_description" placeholder="شرح">
+                                <button class="btn btn-orange" style="padding:6px 14px;font-size:.72rem;">ثبت تسویه</button>
+                            </form>
+                        </details>
+                    <?php endif; ?>
 
-            <!-- ═══ تسویه بستانکار ═══ -->
-            <?php if (($invoice['reconciliation_type'] ?? '') === 'creditor'): ?>
-            <details class="fic-settle">
-                <summary>💰 تسویه بستانکاری</summary>
-                <form method="post" class="inline-form">
-                    <?= csrf_field() ?>
-                    <input type="hidden" name="action" value="settle_creditor">
-                    <input type="hidden" name="invoice_id" value="<?= $invoiceId ?>">
-                    <input type="number" name="settlement_amount" dir="ltr" min="1" required placeholder="مبلغ تسویه">
-                    <select name="settlement_method">
-                        <option value="sheba">شبا</option>
-                        <option value="card_to_card">کارت به کارت</option>
-                        <option value="cash">نقدی</option>
-                    </select>
-                    <input type="text" name="settlement_document_no" dir="ltr" placeholder="شماره سند">
-                    <input type="text" name="settlement_reference_no" dir="ltr" placeholder="شماره پیگیری">
-                    <input type="text" name="settlement_description" placeholder="شرح">
-                    <button class="btn btn-orange" style="padding:6px 14px;font-size:.72rem;">ثبت تسویه</button>
-                </form>
-            </details>
-            <?php endif; ?>
+                    <!-- ═══ فاکتور PDF ═══ -->
+                    <div class="fic-links">
+                        <a href="/invoice-print?inv=<?= $h($invoice['invoice_number']) ?>" target="_blank">🧾 فاکتور</a>
+                    </div>
 
-            <!-- ═══ فاکتور PDF ═══ -->
-            <div class="fic-links">
-                <a href="/invoice-print?inv=<?= $h($invoice['invoice_number']) ?>" target="_blank">🧾 فاکتور</a>
-            </div>
-
-        </article>
-        <?php endforeach; ?>
+                </article>
+            <?php endforeach; ?>
     </section>
+<?php endif; ?>
 
-    <!-- ═══ صفحه‌بندی ═══ -->
-    <?php if ($totalPages > 1): ?>
+<!-- ═══ صفحه‌بندی ═══ -->
+<?php if ($totalPages > 1): ?>
     <nav class="financial-pagination">
         <?php for ($i = 1; $i <= $totalPages; $i++):
             $qs = array_filter(['filter' => $filter, 'q' => $search, 'page' => $i]);
         ?>
-        <a href="/admin/payments<?= $qs ? '?' . http_build_query($qs) : '' ?>"
-           class="<?= $i === $page ? 'is-active' : '' ?>"><?= $i ?></a>
+            <a href="/admin/payments<?= $qs ? '?' . http_build_query($qs) : '' ?>"
+                class="<?= $i === $page ? 'is-active' : '' ?>"><?= $i ?></a>
         <?php endfor; ?>
     </nav>
-    <?php endif; ?>
+<?php endif; ?>
 
 </div>
 
 <?php
- $content = ob_get_clean();
-require ROOT_PATH . '/views/layouts/admin.php';
+
+$content = ob_get_clean();
+
+require ROOT_PATH . '/views/layouts/main.php';
