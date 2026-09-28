@@ -13,6 +13,8 @@ if (!is_logged_in()) {
     exit;
 }
 
+$db = db();
+
 $userId = (int)(
     $_SESSION['admin_id']
     ?? $_SESSION['customer_id']
@@ -39,10 +41,60 @@ if ($invoiceNumber === '') {
     exit('فاکتور پیدا نشد.');
 }
 
+
+/*
+|--------------------------------------------------------------------------
+| پیدا کردن ID فاکتور با شماره فاکتور
+|--------------------------------------------------------------------------
+*/
+
+$stmt = $db->prepare("
+    SELECT
+        id,
+        user_id
+    FROM invoices
+    WHERE invoice_number = ?
+    LIMIT 1
+");
+
+$stmt->execute([
+    $invoiceNumber
+]);
+
+$invoiceRow = $stmt->fetch(PDO::FETCH_ASSOC);
+
+if (!$invoiceRow) {
+    http_response_code(404);
+    exit('فاکتور پیدا نشد.');
+}
+
+
+/*
+|--------------------------------------------------------------------------
+| بررسی دسترسی
+|--------------------------------------------------------------------------
+*/
+
+$invoiceOwnerId = (int)($invoiceRow['user_id'] ?? 0);
+
+if (
+    !$isAdmin
+    && $invoiceOwnerId !== $userId
+) {
+    http_response_code(403);
+    exit('دسترسی غیرمجاز.');
+}
+
+
+/*
+|--------------------------------------------------------------------------
+| دریافت کامل فاکتور
+|--------------------------------------------------------------------------
+*/
+
 $invoice = InvoiceService::find(
-    $invoiceNumber,
-    $userId,
-    $isAdmin
+    $db,
+    (int)$invoiceRow['id']
 );
 
 if (!$invoice) {
@@ -50,14 +102,12 @@ if (!$invoice) {
     exit('فاکتور پیدا نشد.');
 }
 
-if (!InvoiceService::authorize(
-    $invoice,
-    $userId,
-    $isAdmin
-)) {
-    http_response_code(403);
-    exit('دسترسی غیرمجاز.');
-}
+
+/*
+|--------------------------------------------------------------------------
+| تولید و دانلود PDF
+|--------------------------------------------------------------------------
+*/
 
 try {
 
@@ -66,13 +116,16 @@ try {
     );
 } catch (Throwable $e) {
 
-    error_log(
-        'Invoice PDF error: ' .
-            $e->getMessage()
-    );
-
     http_response_code(500);
 
+    exit('PDF ERROR: ' .
+        htmlspecialchars(
+            $e->getMessage(),
+            ENT_QUOTES,
+            'UTF-8'
+        ));
+
+    http_response_code(500);
 ?>
     <!doctype html>
     <html lang="fa" dir="rtl">
@@ -85,6 +138,7 @@ try {
         <meta
             name="robots"
             content="noindex, nofollow, noarchive">
+
         <title>خطا در تولید PDF</title>
     </head>
 
@@ -100,8 +154,7 @@ try {
         </h2>
 
         <p>
-            فاکتور پیدا شد، اما سرویس PDF در حال حاضر
-            آماده نیست.
+            فاکتور پیدا شد، اما هنگام تولید فایل PDF خطایی رخ داد.
         </p>
 
         <a

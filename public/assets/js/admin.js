@@ -1,39 +1,67 @@
-const adminSidebar = document.getElementById("adminSidebar");
+(function () {
+  "use strict";
 
-const adminOverlay = document.getElementById("adminOverlay");
+  const sidebar = document.getElementById("adminSidebar");
+  const overlay = document.getElementById("adminOverlay");
+  const burger = document.getElementById("adminBurger");
 
-const adminBurger = document.getElementById("adminBurger");
+  if (!sidebar || !overlay || !burger) {
+    return;
+  }
 
-function openAdminSidebar() {
-  adminSidebar?.classList.add("open");
-  adminOverlay?.classList.add("show");
-  document.body.classList.add("admin-menu-open");
-}
+  function openAdminSidebar() {
+    sidebar.classList.add("open");
+    overlay.classList.add("show");
 
-function closeAdminSidebar() {
-  adminSidebar?.classList.remove("open");
-  adminOverlay?.classList.remove("show");
-  document.body.classList.remove("admin-menu-open");
-}
+    document.body.classList.add("admin-menu-open");
 
-adminBurger?.addEventListener("click", openAdminSidebar);
+    burger.setAttribute("aria-expanded", "true");
+  }
 
-adminOverlay?.addEventListener("click", closeAdminSidebar);
+  function closeAdminSidebar() {
+    sidebar.classList.remove("open");
+    overlay.classList.remove("show");
 
-document.querySelectorAll(".admin-nav-link").forEach((link) => {
-  link.addEventListener("click", () => {
-    closeAdminSidebar();
+    document.body.classList.remove("admin-menu-open");
+
+    burger.setAttribute("aria-expanded", "false");
+  }
+
+  function toggleAdminSidebar() {
+    if (sidebar.classList.contains("open")) {
+      closeAdminSidebar();
+    } else {
+      openAdminSidebar();
+    }
+  }
+
+  burger.addEventListener("click", toggleAdminSidebar);
+
+  overlay.addEventListener("click", closeAdminSidebar);
+
+  document.querySelectorAll(".admin-nav-link").forEach(function (link) {
+    link.addEventListener("click", function () {
+      closeAdminSidebar();
+    });
   });
-});
 
-document.addEventListener("keydown", (event) => {
-  if (event.key === "Escape") {
-    closeAdminSidebar();
-  }
-});
+  document
+    .querySelectorAll(".admin-sidebar-footer-link")
+    .forEach(function (link) {
+      link.addEventListener("click", function () {
+        closeAdminSidebar();
+      });
+    });
 
-window.addEventListener("resize", () => {
-  if (window.innerWidth > 900) {
-    closeAdminSidebar();
-  }
-});
+  document.addEventListener("keydown", function (event) {
+    if (event.key === "Escape") {
+      closeAdminSidebar();
+    }
+  });
+
+  window.addEventListener("resize", function () {
+    if (window.innerWidth > 900) {
+      closeAdminSidebar();
+    }
+  });
+})();

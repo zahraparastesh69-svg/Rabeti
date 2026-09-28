@@ -1,19 +1,35 @@
 <?php
 
+declare(strict_types=1);
+
 require_once __DIR__ . '/../config/bootstrap.php';
 require_once ROOT_PATH . '/config/database.php';
 require_once ROOT_PATH . '/config/auth.php';
 require_once ROOT_PATH . '/app/services/AddressService.php';
 require_once ROOT_PATH . '/app/services/ShippingService.php';
-
-require_once ROOT_PATH . '/app/services/ShippingService.php';
+require_once ROOT_PATH . '/app/services/PricingService.php';
 
 if (!is_logged_in()) {
     header('Location: /');
     exit;
 }
 
-$h = static fn($v) => htmlspecialchars((string)$v, ENT_QUOTES, 'UTF-8');
+/*
+|--------------------------------------------------------------------------
+| Checkout pages must not be indexed
+|--------------------------------------------------------------------------
+|
+| صفحات سبد خرید و Checkout محتوای قابل جستجو برای گوگل ندارند.
+| جلوگیری از ایندکس شدن آنها به تمرکز Crawl Budget روی محصولات و دسته‌ها کمک می‌کند.
+|
+*/
+header('X-Robots-Tag: noindex, nofollow, noarchive', true);
+
+$h = static fn($v) => htmlspecialchars(
+    (string)$v,
+    ENT_QUOTES,
+    'UTF-8'
+);
 
 $userId = (int)(
     $_SESSION['admin_id']
@@ -28,69 +44,124 @@ if ($userId <= 0) {
 
 $db = db();
 
-$addressId = (int)($_SESSION['checkout_address_id'] ?? 0);
-$shipping  = $_SESSION['checkout_shipping'] ?? null;
+/*
+|--------------------------------------------------------------------------
+| Checkout session
+|--------------------------------------------------------------------------
+*/
+
+$addressId = (int)(
+    $_SESSION['checkout_address_id'] ?? 0
+);
+
+$shipping = $_SESSION['checkout_shipping'] ?? null;
 
 $address = $addressId > 0
     ? AddressService::get($userId, $addressId)
     : null;
-
-/*
-|--------------------------------------------------------------------------
-| بررسی اولیه Checkout
-|--------------------------------------------------------------------------
-*/
 
 if (!$address || !is_array($shipping)) {
     header('Location: /checkout-address');
     exit;
 }
 
-$shippingMethod = trim((string)($shipping['method'] ?? ''));
-$shippingSlot   = trim((string)($shipping['slot'] ?? ''));
+$shippingMethod = trim(
+    (string)($shipping['method'] ?? '')
+);
 
-if ($shippingMethod === '' || $shippingSlot === '') {
+$shippingSlot = trim(
+    (string)($shipping['slot'] ?? '')
+);
+
+if ($shippingMethod === '') {
     header('Location: /checkout-shipping');
     exit;
 }
 
-$error = '';
+/*
+|--------------------------------------------------------------------------
+| گزینه‌های ارسال
+|--------------------------------------------------------------------------
+*/
+
+$options = ShippingService::getOptions(
+    (string)$address['province']
+);
+
+if (
+    !isset(
+        $options['methods'][$shippingMethod]
+    )
+) {
+    unset($_SESSION['checkout_shipping']);
+
+    header('Location: /checkout-shipping');
+    exit;
+}
+
+$selectedShippingMethod =
+    $options['methods'][$shippingMethod];
+
+$shippingRequiresSlot =
+    !empty($selectedShippingMethod['days']);
+
+/*
+|--------------------------------------------------------------------------
+| روش‌های بدون Slot
+|--------------------------------------------------------------------------
+|
+| پست شهرستان و تحویل حضوری تاریخ/بازه قابل انتخاب ندارند.
+| بنابراین Slot باید همیشه خالی باشد.
+|
+*/
+
+if (!$shippingRequiresSlot) {
+    $shippingSlot = '';
+}
 
 /*
 |--------------------------------------------------------------------------
 | نام روش ارسال
 |--------------------------------------------------------------------------
-| برای جلوگیری از وابستگی به متغیر $options که در این فایل تعریف نشده بود.
 */
 
 $shippingMethodLabels = [
-    'courier'   => 'پیک',
-    'post'      => 'پست',
-    'pickup'    => 'حضوری',
 
-    'پیک'       => 'پیک',
-    'پست'       => 'پست',
-    'حضوری'     => 'حضوری',
+    'peyk' =>
+    'پیک موتوری',
 
-    'express'   => 'پیک',
-    'postal'    => 'پست',
-    'self'      => 'حضوری',
-    'in_person' => 'حضوری',
+    'post' =>
+    'پست پیشتاز',
+
+    'in_person' =>
+    'تحویل حضوری از کارگاه',
+
 ];
 
 $shippingMethodLabel =
     $shippingMethodLabels[$shippingMethod]
-    ?? trim((string)($shipping['method_label'] ?? ''))
-    ?? $shippingMethod;
+    ?? trim(
+        (string)(
+            $shipping['method_label']
+            ?? $selectedShippingMethod['label']
+            ?? $shippingMethod
+        )
+    );
+
+$error = '';
 
 /*
 |--------------------------------------------------------------------------
-| تابع نام روز فارسی
+| نام روز
 |--------------------------------------------------------------------------
 */
 
-$dayLabelFa = static function (DateTimeInterface $date): string {
+$dayLabelFa = static function (
+    DateTimeInterface $date
+): string {
+
     $days = [
+
         0 => 'یکشنبه',
         1 => 'دوشنبه',
         2 => 'سه‌شنبه',
@@ -98,6 +169,7 @@ $dayLabelFa = static function (DateTimeInterface $date): string {
         4 => 'پنجشنبه',
         5 => 'جمعه',
         6 => 'شنبه',
+
     ];
 
     return $days[(int)$date->format('w')] ?? '';
@@ -105,48 +177,57 @@ $dayLabelFa = static function (DateTimeInterface $date): string {
 
 /*
 |--------------------------------------------------------------------------
-| تبدیل تاریخ میلادی به نمایش فارسی
-|--------------------------------------------------------------------------
-| خود تاریخ در دیتابیس/منطق سیستم میلادی باقی می‌ماند.
-| فقط برای نمایش، نام روز فارسی می‌شود.
+| فرمت تاریخ
 |--------------------------------------------------------------------------
 */
 
-$formatDeliveryDate = static function (?string $date) use ($dayLabelFa): string {
+$formatDeliveryDate = static function (
+    ?string $date
+) use (
+    $dayLabelFa
+): string {
+
     if (!$date) {
         return '';
     }
 
     try {
+
         $dt = new DateTimeImmutable($date);
-        return $dayLabelFa($dt) . ' ' . $dt->format('Y/m/d');
+
+        return
+            $dayLabelFa($dt)
+            . ' '
+            . $dt->format('Y/m/d');
     } catch (Throwable $e) {
+
         return $date;
     }
 };
 
 /*
 |--------------------------------------------------------------------------
-| COMMIT نهایی سفارش
+| ثبت نهایی سفارش
 |--------------------------------------------------------------------------
 */
 
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
     $receiverName = trim(
-        (string)($_POST['receiver_name'] ?? '')
+        (string)(
+            $_POST['receiver_name'] ?? ''
+        )
     );
 
     $receiverMobile = trim(
-        (string)($_POST['receiver_mobile'] ?? '')
+        (string)(
+            $_POST['receiver_mobile'] ?? ''
+        )
     );
 
     /*
-    |--------------------------------------------------------------------------
-    | تبدیل اعداد فارسی موبایل به انگلیسی
-    |--------------------------------------------------------------------------
-    */
-
+     * اعداد فارسی → انگلیسی
+     */
     $receiverMobile = strtr(
         $receiverMobile,
         [
@@ -164,21 +245,31 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     );
 
     /*
-    |--------------------------------------------------------------------------
-    | Validation گیرنده
-    |--------------------------------------------------------------------------
-    */
+     * اعتبارسنجی نام
+     */
+    if (
+        $receiverName !== ''
+        && mb_strlen($receiverName) < 3
+    ) {
 
-    if ($receiverName !== '' && mb_strlen($receiverName) < 3) {
-        $error = 'نام گیرنده را کامل وارد کنید';
+        $error =
+            'نام گیرنده را کامل وارد کنید.';
     }
 
+    /*
+     * اعتبارسنجی موبایل
+     */
     if (
-        !$error &&
-        $receiverMobile !== '' &&
-        !preg_match('/^09\d{9}$/', $receiverMobile)
+        !$error
+        && $receiverMobile !== ''
+        && !preg_match(
+            '/^09\d{9}$/',
+            $receiverMobile
+        )
     ) {
-        $error = 'موبایل گیرنده معتبر نیست';
+
+        $error =
+            'موبایل گیرنده معتبر نیست.';
     }
 
     if (!$error) {
@@ -194,12 +285,12 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             */
 
             $db->beginTransaction();
+
             $transactionStarted = true;
 
             /*
             |--------------------------------------------------------------------------
-            | 1 + 2
-            | قفل سبد کاربر
+            | قفل سبد خرید
             |--------------------------------------------------------------------------
             */
 
@@ -212,81 +303,111 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                     p.base_moq,
                     p.is_active,
                     pr.price,
-                    COALESCE(inv.qty_available, 0) AS stock
+                    COALESCE(
+                        inv.qty_available,
+                        0
+                    ) AS stock
+
                 FROM cart_items ci
+
                 JOIN carts c
                     ON c.id = ci.cart_id
+
                 JOIN products p
                     ON p.id = ci.product_id
+
                 LEFT JOIN product_prices pr
                     ON pr.product_id = p.id
                     AND pr.customer_group = 'wholesale'
                     AND pr.min_qty = 1
+
                 LEFT JOIN inventory inv
                     ON inv.product_id = p.id
+
                 WHERE c.user_id = ?
                   AND c.status = 'active'
+
                 FOR UPDATE
             ");
 
-            $stmt->execute([$userId]);
+            $stmt->execute([
+                $userId
+            ]);
 
             $items = $stmt->fetchAll();
 
             if (!$items) {
-                throw new RuntimeException('سبد شما خالی است');
+
+                throw new RuntimeException(
+                    'سبد شما خالی است.'
+                );
             }
 
             /*
             |--------------------------------------------------------------------------
-            | 3 + 4
-            | اعتبارسنجی اقلام
+            | اعتبارسنجی کالاها
             |--------------------------------------------------------------------------
             */
 
             $subtotal = 0;
+            $discountTotal = 0;
 
-            foreach ($items as $it) {
+            foreach ($items as &$it) {
 
-                if (!(int)$it['is_active']) {
+                $qty = (int)$it['qty'];
+
+                $basePrice = (int)($it['price'] ?? 0);
+
+                if ($basePrice <= 0) {
                     throw new RuntimeException(
-                        'محصول «' . $it['name'] . '» غیرفعال شده است'
+                        'قیمت یکی از محصولات معتبر نیست.'
                     );
                 }
 
-                if ($it['price'] === null) {
-                    throw new RuntimeException(
-                        'قیمت «' . $it['name'] . '» نیاز به استعلام دارد'
+                $pricing =
+                    PricingService::calculateForProduct(
+                        $db,
+                        (int)$it['product_id'],
+                        $basePrice,
+                        $qty
                     );
-                }
 
-                if ((int)$it['qty'] < (int)$it['base_moq']) {
-                    throw new RuntimeException(
-                        'تعداد «' . $it['name'] .
-                            '» کمتر از حداقل سفارش (' .
-                            (int)$it['base_moq'] .
-                            ' جفت) است'
-                    );
-                }
+                $it['base_unit_price'] =
+                    $pricing['base_unit_price'];
 
-                if ((int)$it['stock'] < (int)$it['qty']) {
-                    throw new RuntimeException(
-                        'موجودی «' . $it['name'] .
-                            '» کافی نیست — فقط ' .
-                            number_format((int)$it['stock']) .
-                            ' جفت'
-                    );
-                }
+                $it['unit_price'] =
+                    $pricing['unit_price'];
 
+                $it['discount_percent'] =
+                    $pricing['discount_percent'];
+
+                $it['discount_amount'] =
+                    $pricing['discount_amount'];
+
+                $it['base_line_total'] =
+                    $pricing['base_line_total'];
+
+                $it['line_total'] =
+                    $pricing['line_total'];
+
+                /*
+     * subtotal = مبلغ کالاها قبل از تخفیف
+     */
                 $subtotal +=
-                    (int)$it['price'] *
-                    (int)$it['qty'];
+                    $pricing['base_line_total'];
+
+                /*
+     * مجموع تخفیف کالاها
+     */
+                $discountTotal +=
+                    $pricing['discount_amount'];
             }
+
+            unset($it);
 
             /*
             |--------------------------------------------------------------------------
-            | 5 + 6
-            | بررسی مجدد مالکیت و فعال بودن آدرس
+            | دریافت مجدد آدرس
             |--------------------------------------------------------------------------
             */
 
@@ -296,60 +417,200 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             );
 
             if (!$addr) {
+
                 throw new RuntimeException(
-                    'آدرس ارسال معتبر نیست'
+                    'آدرس ارسال معتبر نیست.'
                 );
             }
 
             /*
             |--------------------------------------------------------------------------
-            | 7 + 8 + 9
-            | اعتبارسنجی قطعی روش و بازه ارسال در Backend
+            | دریافت مجدد تنظیمات ارسال
             |--------------------------------------------------------------------------
+            |
+            | اطلاعات ارسال Session به تنهایی قابل اعتماد نیست.
+            | در لحظه ثبت سفارش دوباره از ShippingService می‌خوانیم.
+            |
             */
 
-            $ship = ShippingService::validateChoice(
-                $addr['province'],
-                $shippingMethod,
-                $shippingSlot,
-                $addressId,
-                $userId
-            );
-
-            if (!is_array($ship)) {
-                throw new RuntimeException(
-                    'اطلاعات ارسال معتبر نیست'
+            $freshShippingOptions =
+                ShippingService::getOptions(
+                    (string)$addr['province']
                 );
-            }
 
             if (
                 !isset(
-                    $ship['method'],
-                    $ship['fee'],
-                    $ship['date'],
-                    $ship['label']
+                    $freshShippingOptions['methods'][$shippingMethod]
                 )
             ) {
+
                 throw new RuntimeException(
-                    'اطلاعات روش ارسال ناقص است'
+                    'روش ارسال انتخاب‌شده دیگر برای این آدرس قابل استفاده نیست. لطفاً روش ارسال را دوباره انتخاب کنید.'
                 );
+            }
+
+            $freshMethod =
+                $freshShippingOptions['methods'][$shippingMethod];
+
+            $freshRequiresSlot =
+                !empty($freshMethod['days']);
+
+            /*
+            |--------------------------------------------------------------------------
+            | جلوگیری از استفاده از Slot قدیمی
+            |--------------------------------------------------------------------------
+            */
+
+            if (!$freshRequiresSlot) {
+
+                $shippingSlot = '';
             }
 
             /*
             |--------------------------------------------------------------------------
-            | 10
-            | رزرو ظرفیت ارسال
+            | اعتبارسنجی ارسال
             |--------------------------------------------------------------------------
             */
 
-            ShippingService::reserveSlot(
-                $shippingSlot
-            );
+            $ship = null;
+
+            if ($freshRequiresSlot) {
+
+                /*
+                 * روش‌هایی که Slot واقعی دارند:
+                 * پیک تهران / پست تهران
+                 */
+
+                if ($shippingSlot === '') {
+
+                    throw new RuntimeException(
+                        'تاریخ و زمان ارسال انتخاب نشده است.'
+                    );
+                }
+
+                $ship =
+                    ShippingService::validateChoice(
+                        $addr['province'],
+                        $shippingMethod,
+                        $shippingSlot,
+                        $addressId,
+                        $userId
+                    );
+
+                if (!is_array($ship)) {
+
+                    throw new RuntimeException(
+                        'اطلاعات ارسال معتبر نیست.'
+                    );
+                }
+
+                /*
+                 * رزرو ظرفیت فقط برای Slot واقعی
+                 */
+                ShippingService::reserveSlot(
+                    $shippingSlot
+                );
+            } else {
+
+                /*
+                |--------------------------------------------------------------------------
+                | روش‌های بدون Slot
+                |--------------------------------------------------------------------------
+                |
+                | نکته مهم:
+                | delivery_date در دیتابیس NOT NULL است.
+                |
+                | بنابراین NULL ارسال نمی‌کنیم.
+                |
+                | برای روش بدون Slot، تاریخ ثبت سفارش به‌عنوان
+                | تاریخ پردازش/ارسال Snapshot می‌شود و
+                | بازه واقعی در slot_label ذخیره می‌شود.
+                |
+                */
+
+                $noSlotDate =
+                    date('Y-m-d');
+
+                $noSlotLabel =
+                    trim(
+                        (string)(
+                            $freshMethod['estimate']
+                            ?? ''
+                        )
+                    );
+
+                if ($noSlotLabel === '') {
+
+                    $noSlotLabel =
+                        trim(
+                            (string)(
+                                $freshMethod['label']
+                                ?? 'بدون نیاز به انتخاب تاریخ و ساعت'
+                            )
+                        );
+                }
+
+                $ship = [
+
+                    'method' =>
+                    $shippingMethod,
+
+                    'date' =>
+                    $noSlotDate,
+
+                    'label' =>
+                    $noSlotLabel,
+
+                    'fee' =>
+                    (int)(
+                        $freshMethod['fee']
+                        ?? 0
+                    ),
+
+                ];
+            }
 
             /*
             |--------------------------------------------------------------------------
-            | 11
-            | پیدا کردن شرکت مشتری
+            | کنترل نهایی ساختار Ship
+            |--------------------------------------------------------------------------
+            */
+
+            if (
+                !is_array($ship)
+                || empty($ship['method'])
+            ) {
+
+                throw new RuntimeException(
+                    'اطلاعات ارسال ناقص است.'
+                );
+            }
+
+            /*
+            | delivery_date نباید هیچ‌وقت NULL باشد.
+            */
+            $deliveryDate =
+                trim(
+                    (string)(
+                        $ship['date']
+                        ?? ''
+                    )
+                );
+
+            if ($deliveryDate === '') {
+
+                /*
+                 * Fail-safe:
+                 * حتی اگر ShippingService در آینده مقدار خالی برگرداند،
+                 * ثبت سفارش با NULL متوقف نمی‌شود.
+                 */
+                $deliveryDate =
+                    date('Y-m-d');
+            }
+
+            /*
+            |--------------------------------------------------------------------------
+            | شرکت مشتری
             |--------------------------------------------------------------------------
             */
 
@@ -360,17 +621,21 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 LIMIT 1
             ");
 
-            $stmt->execute([$userId]);
+            $stmt->execute([
+                $userId
+            ]);
 
-            $companyId = $stmt->fetchColumn();
+            $companyId =
+                $stmt->fetchColumn();
 
-            $companyId = $companyId !== false
+            $companyId =
+                $companyId !== false
                 ? (int)$companyId
                 : null;
 
             /*
             |--------------------------------------------------------------------------
-            | تعیین اطلاعات نهایی گیرنده
+            | گیرنده نهایی
             |--------------------------------------------------------------------------
             */
 
@@ -389,7 +654,9 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 : (
                     !empty($addr['receiver_mobile'])
                     ? $addr['receiver_mobile']
-                    : (string)($_SESSION['customer_mobile'] ?? '')
+                    : (string)(
+                        $_SESSION['customer_mobile'] ?? ''
+                    )
                 );
 
             /*
@@ -399,11 +666,14 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             */
 
             $orderNumber =
-                'ORD-' .
-                date('ymd') .
-                '-' .
-                str_pad(
-                    (string)random_int(0, 9999),
+                'ORD-'
+                . date('ymd')
+                . '-'
+                . str_pad(
+                    (string)random_int(
+                        0,
+                        9999
+                    ),
                     4,
                     '0',
                     STR_PAD_LEFT
@@ -411,165 +681,282 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
             /*
             |--------------------------------------------------------------------------
-            | مبلغ نهایی
+            | مبلغ
             |--------------------------------------------------------------------------
             */
 
-            $shippingFee = (int)$ship['fee'];
+            $shippingFee =
+                (int)(
+                    $ship['fee']
+                    ?? 0
+                );
 
-            $total = $subtotal + $shippingFee;
+            $finalSubtotal =
+                max(
+                    0,
+                    $subtotal - $discountTotal
+                );
 
+            $total =
+                $finalSubtotal
+                +
+                $shippingFee;
             /*
-            |--------------------------------------------------------------------------
-            | 11
-            | ثبت سفارش + Snapshot آدرس
-            |--------------------------------------------------------------------------
-            */
+|--------------------------------------------------------------------------
+| ثبت سفارش
+|--------------------------------------------------------------------------
+*/
 
-            $db->prepare("
-                INSERT INTO orders
-                    (
-                        order_number,
-                        user_id,
-                        company_id,
-                        subtotal,
-                        shipping_fee,
-                        total,
-                        shipping_name,
-                        shipping_mobile,
-                        shipping_province,
-                        shipping_city,
-                        shipping_address,
-                        shipping_postal
-                    )
-                VALUES
-                    (?,?,?,?,?,?,?,?,?,?,?,?)
-            ")->execute([
+            $insOrder = $db->prepare("
+    INSERT INTO orders
+    (
+        order_number,
+        user_id,
+        company_id,
+        status,
+        subtotal,
+        discount_total,
+        shipping_fee,
+        total,
+        shipping_name,
+        shipping_mobile,
+        shipping_province,
+        shipping_city,
+        shipping_address,
+        shipping_postal
+    )
+    VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?)
+");
+
+            $insOrder->execute([
+
                 $orderNumber,
                 $userId,
                 $companyId,
+                'pending_review',
+
+                /*
+     * subtotal = مبلغ کالاها قبل از تخفیف
+     */
                 $subtotal,
+
+                /*
+     * مجموع تخفیف کالاها
+     */
+                $discountTotal,
+
+                /*
+     * هزینه ارسال
+     */
                 $shippingFee,
+
+                /*
+     * مبلغ نهایی:
+     * قیمت کالاها بعد از تخفیف + ارسال
+     */
                 $total,
+
                 $finalReceiverName,
                 $finalReceiverMobile,
                 $addr['province'],
                 $addr['city'],
                 $addr['address'],
                 $addr['postal_code']
+
             ]);
 
-            $orderId = (int)$db->lastInsertId();
+            $orderId =
+                (int)$db->lastInsertId();
+
 
             /*
-            |--------------------------------------------------------------------------
-            | ثبت اقلام سفارش
-            |--------------------------------------------------------------------------
-            */
+|--------------------------------------------------------------------------
+| ثبت اقلام سفارش
+|--------------------------------------------------------------------------
+*/
 
             $insItem = $db->prepare("
-                INSERT INTO order_items
-                    (
-                        order_id,
-                        product_id,
-                        product_code,
-                        product_name,
-                        qty,
-                        unit_price,
-                        line_total
-                    )
-                VALUES (?,?,?,?,?,?,?)
-            ");
-
-            /*
-            |--------------------------------------------------------------------------
-            | کاهش موجودی
-            |--------------------------------------------------------------------------
-            */
-
-            $cutStock = $db->prepare("
-                UPDATE inventory
-                SET qty_available = qty_available - ?
-                WHERE product_id = ?
-                  AND qty_available >= ?
-            ");
+    INSERT INTO order_items
+    (
+        order_id,
+        product_id,
+        product_code,
+        product_name,
+        qty,
+        base_unit_price,
+        discount_percent,
+        discount_amount,
+        unit_price,
+        line_total
+    )
+    VALUES (?,?,?,?,?,?,?,?,?,?)
+");
 
             foreach ($items as $it) {
 
-                $qty = (int)$it['qty'];
-                $unitPrice = (int)$it['price'];
-                $lineTotal = $unitPrice * $qty;
+                $qty =
+                    (int)$it['qty'];
+
+                $baseUnitPrice =
+                    (int)$it['base_unit_price'];
+
+                $discountPercent =
+                    (float)$it['discount_percent'];
+
+                $discountAmount =
+                    (int)$it['discount_amount'];
+
+                $unitPrice =
+                    (int)$it['unit_price'];
+
+                $lineTotal =
+                    (int)$it['line_total'];
 
                 $insItem->execute([
+
                     $orderId,
+
                     (int)$it['product_id'],
+
                     $it['code'],
+
                     $it['name'],
+
                     $qty,
+
+                    $baseUnitPrice,
+
+                    $discountPercent,
+
+                    $discountAmount,
+
                     $unitPrice,
+
                     $lineTotal
+
                 ]);
-
-                $cutStock->execute([
-                    $qty,
-                    (int)$it['product_id'],
-                    $qty
-                ]);
-
-                /*
-                |--------------------------------------------------------------------------
-                | کنترل نهایی کاهش موجودی
-                |--------------------------------------------------------------------------
-                */
-
-                if ($cutStock->rowCount() !== 1) {
-                    throw new RuntimeException(
-                        'موجودی محصول «' .
-                            $it['name'] .
-                            '» در لحظه ثبت سفارش تغییر کرده است. لطفاً دوباره تلاش کنید.'
-                    );
-                }
             }
 
             /*
+          /*
+|--------------------------------------------------------------------------
+| کاهش موجودی
+|--------------------------------------------------------------------------
+*/
+
+            $cutStock = $db->prepare("
+    UPDATE inventory
+
+    SET qty_available =
+        qty_available - ?
+
+    WHERE product_id = ?
+
+      AND qty_available >= ?
+");
+
+
+            foreach ($items as $it) {
+
+                $qty =
+                    (int)$it['qty'];
+
+                /*
+     * قیمت‌ها قبلاً توسط PricingService
+     * محاسبه و داخل $items ذخیره شده‌اند.
+     */
+
+
+                /*
+     * کاهش موجودی
+     */
+                $cutStock->execute([
+
+                    $qty,
+
+                    (int)$it['product_id'],
+
+                    $qty
+
+                ]);
+
+
+                /*
+     * اگر موجودی کافی نباشد،
+     * کل Transaction باید Rollback شود.
+     */
+                if (
+                    $cutStock->rowCount()
+                    !== 1
+                ) {
+
+                    throw new RuntimeException(
+                        'موجودی محصول «'
+                            . $it['name']
+                            . '» در لحظه ثبت سفارش تغییر کرده است. لطفاً دوباره تلاش کنید.'
+                    );
+                }
+            }
+            /*
             |--------------------------------------------------------------------------
-            | Snapshot ارسال + آدرس
+            | Snapshot ارسال
             |--------------------------------------------------------------------------
             */
 
+            $shipmentLabel =
+                trim(
+                    (string)(
+                        $ship['label']
+                        ?? ''
+                    )
+                );
+
+            if ($shipmentLabel === '') {
+
+                $shipmentLabel =
+                    trim(
+                        (string)(
+                            $freshMethod['estimate']
+                            ?? $freshMethod['label']
+                            ?? 'روش ارسال'
+                        )
+                    );
+            }
+
             $db->prepare("
                 INSERT INTO order_shipments
-                    (
-                        order_id,
-                        method,
-                        fee,
-                        delivery_date,
-                        slot_label,
-                        ship_name,
-                        ship_mobile,
-                        ship_province,
-                        ship_city,
-                        ship_address,
-                        ship_postal
-                    )
+                (
+                    order_id,
+                    method,
+                    fee,
+                    delivery_date,
+                    slot_label,
+                    ship_name,
+                    ship_mobile,
+                    ship_province,
+                    ship_city,
+                    ship_address,
+                    ship_postal
+                )
                 VALUES (?,?,?,?,?,?,?,?,?,?,?)
             ")->execute([
+
                 $orderId,
                 $ship['method'],
                 $shippingFee,
-                $ship['date'],
-                $ship['label'],
+                $deliveryDate,
+                $shipmentLabel,
                 $finalReceiverName,
                 $finalReceiverMobile,
                 $addr['province'],
                 $addr['city'],
                 $addr['address'],
                 $addr['postal_code']
+
             ]);
 
             /*
             |--------------------------------------------------------------------------
-            | 13
             | تبدیل سبد به سفارش
             |--------------------------------------------------------------------------
             */
@@ -592,8 +979,10 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             $db->prepare("
                 DELETE ci
                 FROM cart_items ci
+
                 JOIN carts c
                     ON c.id = ci.cart_id
+
                 WHERE c.user_id = ?
             ")->execute([
                 $userId
@@ -601,16 +990,19 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
             /*
             |--------------------------------------------------------------------------
-            | ایجاد فاکتور
+            | Invoice
             |--------------------------------------------------------------------------
             */
 
             $invNum =
-                'INV-' .
-                date('ymd') .
-                '-' .
-                str_pad(
-                    (string)random_int(0, 9999),
+                'INV-'
+                . date('ymd')
+                . '-'
+                . str_pad(
+                    (string)random_int(
+                        0,
+                        9999
+                    ),
                     4,
                     '0',
                     STR_PAD_LEFT
@@ -618,18 +1010,20 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
             $db->prepare("
                 INSERT INTO invoices
-                    (
-                        invoice_number,
-                        order_id,
-                        user_id,
-                        total
-                    )
+                (
+                    invoice_number,
+                    order_id,
+                    user_id,
+                    total
+                )
                 VALUES (?,?,?,?)
             ")->execute([
+
                 $invNum,
                 $orderId,
                 $userId,
                 $total
+
             ]);
 
             /*
@@ -640,19 +1034,22 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
             $db->prepare("
                 INSERT INTO audit_logs
-                    (
-                        user_id,
-                        action,
-                        entity,
-                        entity_id,
-                        ip
-                    )
+                (
+                    user_id,
+                    action,
+                    entity,
+                    entity_id,
+                    ip
+                )
                 VALUES
-                    (?, 'order.create', 'order', ?, ?)
+                (?, 'order.create', 'order', ?, ?)
             ")->execute([
+
                 $userId,
                 $orderId,
-                $_SERVER['REMOTE_ADDR'] ?? '0.0.0.0'
+                $_SERVER['REMOTE_ADDR']
+                    ?? '0.0.0.0'
+
             ]);
 
             /*
@@ -662,11 +1059,12 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             */
 
             $db->commit();
+
             $transactionStarted = false;
 
             /*
             |--------------------------------------------------------------------------
-            | پاکسازی Session Checkout
+            | پاک کردن Session Checkout
             |--------------------------------------------------------------------------
             */
 
@@ -682,146 +1080,281 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             */
 
             header(
-                'Location: /payment?order=' .
-                    urlencode($orderNumber)
+                'Location: /payment?order='
+                    . urlencode($orderNumber)
             );
 
             exit;
         } catch (RuntimeException $e) {
 
-            if ($transactionStarted && $db->inTransaction()) {
+            if (
+                $transactionStarted
+                && $db->inTransaction()
+            ) {
+
                 $db->rollBack();
             }
 
-            $error = $e->getMessage();
-
-            /*
-            |--------------------------------------------------------------------------
-            | اگر خطا مربوط به بازه ارسال باشد
-            |--------------------------------------------------------------------------
-            */
-
-            if (mb_strpos($error, 'بازه') !== false) {
-
-                header(
-                    'Location: /checkout-shipping?error=' .
-                        urlencode($error)
-                );
-
-                exit;
-            }
+            $error =
+                $e->getMessage();
         } catch (Throwable $e) {
 
-            if ($transactionStarted && $db->inTransaction()) {
+            if (
+                $transactionStarted
+                && $db->inTransaction()
+            ) {
+
                 $db->rollBack();
             }
 
             error_log(
-                'CHECKOUT COMMIT ERROR: ' .
-                    $e->getMessage()
+                'CHECKOUT COMMIT ERROR: '
+                    . $e->getMessage()
             );
 
             $error =
-                'خطای سرور در ثبت سفارش — دوباره تلاش کنید';
+                'خطایی در ثبت سفارش رخ داد. لطفاً دوباره تلاش کنید.';
         }
     }
 }
 
 /*
 |--------------------------------------------------------------------------
-| نمایش خلاصه سفارش
+| اقلام برای نمایش Review
 |--------------------------------------------------------------------------
 */
 
 $stmt = $db->prepare("
     SELECT
-        ci.qty,
-        p.code,
-        p.name,
-        pr.price
+       
+    ci.qty,
+    p.id AS product_id,
+    p.code,
+    p.name,
+    pr.price
+
     FROM cart_items ci
+
     JOIN carts c
         ON c.id = ci.cart_id
+
     JOIN products p
         ON p.id = ci.product_id
+
     LEFT JOIN product_prices pr
         ON pr.product_id = p.id
         AND pr.customer_group = 'wholesale'
         AND pr.min_qty = 1
+
     WHERE c.user_id = ?
       AND c.status = 'active'
 ");
 
-$stmt->execute([$userId]);
+$stmt->execute([
+    $userId
+]);
 
 $items = $stmt->fetchAll();
 
-if (!$items && !$error) {
+if (
+    !$items
+    && !$error
+) {
+
     header('Location: /cart');
     exit;
 }
 
 /*
 |--------------------------------------------------------------------------
-| محاسبه مبالغ برای نمایش
+| محاسبه مبلغ نمایش
 |--------------------------------------------------------------------------
 */
 
 $subtotal = 0;
+$discountTotal = 0;
 
-foreach ($items as $it) {
-    $subtotal +=
-        (int)($it['price'] ?? 0) *
+foreach ($items as &$it) {
+
+    $qty =
         (int)$it['qty'];
+
+    $basePrice =
+        (int)($it['price'] ?? 0);
+
+    if ($basePrice <= 0) {
+        continue;
+    }
+
+    $pricing =
+        PricingService::calculateForProduct(
+            $db,
+            (int)$it['product_id'],
+            $basePrice,
+            $qty
+        );
+
+    $it['base_unit_price'] =
+        $pricing['base_unit_price'];
+
+    $it['unit_price'] =
+        $pricing['unit_price'];
+
+    $it['discount_percent'] =
+        $pricing['discount_percent'];
+
+    $it['discount_amount'] =
+        $pricing['discount_amount'];
+
+    $it['base_line_total'] =
+        $pricing['base_line_total'];
+
+    $it['line_total'] =
+        $pricing['line_total'];
+
+    /*
+     * جمع کالاها قبل از تخفیف
+     */
+    $subtotal +=
+        $pricing['base_line_total'];
+
+    /*
+     * مجموع تخفیف
+     */
+    $discountTotal +=
+        $pricing['discount_amount'];
 }
 
+unset($it);
+
+$finalSubtotal =
+    max(
+        0,
+        $subtotal - $discountTotal
+    );
+
 $shippingFeeDisplay =
-    (int)($shipping['fee'] ?? 0);
+    (int)(
+        $shipping['fee']
+        ??
+        $selectedShippingMethod['fee']
+        ??
+        0
+    );
 
 $total =
-    $subtotal +
+    $finalSubtotal
+    +
     $shippingFeeDisplay;
-
 /*
 |--------------------------------------------------------------------------
-| اطلاعات بازه ارسال
+| اطلاعات تاریخ / Slot
 |--------------------------------------------------------------------------
 */
 
-$slotParts = explode('|', $shippingSlot);
+$shipDate = '';
+$shipTimeLabel = '';
 
-$shipDate = $slotParts[0] ?? '';
-$shipRange = $slotParts[1] ?? '';
-$shipTimeLabel = $slotParts[2] ?? '';
+if ($shippingSlot !== '') {
 
-/*
-|--------------------------------------------------------------------------
-| اگر label زمان در Session نبود،
-| از label سرویس ارسال استفاده می‌کنیم.
-|--------------------------------------------------------------------------
-*/
+    $slotParts =
+        explode(
+            '|',
+            $shippingSlot,
+            3
+        );
 
-if ($shipTimeLabel === '') {
+    /*
+     * ساختار Slot فعلی پروژه:
+     * بخش دوم = تاریخ
+     * بخش سوم = عنوان بازه
+     */
+    $shipDate =
+        $slotParts[1] ?? '';
+
     $shipTimeLabel =
-        trim((string)($shipping['label'] ?? ''));
+        $slotParts[2] ?? '';
+}
+
+/*
+|--------------------------------------------------------------------------
+| روش‌های بدون Slot
+|--------------------------------------------------------------------------
+*/
+
+if ($shippingSlot === '') {
+
+    $shipDate = '';
+
+    $shipTimeLabel =
+        trim(
+            (string)(
+                $shipping['estimate']
+                ?? $selectedShippingMethod['estimate']
+                ?? ''
+            )
+        );
+
+    if ($shipTimeLabel === '') {
+
+        $shipTimeLabel =
+            'بدون نیاز به انتخاب تاریخ و ساعت';
+    }
 }
 
 $deliveryDateLabel =
-    $formatDeliveryDate($shipDate);
+    $formatDeliveryDate(
+        $shipDate
+    );
 
-$pageTitle = 'خلاصه سفارش | رابطی';
+/*
+|--------------------------------------------------------------------------
+| SEO / Page metadata
+|--------------------------------------------------------------------------
+*/
+
+$pageTitle =
+    'خلاصه سفارش | رابطی';
+
+$activeMenu = '';
 
 ob_start();
 
 ?>
 
+<!-- Checkout pages are transactional and should not be indexed. -->
+<meta
+    name="robots"
+    content="noindex,nofollow,noarchive">
+
 <nav class="breadcrumb">
-    <a href="/">خانه</a> ›
-    <a href="/cart">سبد</a> ›
-    <a href="/checkout-address">آدرس</a> ›
-    <a href="/checkout-shipping">ارسال</a> ›
-    <span>خلاصه</span>
+
+    <a href="/">
+        خانه
+    </a>
+    ›
+
+    <a href="/cart">
+        سبد
+    </a>
+    ›
+
+    <a href="/checkout-address">
+        آدرس
+    </a>
+    ›
+
+    <a href="/checkout-shipping">
+        ارسال
+    </a>
+    ›
+
+    <span>
+        خلاصه
+    </span>
+
 </nav>
+
 
 <section class="catalog-head">
 
@@ -830,22 +1363,30 @@ ob_start();
     </h1>
 
     <p class="catalog-sub">
-        یک بار دیگر مرور کنید و تأیید نهایی
+        یک بار دیگر مرور کنید و تأیید نهایی را انجام دهید.
     </p>
 
 </section>
 
+
 <?php if ($error): ?>
 
-    <div class="form-alert error" style="display:block;">
+    <div
+        class="form-alert error"
+        style="display:block;">
+
         ⚠️ <?= $h($error) ?>
+
     </div>
 
 <?php endif; ?>
 
+
 <div class="review-grid">
 
+
     <div class="review-col">
+
 
         <div class="pd-specs-box">
 
@@ -858,22 +1399,30 @@ ob_start();
                 <div class="cs-row">
 
                     <span>
+
                         <?= $h($it['name']) ?>
 
                         <small>
-                            × <?= (int)$it['qty'] ?>
+                            ×
+                            <?= number_format(
+                                (int)$it['qty']
+                            ) ?>
                         </small>
+
                     </span>
 
                     <b>
+
                         <?=
                         $it['price'] !== null
                             ? number_format(
-                                (int)$it['price'] *
+                                (int)$it['price']
+                                    *
                                     (int)$it['qty']
                             )
                             : '—'
                         ?>
+
                     </b>
 
                 </div>
@@ -881,6 +1430,7 @@ ob_start();
             <?php endforeach; ?>
 
         </div>
+
 
         <div class="pd-specs-box">
 
@@ -890,7 +1440,7 @@ ob_start();
 
             <p class="review-text">
 
-                🏪
+                📍
                 <?= $h($address['label']) ?>
 
                 <br>
@@ -919,6 +1469,7 @@ ob_start();
 
         </div>
 
+
         <div class="pd-specs-box">
 
             <div class="pd-price-title">
@@ -930,10 +1481,14 @@ ob_start();
                 🚚
                 <?= $h($shippingMethodLabel) ?>
 
-                <br>
+                <?php if ($deliveryDateLabel !== ''): ?>
 
-                📅
-                <?= $h($deliveryDateLabel) ?>
+                    <br>
+
+                    📅
+                    <?= $h($deliveryDateLabel) ?>
+
+                <?php endif; ?>
 
                 <br>
 
@@ -952,7 +1507,9 @@ ob_start();
 
     </div>
 
+
     <div class="review-col">
+
 
         <div
             class="cart-summary"
@@ -971,6 +1528,7 @@ ob_start();
 
             </div>
 
+
             <div class="cart-summary-row">
 
                 <span>
@@ -978,11 +1536,14 @@ ob_start();
                 </span>
 
                 <b>
-                    <?= number_format($shippingFeeDisplay) ?>
+                    <?= number_format(
+                        $shippingFeeDisplay
+                    ) ?>
                     تومان
                 </b>
 
             </div>
+
 
             <div class="cart-summary-row total">
 
@@ -997,26 +1558,33 @@ ob_start();
 
             </div>
 
+
             <div
                 class="form-field"
                 style="margin-top:14px;">
 
                 <label>
-                    گیرنده (اختیاری — خالی = خودتان)
+                    گیرنده
+                    (اختیاری — خالی = خودتان)
                 </label>
 
                 <input
                     type="text"
                     name="receiver_name"
                     form="commitForm"
-                    value="<?= $h($_POST['receiver_name'] ?? '') ?>">
+                    value="<?= $h(
+                                $_POST['receiver_name']
+                                    ?? ''
+                            ) ?>">
 
             </div>
+
 
             <div class="form-field">
 
                 <label>
-                    موبایل گیرنده (اختیاری)
+                    موبایل گیرنده
+                    (اختیاری)
                 </label>
 
                 <input
@@ -1024,9 +1592,13 @@ ob_start();
                     name="receiver_mobile"
                     dir="ltr"
                     form="commitForm"
-                    value="<?= $h($_POST['receiver_mobile'] ?? '') ?>">
+                    value="<?= $h(
+                                $_POST['receiver_mobile']
+                                    ?? ''
+                            ) ?>">
 
             </div>
+
 
             <form
                 method="post"
@@ -1035,7 +1607,9 @@ ob_start();
                 <button
                     type="submit"
                     class="btn btn-primary cart-checkout-btn">
+
                     تأیید نهایی و پرداخت ←
+
                 </button>
 
             </form>
@@ -1046,8 +1620,11 @@ ob_start();
 
 </div>
 
+
 <?php
 
-$content = ob_get_clean();
+$content =
+    ob_get_clean();
 
-require ROOT_PATH . '/views/layouts/main.php';
+require ROOT_PATH
+    . '/views/layouts/main.php';

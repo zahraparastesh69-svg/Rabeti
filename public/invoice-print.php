@@ -3,9 +3,58 @@
 declare(strict_types=1);
 
 require_once __DIR__ . '/../config/bootstrap.php';
-require_once ROOT_PATH . '/config/database.php';
-require_once ROOT_PATH . '/config/auth.php';
+require_once __DIR__ . '/../config/database.php';
+require_once __DIR__ . '/../config/auth.php';
 require_once ROOT_PATH . '/app/services/InvoiceService.php';
+
+$db = db();
+
+$h = static fn($v): string =>
+htmlspecialchars((string)$v, ENT_QUOTES, 'UTF-8');
+
+$moneyFa = static function ($amount): string {
+    return number_format((int)$amount) . ' تومان';
+};
+
+$dateTimeFa = static function ($value): string {
+    if (!$value) {
+        return '---';
+    }
+
+    $timestamp = strtotime((string)$value);
+
+    if ($timestamp === false) {
+        return (string)$value;
+    }
+
+    return date('Y/m/d - H:i', $timestamp);
+};
+
+$statusLabel = static function (string $status): string {
+    return match ($status) {
+        'pending'   => 'در انتظار تأیید مالی',
+        'confirmed' => 'تأیید شده',
+        'rejected'  => 'رد شده',
+        default     => 'نامشخص',
+    };
+};
+
+$methodLabel = static function (string $method): string {
+    return match ($method) {
+        'sheba'         => 'انتقال با شبا',
+        'card_to_card'  => 'کارت به کارت',
+        'cash_receipt'  => 'فیش نقدی',
+        'online'        => 'درگاه پرداخت آنلاین',
+        default         => 'پرداخت',
+    };
+};
+
+
+/*
+|--------------------------------------------------------------------------
+| Authentication
+|--------------------------------------------------------------------------
+*/
 
 if (!is_logged_in()) {
     header('Location: /');
@@ -23,113 +72,485 @@ if ($userId <= 0) {
     exit;
 }
 
+
+/*
+|--------------------------------------------------------------------------
+| Invoice lookup
+|--------------------------------------------------------------------------
+*/
+
+$invoiceId     = (int)($_GET['id'] ?? 0);
+$invoiceNumber = trim((string)($_GET['inv'] ?? ''));
+
+$invoice = null;
+
+try {
+    if ($invoiceId > 0) {
+
+        $invoice = InvoiceService::find(
+            $db,
+            $invoiceId
+        );
+    } elseif ($invoiceNumber !== '') {
+
+        $stmt = $db->prepare("
+            SELECT id
+            FROM invoices
+            WHERE invoice_number = ?
+            LIMIT 1
+        ");
+
+        $stmt->execute([
+            $invoiceNumber
+        ]);
+
+        $foundInvoice = $stmt->fetch(PDO::FETCH_ASSOC);
+
+        if ($foundInvoice) {
+            $invoice = InvoiceService::find(
+                $db,
+                (int)$foundInvoice['id']
+            );
+        }
+    }
+} catch (Throwable $e) {
+    $invoice = null;
+}
+
+
+/*
+|--------------------------------------------------------------------------
+| Invoice not found
+|--------------------------------------------------------------------------
+*/
+
+if (!$invoice) {
+
+    http_response_code(404);
+
+    header('X-Robots-Tag: noindex, nofollow, noarchive');
+
+?>
+    <!doctype html>
+    <html lang="fa" dir="rtl">
+
+    <head>
+        <meta charset="utf-8">
+        <meta name="viewport" content="width=device-width, initial-scale=1">
+        <title>فاکتور پیدا نشد | رابطی</title>
+        <link rel="stylesheet" href="assets\css\app.css?v=2">
+    </head>
+
+    <body class="invoice-page invoice-error-page">
+
+        <main class="invoice-error">
+
+            <div class="invoice-error-icon">!</div>
+
+            <h1>فاکتور پیدا نشد</h1>
+
+            <p>
+                فاکتور موردنظر وجود ندارد یا دیگر قابل مشاهده نیست.
+            </p>
+
+            <a
+                href="/account/orders"
+                class="action-btn action-back">
+                بازگشت به سفارش‌ها
+            </a>
+
+        </main>
+
+    </body>
+
+    </html>
+<?php
+
+    exit;
+}
+
+
+/*
+|--------------------------------------------------------------------------
+| Authorization
+|--------------------------------------------------------------------------
+*/
+
 $isAdmin = !empty($_SESSION['admin_id']);
 
-$invoiceNumber = trim(
-    (string)(
-        $_GET['inv']
-        ?? $_GET['invoice']
-        ?? ''
+$invoiceUserId = (int)(
+    $invoice['user_id']
+    ?? $invoice['customer_id']
+    ?? $invoice['order_user_id']
+    ?? 0
+);
+
+if (!$isAdmin && $invoiceUserId !== $userId) {
+
+    http_response_code(403);
+
+    header('X-Robots-Tag: noindex, nofollow, noarchive');
+
+?>
+    <!doctype html>
+    <html lang="fa" dir="rtl">
+
+    <head>
+        <meta charset="utf-8">
+        <meta name="viewport" content="width=device-width, initial-scale=1">
+        <title>دسترسی غیرمجاز | رابطی</title>
+        <link rel="stylesheet" href="/assets/css/invoice.css?v=1">
+    </head>
+
+    <body class="invoice-page invoice-error-page">
+
+        <main class="invoice-error">
+
+            <div class="invoice-error-icon">!</div>
+
+            <h1>دسترسی غیرمجاز</h1>
+
+            <p>
+                شما اجازه مشاهده این فاکتور را ندارید.
+            </p>
+
+            <a
+                href="/account/orders"
+                class="action-btn action-back">
+                بازگشت به سفارش‌ها
+            </a>
+
+        </main>
+
+    </body>
+
+    </html>
+<?php
+
+    exit;
+}
+
+
+/*
+|--------------------------------------------------------------------------
+| IMPORTANT:
+| Read payment history directly from database on every request.
+|--------------------------------------------------------------------------
+*/
+
+$paymentStmt = $db->prepare("
+    SELECT
+        id,
+        method,
+        amount,
+        status,
+        reference_no,
+        receipt_path,
+        admin_note,
+        confirmed_by,
+        confirmed_at,
+        created_at
+    FROM payments
+    WHERE invoice_id = ?
+    ORDER BY created_at ASC, id ASC
+");
+
+$paymentStmt->execute([
+    (int)$invoice['id']
+]);
+
+$payments = $paymentStmt->fetchAll(PDO::FETCH_ASSOC);
+
+
+/*
+|--------------------------------------------------------------------------
+| Payment calculations
+|--------------------------------------------------------------------------
+*/
+
+$confirmedPaidFromPayments = 0;
+$pendingAmount             = 0;
+$rejectedAmount            = 0;
+
+$hasPendingPayment = false;
+
+foreach ($payments as $payment) {
+
+    $amount = max(
+        0,
+        (int)($payment['amount'] ?? 0)
+    );
+
+    $status = (string)(
+        $payment['status'] ?? ''
+    );
+
+    if ($status === 'confirmed') {
+
+        $confirmedPaidFromPayments += $amount;
+    } elseif ($status === 'pending') {
+
+        $pendingAmount += $amount;
+        $hasPendingPayment = true;
+    } elseif ($status === 'rejected') {
+
+        $rejectedAmount += $amount;
+    }
+}
+
+
+/*
+|--------------------------------------------------------------------------
+| Invoice data
+|--------------------------------------------------------------------------
+*/
+
+$items  = $invoice['items'] ?? [];
+$totals = $invoice['totals'] ?? [];
+
+$invoiceNo = (string)(
+    $invoice['invoice_number']
+    ?? $invoice['number']
+    ?? $invoiceNumber
+    ?? '---'
+);
+
+$orderNo = (string)(
+    $invoice['order_number']
+    ?? $invoice['order']['order_number']
+    ?? '---'
+);
+
+$invoiceDate = (string)(
+    $invoice['issued_at']
+    ?? $invoice['created_at']
+    ?? $invoice['invoice_date']
+    ?? $invoice['date']
+    ?? ''
+);
+
+if ($invoiceDate !== '') {
+
+    $timestamp = strtotime($invoiceDate);
+
+    if ($timestamp !== false) {
+        $invoiceDateDisplay = date('Y/m/d', $timestamp);
+    } else {
+        $invoiceDateDisplay = $invoiceDate;
+    }
+} else {
+
+    $invoiceDateDisplay = date('Y/m/d');
+}
+
+
+/*
+|--------------------------------------------------------------------------
+| Customer information
+|--------------------------------------------------------------------------
+*/
+
+$customerName = (string)(
+    $invoice['customer_name']
+    ?? $invoice['shipping_name']
+    ?? $invoice['user_name']
+    ?? '---'
+);
+
+$customerMobile = (string)(
+    $invoice['customer_mobile']
+    ?? $invoice['shipping_mobile']
+    ?? $invoice['mobile']
+    ?? '---'
+);
+
+$customerProvince = (string)(
+    $invoice['shipping_province']
+    ?? $invoice['province']
+    ?? ''
+);
+
+$customerCity = (string)(
+    $invoice['shipping_city']
+    ?? $invoice['city']
+    ?? ''
+);
+
+$customerAddress = (string)(
+    $invoice['shipping_address']
+    ?? $invoice['address']
+    ?? ''
+);
+
+$customerPostal = (string)(
+    $invoice['shipping_postal']
+    ?? $invoice['postal_code']
+    ?? ''
+);
+
+$customerNote = (string)(
+    $invoice['customer_note']
+    ?? $invoice['note']
+    ?? ''
+);
+
+
+/*
+|--------------------------------------------------------------------------
+| Financial totals
+|--------------------------------------------------------------------------
+*/
+
+$subtotal = (int)(
+    $totals['subtotal']
+    ?? $invoice['subtotal']
+    ?? 0
+);
+
+$discount = (int)(
+    $totals['discount']
+    ?? $invoice['discount_total']
+    ?? 0
+);
+
+$afterDiscount = (int)(
+    $totals['after_discount']
+    ?? max(0, $subtotal - $discount)
+);
+
+$shipping = (int)(
+    $totals['shipping']
+    ?? $invoice['shipping_fee']
+    ?? 0
+);
+
+$tax = (int)(
+    $totals['tax']
+    ?? 0
+);
+
+$total = (int)(
+    $totals['total']
+    ?? $invoice['invoice_total']
+    ?? $invoice['total']
+    ?? ($afterDiscount + $shipping + $tax)
+);
+
+
+/*
+|--------------------------------------------------------------------------
+| IMPORTANT:
+| paid_total is the confirmed payment total maintained by finance.
+|
+| We DO NOT add pending payments here.
+| We DO NOT subtract pending payments from remaining.
+|--------------------------------------------------------------------------
+*/
+
+$paid = max(
+    0,
+    (int)(
+        $invoice['paid_total']
+        ?? $totals['paid']
+        ?? $confirmedPaidFromPayments
     )
 );
 
-if ($invoiceNumber === '') {
-    http_response_code(404);
-    exit('فاکتور پیدا نشد.');
-}
-
-$invoice = InvoiceService::find(
-    $invoiceNumber,
-    $userId,
-    $isAdmin
+$paid = min(
+    $paid,
+    max(0, $total)
 );
 
-if (!$invoice) {
-    http_response_code(404);
-    exit('فاکتور پیدا نشد.');
-}
-
-if (!InvoiceService::authorize(
-    $invoice,
-    $userId,
-    $isAdmin
-)) {
-    http_response_code(403);
-    exit('دسترسی غیرمجاز.');
-}
-
-$items = $invoice['items'] ?? [];
-$totals = $invoice['totals'] ?? [];
-
-function e(?string $value): string
-{
-    return htmlspecialchars(
-        (string)$value,
-        ENT_QUOTES,
-        'UTF-8'
-    );
-}
-
-function fa(string|int|float $value): string
-{
-    return InvoiceService::faDigits(
-        (string)$value
-    );
-}
-
-function moneyFa(string|int|float $value): string
-{
-    return InvoiceService::money($value);
-}
-
-$statusLabel = InvoiceService::statusLabel(
-    (string)$invoice['invoice_status']
+$remaining = max(
+    0,
+    $total - $paid
 );
 
-$orderStatusLabel = InvoiceService::orderStatusLabel(
-    (string)$invoice['order_status']
+
+/*
+|--------------------------------------------------------------------------
+| Reconciliation
+|--------------------------------------------------------------------------
+|
+| These values are authoritative financial results entered by admin.
+| We do NOT recalculate them from payment records.
+|--------------------------------------------------------------------------
+*/
+
+$reconciliationType = (string)(
+    $invoice['reconciliation_type']
+    ?? 'settled'
 );
 
-$statusClass = match ($invoice['invoice_status']) {
-    'paid'    => 'is-paid',
-    'partial' => 'is-partial',
-    'void'    => 'is-void',
-    default   => 'is-unpaid',
+$reconciliationAmount = max(
+    0,
+    (int)(
+        $invoice['reconciliation_amount']
+        ?? 0
+    )
+);
+
+$reconciliationLabel = match ($reconciliationType) {
+    'debtor'   => 'بدهکار',
+    'creditor' => 'بستانکار',
+    'settled'  => 'تسویه',
+    default    => 'ثبت نشده',
 };
 
-$customerName = trim(
-    (string)($invoice['customer_name'] ?? '')
+
+/*
+|--------------------------------------------------------------------------
+| Payment CTA rules
+|--------------------------------------------------------------------------
+*/
+
+$invoiceStatus = (string)(
+    $invoice['status']
+    ?? 'unpaid'
 );
 
-$companyName = trim(
-    (string)($invoice['customer_company'] ?? '')
+$canPay = (
+    !$hasPendingPayment
+    && $remaining > 0
+    && $reconciliationType !== 'creditor'
+    && $invoiceStatus !== 'void'
 );
 
-$customerMobile = trim(
-    (string)($invoice['customer_mobile'] ?? '')
+$logoPath = '/Image/logo3.jpg';
+
+$itemsCount = 0;
+
+foreach ($items as $item) {
+    $itemsCount += (int)(
+        $item['qty'] ?? 0
+    );
+}
+
+
+/*
+|--------------------------------------------------------------------------
+| SEO / privacy
+|--------------------------------------------------------------------------
+*/
+
+header(
+    'X-Robots-Tag: noindex, nofollow, noarchive'
 );
 
-$orderNumber = trim(
-    (string)($invoice['order_number'] ?? '')
-);
-
-$issueDate = InvoiceService::dateFa(
-    $invoice['issue_date'] ?? null
-);
-
-$dueDate = InvoiceService::dateFa(
-    $invoice['due_date'] ?? null
-);
 ?>
 <!doctype html>
-<html lang="fa" dir="rtl">
+
+<html
+    lang="fa"
+    dir="rtl">
 
 <head>
+
     <meta charset="utf-8">
 
     <meta
         name="viewport"
-        content="width=device-width, initial-scale=1, viewport-fit=cover">
+        content="width=device-width, initial-scale=1">
 
     <meta
         name="robots"
@@ -140,1091 +561,1315 @@ $dueDate = InvoiceService::dateFa(
         content="noindex, nofollow, noarchive">
 
     <title>
-        فاکتور <?= e($invoice['invoice_number']) ?>
+        فاکتور <?= $h($invoiceNo) ?> | رابطی
     </title>
 
-    <style>
-        :root {
-            --ink: #202124;
-            --muted: #6b7280;
-            --line: #e7e7e7;
-            --soft: #f7f7f7;
-            --accent: #111827;
-            --success: #147a45;
-            --warning: #a16207;
-            --danger: #b42318;
-        }
+    <link
+        rel="stylesheet"
+        href="/assets/css/app.css?v=2">
 
-        * {
-            box-sizing: border-box;
-        }
-
-        html {
-            direction: rtl;
-            background: #f2f3f5;
-        }
-
-        body {
-            margin: 0;
-            padding: 20px;
-            color: var(--ink);
-            background: #f2f3f5;
-            font-family:
-                Tahoma,
-                Arial,
-                sans-serif;
-            font-size: 13px;
-            line-height: 1.7;
-        }
-
-        button,
-        a {
-            font: inherit;
-        }
-
-        .invoice-page {
-            width: min(900px, 100%);
-            margin: 0 auto;
-            background: #fff;
-            border: 1px solid #e5e7eb;
-            border-radius: 14px;
-            overflow: hidden;
-        }
-
-        .invoice-inner {
-            padding: 24px 26px;
-        }
-
-        /* Toolbar */
-
-        .toolbar {
-            width: min(900px, 100%);
-            margin: 0 auto 12px;
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            gap: 8px;
-        }
-
-        .toolbar-right,
-        .toolbar-left {
-            display: flex;
-            gap: 7px;
-            align-items: center;
-        }
-
-        .toolbar a,
-        .toolbar button {
-            border: 1px solid #ddd;
-            background: #fff;
-            color: #222;
-            text-decoration: none;
-            border-radius: 8px;
-            padding: 7px 11px;
-            cursor: pointer;
-            white-space: nowrap;
-        }
-
-        .toolbar .primary {
-            background: #111827;
-            border-color: #111827;
-            color: #fff;
-        }
-
-        /* Header */
-
-        .invoice-head {
-            display: flex;
-            justify-content: space-between;
-            align-items: flex-start;
-            gap: 20px;
-            padding-bottom: 17px;
-            border-bottom: 1px solid var(--line);
-        }
-
-        .brand {
-            min-width: 0;
-        }
-
-        .brand-title {
-            font-size: 20px;
-            font-weight: 800;
-            letter-spacing: -.3px;
-        }
-
-        .brand-subtitle {
-            margin-top: 3px;
-            color: var(--muted);
-            font-size: 11px;
-        }
-
-        .invoice-meta {
-            text-align: left;
-            min-width: 175px;
-        }
-
-        .invoice-number {
-            font-size: 16px;
-            font-weight: 800;
-            direction: ltr;
-            unicode-bidi: plaintext;
-        }
-
-        .invoice-date {
-            color: var(--muted);
-            font-size: 11px;
-            margin-top: 3px;
-        }
-
-        .status {
-            display: inline-flex;
-            align-items: center;
-            padding: 3px 8px;
-            margin-top: 6px;
-            border-radius: 999px;
-            font-size: 10px;
-            font-weight: 700;
-        }
-
-        .is-paid {
-            background: #eaf7ef;
-            color: var(--success);
-        }
-
-        .is-partial {
-            background: #fff7df;
-            color: var(--warning);
-        }
-
-        .is-unpaid {
-            background: #fff0ee;
-            color: var(--danger);
-        }
-
-        .is-void {
-            background: #f1f1f1;
-            color: #666;
-        }
-
-        /* Information */
-
-        .info-grid {
-            display: grid;
-            grid-template-columns: repeat(3, 1fr);
-            gap: 10px;
-            margin: 16px 0;
-        }
-
-        .info-card {
-            background: var(--soft);
-            border-radius: 9px;
-            padding: 10px 12px;
-            min-width: 0;
-        }
-
-        .info-label {
-            color: var(--muted);
-            font-size: 10px;
-            margin-bottom: 2px;
-        }
-
-        .info-value {
-            font-size: 12px;
-            font-weight: 700;
-            overflow-wrap: anywhere;
-        }
-
-        /* Desktop items */
-
-        .items {
-            width: 100%;
-            border-collapse: collapse;
-            table-layout: fixed;
-        }
-
-        .items th {
-            background: #f7f7f7;
-            color: #555;
-            font-size: 10px;
-            font-weight: 700;
-            padding: 8px 7px;
-            border-bottom: 1px solid var(--line);
-        }
-
-        .items td {
-            padding: 8px 7px;
-            border-bottom: 1px solid #eee;
-            vertical-align: middle;
-            font-size: 11px;
-        }
-
-        .items .col-number {
-            width: 34px;
-            text-align: center;
-        }
-
-        .items .col-qty {
-            width: 58px;
-            text-align: center;
-        }
-
-        .items .col-price {
-            width: 105px;
-            text-align: left;
-        }
-
-        .items .col-total {
-            width: 115px;
-            text-align: left;
-        }
-
-        .product-name {
-            font-weight: 700;
-        }
-
-        .product-code {
-            color: var(--muted);
-            font-size: 9px;
-            margin-top: 1px;
-            direction: ltr;
-            unicode-bidi: plaintext;
-        }
-
-        .product-detail {
-            color: var(--muted);
-            font-size: 9px;
-            margin-top: 1px;
-        }
-
-        .number {
-            direction: ltr;
-            unicode-bidi: plaintext;
-            white-space: nowrap;
-        }
-
-        /* Mobile cards */
-
-        .mobile-items {
-            display: none;
-        }
-
-        .mobile-item {
-            border: 1px solid var(--line);
-            border-radius: 10px;
-            padding: 10px;
-            margin-bottom: 8px;
-        }
-
-        .mobile-item-head {
-            display: flex;
-            justify-content: space-between;
-            gap: 10px;
-        }
-
-        .mobile-item-number {
-            color: var(--muted);
-            font-size: 10px;
-        }
-
-        .mobile-item-name {
-            font-weight: 800;
-            font-size: 12px;
-        }
-
-        .mobile-item-code {
-            color: var(--muted);
-            font-size: 9px;
-            direction: ltr;
-            unicode-bidi: plaintext;
-        }
-
-        .mobile-item-detail {
-            color: var(--muted);
-            font-size: 9px;
-            margin-top: 2px;
-        }
-
-        .mobile-item-bottom {
-            display: grid;
-            grid-template-columns: repeat(3, 1fr);
-            gap: 7px;
-            margin-top: 9px;
-            padding-top: 8px;
-            border-top: 1px solid var(--line);
-        }
-
-        .mobile-stat-label {
-            color: var(--muted);
-            font-size: 9px;
-        }
-
-        .mobile-stat-value {
-            font-weight: 700;
-            font-size: 10px;
-            margin-top: 1px;
-        }
-
-        /* Totals */
-
-        .bottom-grid {
-            display: grid;
-            grid-template-columns: 1fr 285px;
-            gap: 22px;
-            margin-top: 17px;
-        }
-
-        .note-box {
-            color: var(--muted);
-            font-size: 10px;
-        }
-
-        .note-title {
-            font-weight: 700;
-            color: #555;
-            margin-bottom: 3px;
-        }
-
-        .totals {
-            width: 100%;
-        }
-
-        .total-row {
-            display: flex;
-            justify-content: space-between;
-            gap: 15px;
-            padding: 4px 0;
-            font-size: 11px;
-        }
-
-        .total-row+.total-row {
-            border-top: 1px solid #f0f0f0;
-        }
-
-        .total-final {
-            margin-top: 5px;
-            padding: 9px 0 0;
-            border-top: 1px solid #222;
-            font-size: 14px;
-            font-weight: 800;
-        }
-
-        /* Footer */
-
-        .invoice-footer {
-            margin-top: 18px;
-            padding-top: 10px;
-            border-top: 1px solid var(--line);
-            color: var(--muted);
-            font-size: 9px;
-            display: flex;
-            justify-content: space-between;
-            gap: 10px;
-        }
-
-        /* Mobile */
-
-        @media (max-width: 650px) {
-
-            body {
-                padding: 8px;
-                background: #f2f3f5;
-                font-size: 12px;
-            }
-
-            .toolbar {
-                margin-bottom: 8px;
-                flex-wrap: wrap;
-            }
-
-            .toolbar-left {
-                width: 100%;
-                order: 2;
-            }
-
-            .toolbar-right {
-                width: 100%;
-                order: 1;
-                justify-content: space-between;
-            }
-
-            .toolbar a,
-            .toolbar button {
-                flex: 1;
-                text-align: center;
-                padding: 8px 7px;
-                font-size: 11px;
-            }
-
-            .invoice-page {
-                border-radius: 11px;
-            }
-
-            .invoice-inner {
-                padding: 15px 13px;
-            }
-
-            .invoice-head {
-                gap: 10px;
-            }
-
-            .brand-title {
-                font-size: 16px;
-            }
-
-            .brand-subtitle {
-                font-size: 9px;
-            }
-
-            .invoice-meta {
-                min-width: 0;
-                text-align: left;
-            }
-
-            .invoice-number {
-                font-size: 12px;
-            }
-
-            .invoice-date {
-                font-size: 9px;
-            }
-
-            .status {
-                font-size: 9px;
-                padding: 2px 6px;
-            }
-
-            .info-grid {
-                grid-template-columns: 1fr 1fr;
-                gap: 7px;
-                margin: 11px 0;
-            }
-
-            .info-card {
-                padding: 8px 9px;
-            }
-
-            .info-label {
-                font-size: 8px;
-            }
-
-            .info-value {
-                font-size: 10px;
-            }
-
-            .desktop-items {
-                display: none;
-            }
-
-            .mobile-items {
-                display: block;
-            }
-
-            .bottom-grid {
-                grid-template-columns: 1fr;
-                gap: 12px;
-                margin-top: 12px;
-            }
-
-            .totals {
-                background: var(--soft);
-                border-radius: 9px;
-                padding: 9px 11px;
-            }
-
-            .invoice-footer {
-                flex-direction: column;
-                gap: 3px;
-            }
-        }
-
-        /* Print */
-
-        @media print {
-
-            @page {
-                size: A4;
-                margin: 8mm;
-            }
-
-            html,
-            body {
-                background: #fff !important;
-                padding: 0 !important;
-                margin: 0 !important;
-            }
-
-            body {
-                font-size: 10px;
-            }
-
-            .toolbar {
-                display: none !important;
-            }
-
-            .invoice-page {
-                width: 100%;
-                max-width: none;
-                margin: 0;
-                border: 0;
-                border-radius: 0;
-                overflow: visible;
-            }
-
-            .invoice-inner {
-                padding: 0;
-            }
-
-            .invoice-head {
-                padding-bottom: 8px;
-            }
-
-            .info-grid {
-                margin: 9px 0;
-            }
-
-            .info-card {
-                padding: 6px 8px;
-            }
-
-            .items th,
-            .items td {
-                padding: 5px 5px;
-            }
-
-            .bottom-grid {
-                margin-top: 9px;
-            }
-
-            .invoice-footer {
-                margin-top: 9px;
-            }
-
-            .mobile-items {
-                display: none !important;
-            }
-
-            .desktop-items {
-                display: table !important;
-            }
-
-            .invoice-page,
-            .info-card,
-            tr,
-            .bottom-grid {
-                break-inside: avoid;
-            }
-        }
-    </style>
 </head>
 
-<body>
+<body class="invoice-page">
 
-    <div class="toolbar">
 
-        <div class="toolbar-right">
+    <div class="invoice-actions">
 
-            <a href="/"
-                aria-label="بازگشت به صفحه اصلی">
-                خانه
-            </a>
+        <div class="actions-right">
 
             <button
                 type="button"
-                onclick="history.back()">
-                بازگشت
-            </button>
-
-        </div>
-
-        <div class="toolbar-left">
-
-            <button
-                type="button"
-                onclick="window.print()"
-                class="primary">
-                چاپ
+                class="action-btn action-print"
+                onclick="window.print()">
+                🖨 چاپ
             </button>
 
             <a
-                href="/invoice-pdf?inv=<?= rawurlencode($invoice['invoice_number']) ?>"
-                target="_blank"
-                rel="noopener">
-                PDF
+                href="/invoice-pdf.php?inv=<?= rawurlencode($invoiceNo) ?>"
+                class="action-btn action-pdf">
+                📄 دریافت PDF
+            </a>
+
+        </div>
+
+        <div class="actions-left">
+
+            <a
+                href="/account/orders"
+                class="action-btn action-back">
+                ← بازگشت
             </a>
 
         </div>
 
     </div>
 
-    <main class="invoice-page">
 
-        <div class="invoice-inner">
+    <main class="invoice-sheet">
 
-            <header class="invoice-head">
 
-                <div class="brand">
-                    <div class="brand-title">
+        <!-- =========================================================
+         HEADER
+    ========================================================== -->
+
+        <header class="invoice-header">
+
+            <div class="invoice-header-top">
+
+                <div class="brand-block">
+
+                    <img
+                        src="<?= $h($logoPath) ?>"
+                        alt="رابطی"
+                        class="brand-logo">
+
+                    <div class="brand-text">
+
+                        <div class="brand-name">
+                            رابطی
+                        </div>
+
+                        <div class="brand-subtitle">
+                            تولید مستقیم و فروش عمده جوراب
+                        </div>
+
+                    </div>
+
+                </div>
+
+
+                <div class="invoice-title">
+
+                    <div class="invoice-title-label">
                         فاکتور فروش
                     </div>
 
-                    <div class="brand-subtitle">
-                        فروش عمده جوراب
-                    </div>
-                </div>
-
-                <div class="invoice-meta">
-
-                    <div class="invoice-number">
-                        <?= e($invoice['invoice_number']) ?>
-                    </div>
-
-                    <div class="invoice-date">
-                        تاریخ صدور:
-                        <?= e($issueDate) ?>
-                    </div>
-
-                    <div class="status <?= e($statusClass) ?>">
-                        <?= e($statusLabel) ?>
+                    <div class="invoice-title-number">
+                        <?= $h($invoiceNo) ?>
                     </div>
 
                 </div>
 
-            </header>
+            </div>
 
 
-            <section class="info-grid">
+            <div class="invoice-meta">
 
-                <div class="info-card">
+                <div class="meta-card">
 
-                    <div class="info-label">
-                        مشتری
-                    </div>
+                    <span class="meta-label">
+                        شماره فاکتور
+                    </span>
 
-                    <div class="info-value">
-                        <?= e($customerName ?: '—') ?>
-                    </div>
+                    <strong class="meta-value ltr">
+                        <?= $h($invoiceNo) ?>
+                    </strong>
 
                 </div>
 
 
-                <?php if ($companyName !== ''): ?>
+                <div class="meta-card">
 
-                    <div class="info-card">
+                    <span class="meta-label">
+                        شماره سفارش
+                    </span>
 
-                        <div class="info-label">
-                            شرکت / فروشگاه
+                    <strong class="meta-value ltr">
+                        <?= $h($orderNo) ?>
+                    </strong>
+
+                </div>
+
+
+                <div class="meta-card">
+
+                    <span class="meta-label">
+                        تاریخ صدور
+                    </span>
+
+                    <strong class="meta-value">
+                        <?= $h($invoiceDateDisplay) ?>
+                    </strong>
+
+                </div>
+
+            </div>
+
+        </header>
+
+
+        <div class="invoice-content">
+
+
+            <!-- =====================================================
+             PARTIES
+        ====================================================== -->
+
+            <section class="parties">
+
+                <div class="party-card">
+
+                    <div class="party-head">
+
+                        <div class="party-title">
+                            خریدار
                         </div>
 
-                        <div class="info-value">
-                            <?= e($companyName) ?>
+                        <div class="party-badge">
+                            مشتری
                         </div>
+
+                    </div>
+
+
+                    <div class="party-row">
+
+                        <span class="party-row-label">
+                            نام
+                        </span>
+
+                        <strong class="party-row-value">
+                            <?= $h($customerName) ?>
+                        </strong>
+
+                    </div>
+
+
+                    <div class="party-row">
+
+                        <span class="party-row-label">
+                            موبایل
+                        </span>
+
+                        <strong class="party-row-value ltr">
+                            <?= $h($customerMobile) ?>
+                        </strong>
+
+                    </div>
+
+
+                    <?php if ($customerProvince !== '' || $customerCity !== ''): ?>
+
+                        <div class="party-row">
+
+                            <span class="party-row-label">
+                                شهر
+                            </span>
+
+                            <strong class="party-row-value">
+                                <?= $h(
+                                    trim(
+                                        $customerProvince
+                                            . '، '
+                                            . $customerCity,
+                                        '، '
+                                    )
+                                ) ?>
+                            </strong>
+
+                        </div>
+
+                    <?php endif; ?>
+
+
+                    <?php if ($customerAddress !== ''): ?>
+
+                        <div class="party-row">
+
+                            <span class="party-row-label">
+                                آدرس
+                            </span>
+
+                            <strong class="party-row-value party-address">
+                                <?= $h($customerAddress) ?>
+                            </strong>
+
+                        </div>
+
+                    <?php endif; ?>
+
+
+                    <?php if ($customerPostal !== ''): ?>
+
+                        <div class="party-row">
+
+                            <span class="party-row-label">
+                                کد پستی
+                            </span>
+
+                            <strong class="party-row-value ltr">
+                                <?= $h($customerPostal) ?>
+                            </strong>
+
+                        </div>
+
+                    <?php endif; ?>
+
+                </div>
+
+
+                <div class="party-card seller-card">
+
+                    <div class="party-head">
+
+                        <div class="party-title">
+                            فروشنده
+                        </div>
+
+                        <div class="party-badge seller-badge">
+                            رابطی
+                        </div>
+
+                    </div>
+
+
+                    <div class="party-row">
+
+                        <span class="party-row-label">
+                            نام
+                        </span>
+
+                        <strong class="party-row-value">
+                            کارگاه تولید جوراب رابطی
+                        </strong>
+
+                    </div>
+
+
+                    <div class="party-row">
+
+                        <span class="party-row-label">
+                            نوع فروش
+                        </span>
+
+                        <strong class="party-row-value">
+                            عمده و مستقیم از تولیدکننده
+                        </strong>
+
+                    </div>
+
+
+                    <div class="party-row">
+
+                        <span class="party-row-label">
+                            وضعیت
+                        </span>
+
+                        <strong class="party-row-value">
+                            فاکتور رسمی سفارش
+                        </strong>
+
+                    </div>
+
+                </div>
+
+            </section>
+
+
+            <!-- =====================================================
+             PRODUCTS
+        ====================================================== -->
+
+            <section class="products-section">
+
+                <div class="section-title">
+                    اقلام سفارش
+                </div>
+
+
+                <?php if (!empty($items)): ?>
+
+                    <!-- Desktop -->
+
+                    <div class="table-wrap">
+
+                        <table class="products-table">
+
+                            <thead>
+
+                                <tr>
+
+                                    <th class="col-index">
+                                        #
+                                    </th>
+
+                                    <th>
+                                        محصول
+                                    </th>
+
+                                    <th>
+                                        تعداد
+                                    </th>
+
+                                    <th>
+                                        قیمت پایه
+                                    </th>
+
+                                    <th>
+                                        تخفیف
+                                    </th>
+
+                                    <th>
+                                        قیمت واحد
+                                    </th>
+
+                                    <th>
+                                        مبلغ
+                                    </th>
+
+                                </tr>
+
+                            </thead>
+
+                            <tbody>
+
+                                <?php foreach ($items as $index => $item): ?>
+
+                                    <?php
+
+                                    $productName = (string)(
+                                        $item['product_name']
+                                        ?? $item['name']
+                                        ?? 'محصول'
+                                    );
+
+                                    $productCode = (string)(
+                                        $item['product_code']
+                                        ?? $item['code']
+                                        ?? ''
+                                    );
+
+                                    $qty = (int)(
+                                        $item['qty']
+                                        ?? 0
+                                    );
+
+                                    $baseUnitPrice = (int)(
+                                        $item['base_unit_price']
+                                        ?? $item['base_price']
+                                        ?? $item['price']
+                                        ?? 0
+                                    );
+
+                                    $discountPercent = (float)(
+                                        $item['discount_percent']
+                                        ?? 0
+                                    );
+
+                                    $discountAmount = (int)(
+                                        $item['discount_amount']
+                                        ?? 0
+                                    );
+
+                                    $unitPrice = (int)(
+                                        $item['unit_price']
+                                        ?? $baseUnitPrice
+                                    );
+
+                                    $lineTotal = (int)(
+                                        $item['line_total']
+                                        ?? ($unitPrice * $qty)
+                                    );
+
+                                    ?>
+
+                                    <tr>
+
+                                        <td class="col-index">
+                                            <?= $index + 1 ?>
+                                        </td>
+
+
+                                        <td>
+
+                                            <div class="product-name">
+                                                <?= $h($productName) ?>
+                                            </div>
+
+                                            <?php if ($productCode !== ''): ?>
+
+                                                <div class="product-code">
+                                                    کد:
+                                                    <?= $h($productCode) ?>
+                                                </div>
+
+                                            <?php endif; ?>
+
+                                        </td>
+
+
+                                        <td>
+
+                                            <span class="qty-value">
+                                                <?= number_format($qty) ?>
+                                            </span>
+
+                                            جفت
+
+                                        </td>
+
+
+                                        <td class="price">
+                                            <?= $moneyFa($baseUnitPrice) ?>
+                                        </td>
+
+
+                                        <td class="discount-cell">
+
+                                            <?php if ($discountPercent > 0): ?>
+
+                                                <span class="discount-percent">
+                                                    <?= rtrim(
+                                                        rtrim(
+                                                            number_format(
+                                                                $discountPercent,
+                                                                2,
+                                                                '.',
+                                                                ''
+                                                            ),
+                                                            '0'
+                                                        ),
+                                                        '.'
+                                                    ) ?>٪
+                                                </span>
+
+                                                <?php if ($discountAmount > 0): ?>
+
+                                                    <span class="discount-amount">
+                                                        <?= $moneyFa($discountAmount) ?>
+                                                    </span>
+
+                                                <?php endif; ?>
+
+                                            <?php else: ?>
+
+                                                <span class="no-discount">
+                                                    —
+                                                </span>
+
+                                            <?php endif; ?>
+
+                                        </td>
+
+
+                                        <td class="price final-price">
+                                            <?= $moneyFa($unitPrice) ?>
+                                        </td>
+
+
+                                        <td class="price line-total">
+                                            <?= $moneyFa($lineTotal) ?>
+                                        </td>
+
+                                    </tr>
+
+                                <?php endforeach; ?>
+
+                            </tbody>
+
+                        </table>
+
+                    </div>
+
+
+                    <!-- Mobile -->
+
+                    <div class="mobile-items">
+
+                        <?php foreach ($items as $index => $item): ?>
+
+                            <?php
+
+                            $productName = (string)(
+                                $item['product_name']
+                                ?? $item['name']
+                                ?? 'محصول'
+                            );
+
+                            $productCode = (string)(
+                                $item['product_code']
+                                ?? $item['code']
+                                ?? ''
+                            );
+
+                            $qty = (int)(
+                                $item['qty']
+                                ?? 0
+                            );
+
+                            $baseUnitPrice = (int)(
+                                $item['base_unit_price']
+                                ?? $item['base_price']
+                                ?? $item['price']
+                                ?? 0
+                            );
+
+                            $discountPercent = (float)(
+                                $item['discount_percent']
+                                ?? 0
+                            );
+
+                            $discountAmount = (int)(
+                                $item['discount_amount']
+                                ?? 0
+                            );
+
+                            $unitPrice = (int)(
+                                $item['unit_price']
+                                ?? $baseUnitPrice
+                            );
+
+                            $lineTotal = (int)(
+                                $item['line_total']
+                                ?? ($unitPrice * $qty)
+                            );
+
+                            ?>
+
+                            <article class="mobile-item">
+
+                                <div class="mobile-item-head">
+
+                                    <div>
+
+                                        <div class="mobile-item-index">
+                                            <?= $index + 1 ?>
+                                        </div>
+
+                                        <div class="mobile-item-name">
+                                            <?= $h($productName) ?>
+                                        </div>
+
+                                        <?php if ($productCode !== ''): ?>
+
+                                            <div class="product-code">
+                                                کد:
+                                                <?= $h($productCode) ?>
+                                            </div>
+
+                                        <?php endif; ?>
+
+                                    </div>
+
+
+                                    <strong class="mobile-item-total">
+                                        <?= $moneyFa($lineTotal) ?>
+                                    </strong>
+
+                                </div>
+
+
+                                <div class="mobile-item-grid">
+
+                                    <div class="mobile-detail">
+
+                                        <span class="mobile-detail-label">
+                                            تعداد
+                                        </span>
+
+                                        <strong class="mobile-detail-value">
+                                            <?= number_format($qty) ?>
+                                            جفت
+                                        </strong>
+
+                                    </div>
+
+
+                                    <div class="mobile-detail">
+
+                                        <span class="mobile-detail-label">
+                                            قیمت پایه
+                                        </span>
+
+                                        <strong class="mobile-detail-value">
+                                            <?= $moneyFa($baseUnitPrice) ?>
+                                        </strong>
+
+                                    </div>
+
+
+                                    <div class="mobile-detail">
+
+                                        <span class="mobile-detail-label">
+                                            تخفیف
+                                        </span>
+
+                                        <strong class="mobile-detail-value discount-cell">
+
+                                            <?php if ($discountPercent > 0): ?>
+
+                                                <?= rtrim(
+                                                    rtrim(
+                                                        number_format(
+                                                            $discountPercent,
+                                                            2,
+                                                            '.',
+                                                            ''
+                                                        ),
+                                                        '0'
+                                                    ),
+                                                    '.'
+                                                ) ?>٪
+
+                                            <?php else: ?>
+
+                                                —
+
+                                            <?php endif; ?>
+
+                                        </strong>
+
+                                    </div>
+
+
+                                    <div class="mobile-detail">
+
+                                        <span class="mobile-detail-label">
+                                            قیمت واحد نهایی
+                                        </span>
+
+                                        <strong class="mobile-detail-value final-price">
+                                            <?= $moneyFa($unitPrice) ?>
+                                        </strong>
+
+                                    </div>
+
+                                </div>
+
+                            </article>
+
+                        <?php endforeach; ?>
 
                     </div>
 
                 <?php else: ?>
 
-                    <div class="info-card">
+                    <div class="empty-items">
+                        موردی برای نمایش در این فاکتور وجود ندارد.
+                    </div>
 
-                        <div class="info-label">
-                            شماره تماس
+                <?php endif; ?>
+
+            </section>
+
+
+            <!-- =====================================================
+             PAYMENT HISTORY
+        ====================================================== -->
+
+            <section class="payment-section">
+
+                <div class="section-title">
+                    تاریخچه پرداخت
+                </div>
+
+
+                <?php if (!empty($payments)): ?>
+
+                    <div class="payment-history">
+
+                        <?php foreach ($payments as $payment): ?>
+
+                            <?php
+
+                            $paymentStatus = (string)(
+                                $payment['status'] ?? ''
+                            );
+
+                            $paymentMethod = (string)(
+                                $payment['method'] ?? ''
+                            );
+
+                            $paymentAmount = max(
+                                0,
+                                (int)(
+                                    $payment['amount'] ?? 0
+                                )
+                            );
+
+                            $paymentCreatedAt = $payment['created_at']
+                                ?? null;
+
+                            $paymentConfirmedAt = $payment['confirmed_at']
+                                ?? null;
+
+                            $referenceNo = trim(
+                                (string)(
+                                    $payment['reference_no']
+                                    ?? ''
+                                )
+                            );
+
+                            $adminNote = trim(
+                                (string)(
+                                    $payment['admin_note']
+                                    ?? ''
+                                )
+                            );
+
+                            ?>
+
+                            <article
+                                class="
+                                payment-item
+                                payment-item-<?= $h($paymentStatus) ?>
+                            ">
+
+                                <div class="payment-item-main">
+
+                                    <div class="payment-item-title">
+
+                                        <span class="payment-method">
+                                            <?= $h(
+                                                $methodLabel(
+                                                    $paymentMethod
+                                                )
+                                            ) ?>
+                                        </span>
+
+                                        <span
+                                            class="
+                                            payment-status
+                                            payment-status-<?= $h($paymentStatus) ?>
+                                        ">
+                                            <?= $h(
+                                                $statusLabel(
+                                                    $paymentStatus
+                                                )
+                                            ) ?>
+                                        </span>
+
+                                    </div>
+
+
+                                    <div class="payment-item-amount">
+                                        <?= $moneyFa($paymentAmount) ?>
+                                    </div>
+
+                                </div>
+
+
+                                <div class="payment-item-meta">
+
+                                    <div>
+
+                                        <span class="payment-meta-label">
+                                            ثبت پرداخت
+                                        </span>
+
+                                        <span>
+                                            <?= $h(
+                                                $dateTimeFa(
+                                                    $paymentCreatedAt
+                                                )
+                                            ) ?>
+                                        </span>
+
+                                    </div>
+
+
+                                    <?php if ($paymentStatus === 'confirmed' && $paymentConfirmedAt): ?>
+
+                                        <div>
+
+                                            <span class="payment-meta-label">
+                                                تأیید مالی
+                                            </span>
+
+                                            <span>
+                                                <?= $h(
+                                                    $dateTimeFa(
+                                                        $paymentConfirmedAt
+                                                    )
+                                                ) ?>
+                                            </span>
+
+                                        </div>
+
+                                    <?php endif; ?>
+
+
+                                    <?php if ($referenceNo !== ''): ?>
+
+                                        <div>
+
+                                            <span class="payment-meta-label">
+                                                شماره پیگیری
+                                            </span>
+
+                                            <span class="ltr">
+                                                <?= $h($referenceNo) ?>
+                                            </span>
+
+                                        </div>
+
+                                    <?php endif; ?>
+
+                                </div>
+
+
+                                <?php if ($adminNote !== ''): ?>
+
+                                    <div class="payment-admin-note">
+
+                                        <strong>
+                                            توضیح مالی:
+                                        </strong>
+
+                                        <?= $h($adminNote) ?>
+
+                                    </div>
+
+                                <?php endif; ?>
+
+                            </article>
+
+                        <?php endforeach; ?>
+
+                    </div>
+
+                <?php else: ?>
+
+                    <div class="payment-empty">
+                        هنوز پرداختی برای این فاکتور ثبت نشده است.
+                    </div>
+
+                <?php endif; ?>
+
+
+                <?php if ($hasPendingPayment): ?>
+
+                    <div class="payment-alert payment-alert-pending">
+
+                        <span class="payment-alert-icon">
+                            ⏳
+                        </span>
+
+                        <div>
+
+                            <strong>
+                                پرداخت شما در انتظار تأیید مالی است.
+                            </strong>
+
+                            <p>
+                                مبلغ
+                                <?= $moneyFa($pendingAmount) ?>
+                                ثبت شده اما هنوز توسط واحد مالی تأیید نشده است.
+                                تا زمان تعیین تکلیف این پرداخت، امکان ثبت پرداخت جدید وجود ندارد.
+                            </p>
+
                         </div>
 
-                        <div class="info-value number">
-                            <?= e($customerMobile ?: '—') ?>
+                    </div>
+
+                <?php elseif ($remaining <= 0): ?>
+
+                    <div class="payment-alert payment-alert-success">
+
+                        <span class="payment-alert-icon">
+                            ✓
+                        </span>
+
+                        <div>
+
+                            <strong>
+                                این فاکتور به‌طور کامل پرداخت شده است.
+                            </strong>
+
+                            <p>
+                                مانده قابل پرداخت این فاکتور صفر است.
+                            </p>
+
+                        </div>
+
+                    </div>
+
+                <?php elseif ($reconciliationType === 'creditor'): ?>
+
+                    <div class="payment-alert payment-alert-creditor">
+
+                        <span class="payment-alert-icon">
+                            ✓
+                        </span>
+
+                        <div>
+
+                            <strong>
+                                وضعیت مالی: بستانکار
+                            </strong>
+
+                            <p>
+                                مبلغ بستانکاری ثبت‌شده:
+                                <?= $moneyFa($reconciliationAmount) ?>
+                                <br>
+                                در این وضعیت نیازی به ثبت پرداخت جدید نیست.
+                            </p>
+
                         </div>
 
                     </div>
 
                 <?php endif; ?>
 
+            </section>
 
-                <div class="info-card">
 
-                    <div class="info-label">
-                        سفارش
+            <!-- =====================================================
+             BOTTOM
+        ====================================================== -->
+
+            <section class="invoice-bottom">
+
+
+                <div class="bottom-left">
+
+                    <?php if ($customerNote !== ''): ?>
+
+                        <div class="note-box">
+
+                            <div class="note-box-title">
+                                توضیحات مشتری
+                            </div>
+
+                            <p>
+                                <?= nl2br($h($customerNote)) ?>
+                            </p>
+
+                        </div>
+
+                    <?php endif; ?>
+
+
+                    <!-- Reconciliation -->
+
+                    <div class="reconciliation-box">
+
+                        <div class="reconciliation-title">
+                            نتیجه مالی
+                        </div>
+
+
+                        <?php if ($reconciliationType === 'debtor'): ?>
+
+                            <div class="reconciliation-result debtor">
+
+                                <span>
+                                    وضعیت
+                                </span>
+
+                                <strong>
+                                    بدهکار
+                                </strong>
+
+                            </div>
+
+                            <div class="reconciliation-amount">
+
+                                <span>
+                                    مبلغ بدهی ثبت‌شده
+                                </span>
+
+                                <strong>
+                                    <?= $moneyFa($reconciliationAmount) ?>
+                                </strong>
+
+                            </div>
+
+
+                        <?php elseif ($reconciliationType === 'creditor'): ?>
+
+                            <div class="reconciliation-result creditor">
+
+                                <span>
+                                    وضعیت
+                                </span>
+
+                                <strong>
+                                    بستانکار
+                                </strong>
+
+                            </div>
+
+                            <div class="reconciliation-amount">
+
+                                <span>
+                                    مبلغ بستانکاری ثبت‌شده
+                                </span>
+
+                                <strong>
+                                    <?= $moneyFa($reconciliationAmount) ?>
+                                </strong>
+
+                            </div>
+
+
+                        <?php elseif ($reconciliationType === 'settled'): ?>
+
+                            <div class="reconciliation-result settled">
+
+                                <span>
+                                    وضعیت
+                                </span>
+
+                                <strong>
+                                    تسویه
+                                </strong>
+
+                            </div>
+
+
+                        <?php else: ?>
+
+                            <div class="reconciliation-result">
+
+                                <span>
+                                    وضعیت
+                                </span>
+
+                                <strong>
+                                    <?= $h($reconciliationLabel) ?>
+                                </strong>
+
+                            </div>
+
+                        <?php endif; ?>
+
                     </div>
 
-                    <div class="info-value number">
-                        <?= e($orderNumber ?: '—') ?>
-                    </div>
+
+                    <?php if ($itemsCount > 0): ?>
+
+                        <div class="items-summary">
+
+                            <span>
+                                تعداد کل اقلام
+                            </span>
+
+                            <strong>
+                                <?= number_format($itemsCount) ?>
+                                جفت
+                            </strong>
+
+                        </div>
+
+                    <?php endif; ?>
 
                 </div>
 
 
-                <div class="info-card">
+                <!-- =================================================
+                 TOTALS
+            ================================================== -->
 
-                    <div class="info-label">
-                        وضعیت سفارش
+                <div class="totals-box">
+
+                    <div class="totals-head">
+                        خلاصه مالی
                     </div>
 
-                    <div class="info-value">
-                        <?= e($orderStatusLabel) ?>
+
+                    <div class="total-row">
+
+                        <span class="total-label">
+                            جمع قیمت پایه
+                        </span>
+
+                        <span class="total-value">
+                            <?= $moneyFa($subtotal) ?>
+                        </span>
+
                     </div>
 
-                </div>
+
+                    <?php if ($discount > 0): ?>
+
+                        <div class="total-row discount-total">
+
+                            <span class="total-label">
+                                تخفیف سفارش
+                            </span>
+
+                            <span class="total-value">
+                                -
+                                <?= $moneyFa($discount) ?>
+                            </span>
+
+                        </div>
+
+                    <?php endif; ?>
 
 
-                <div class="info-card">
+                    <div class="total-row">
 
-                    <div class="info-label">
-                        تاریخ سررسید
+                        <span class="total-label">
+                            مبلغ پس از تخفیف
+                        </span>
+
+                        <span class="total-value">
+                            <?= $moneyFa($afterDiscount) ?>
+                        </span>
+
                     </div>
 
-                    <div class="info-value">
-                        <?= e($dueDate) ?>
+
+                    <?php if ($shipping > 0): ?>
+
+                        <div class="total-row">
+
+                            <span class="total-label">
+                                هزینه ارسال
+                            </span>
+
+                            <span class="total-value">
+                                <?= $moneyFa($shipping) ?>
+                            </span>
+
+                        </div>
+
+                    <?php endif; ?>
+
+
+                    <?php if ($tax > 0): ?>
+
+                        <div class="total-row">
+
+                            <span class="total-label">
+                                مالیات
+                            </span>
+
+                            <span class="total-value">
+                                <?= $moneyFa($tax) ?>
+                            </span>
+
+                        </div>
+
+                    <?php endif; ?>
+
+
+                    <div class="total-row grand-total">
+
+                        <span class="total-label">
+                            مبلغ نهایی فاکتور
+                        </span>
+
+                        <strong class="total-value">
+                            <?= $moneyFa($total) ?>
+                        </strong>
+
                     </div>
 
-                </div>
 
+                    <div class="total-row paid-row">
 
-                <div class="info-card">
+                        <span class="total-label">
+                            پرداخت تأییدشده
+                        </span>
 
-                    <div class="info-label">
-                        تعداد اقلام
+                        <strong class="total-value">
+                            <?= $moneyFa($paid) ?>
+                        </strong>
+
                     </div>
 
-                    <div class="info-value">
-                        <?= fa(count($items)) ?>
+
+                    <?php if ($pendingAmount > 0): ?>
+
+                        <div class="total-row pending-row">
+
+                            <span class="total-label">
+                                در انتظار تأیید مالی
+                            </span>
+
+                            <strong class="total-value">
+                                <?= $moneyFa($pendingAmount) ?>
+                            </strong>
+
+                        </div>
+
+                    <?php endif; ?>
+
+
+                    <?php if ($rejectedAmount > 0): ?>
+
+                        <div class="total-row rejected-row">
+
+                            <span class="total-label">
+                                پرداخت‌های ردشده
+                            </span>
+
+                            <strong class="total-value">
+                                <?= $moneyFa($rejectedAmount) ?>
+                            </strong>
+
+                        </div>
+
+                    <?php endif; ?>
+
+
+                    <div class="total-row remaining-row">
+
+                        <span class="total-label">
+                            مانده فاکتور
+                        </span>
+
+                        <strong class="total-value">
+                            <?= $moneyFa($remaining) ?>
+                        </strong>
+
                     </div>
+
+
+                    <?php if ($canPay): ?>
+
+                        <div class="payment-action">
+
+                            <a
+                                href="/payment.php?inv=<?= rawurlencode($invoiceNo) ?>"
+                                class="payment-button">
+                                💳 پرداخت مانده فاکتور
+                            </a>
+
+                            <div class="payment-action-hint">
+                                مبلغ قابل پرداخت:
+                                <strong>
+                                    <?= $moneyFa($remaining) ?>
+                                </strong>
+                            </div>
+
+                        </div>
+
+                    <?php endif; ?>
 
                 </div>
 
             </section>
 
 
-            <!-- Desktop -->
-
-            <div class="desktop-items">
-
-                <table class="items">
-
-                    <thead>
-
-                        <tr>
-
-                            <th class="col-number">
-                                #
-                            </th>
-
-                            <th>
-                                کالا
-                            </th>
-
-                            <th class="col-qty">
-                                تعداد
-                            </th>
-
-                            <th class="col-price">
-                                قیمت واحد
-                            </th>
-
-                            <th class="col-total">
-                                مبلغ
-                            </th>
-
-                        </tr>
-
-                    </thead>
-
-                    <tbody>
-
-                        <?php foreach ($items as $index => $item): ?>
-
-                            <tr>
-
-                                <td class="col-number">
-                                    <?= fa($index + 1) ?>
-                                </td>
-
-                                <td>
-
-                                    <div class="product-name">
-                                        <?= e(
-                                            $item['product_name']
-                                                ?? 'محصول'
-                                        ) ?>
-                                    </div>
-
-                                    <?php if (!empty($item['product_code'])): ?>
-
-                                        <div class="product-code">
-                                            <?= e($item['product_code']) ?>
-                                        </div>
-
-                                    <?php endif; ?>
-
-                                    <div class="product-detail">
-
-                                        <?php
-                                        $details = array_filter([
-                                            $item['variant_name'] ?? '',
-                                            $item['color_name'] ?? '',
-                                            $item['size_label'] ?? '',
-                                        ]);
-                                        ?>
-
-                                        <?= e(
-                                            implode(' · ', $details)
-                                                ?: '—'
-                                        ) ?>
-
-                                    </div>
-
-                                </td>
-
-                                <td class="col-qty">
-                                    <?= fa((int)$item['qty']) ?>
-                                </td>
-
-                                <td class="col-price number">
-                                    <?= e(
-                                        moneyFa(
-                                            $item['unit_price']
-                                                ?? 0
-                                        )
-                                    ) ?>
-                                </td>
-
-                                <td class="col-total number">
-                                    <?= e(
-                                        moneyFa(
-                                            $item['subtotal']
-                                                ?? 0
-                                        )
-                                    ) ?>
-                                </td>
-
-                            </tr>
-
-                        <?php endforeach; ?>
-
-                    </tbody>
-
-                </table>
-
+            <div class="thank-you">
+                از اعتماد شما به رابطی سپاسگزاریم.
             </div>
-
-
-            <!-- Mobile -->
-
-            <div class="mobile-items">
-
-                <?php foreach ($items as $index => $item): ?>
-
-                    <article class="mobile-item">
-
-                        <div class="mobile-item-head">
-
-                            <div>
-
-                                <div class="mobile-item-name">
-                                    <?= e(
-                                        $item['product_name']
-                                            ?? 'محصول'
-                                    ) ?>
-                                </div>
-
-                                <?php if (!empty($item['product_code'])): ?>
-
-                                    <div class="mobile-item-code">
-                                        <?= e($item['product_code']) ?>
-                                    </div>
-
-                                <?php endif; ?>
-
-                                <?php
-                                $details = array_filter([
-                                    $item['variant_name'] ?? '',
-                                    $item['color_name'] ?? '',
-                                    $item['size_label'] ?? '',
-                                ]);
-                                ?>
-
-                                <div class="mobile-item-detail">
-                                    <?= e(
-                                        implode(' · ', $details)
-                                            ?: '—'
-                                    ) ?>
-                                </div>
-
-                            </div>
-
-                            <div class="mobile-item-number">
-                                <?= fa($index + 1) ?>
-                            </div>
-
-                        </div>
-
-
-                        <div class="mobile-item-bottom">
-
-                            <div>
-
-                                <div class="mobile-stat-label">
-                                    تعداد
-                                </div>
-
-                                <div class="mobile-stat-value">
-                                    <?= fa((int)$item['qty']) ?>
-                                </div>
-
-                            </div>
-
-                            <div>
-
-                                <div class="mobile-stat-label">
-                                    قیمت واحد
-                                </div>
-
-                                <div class="mobile-stat-value number">
-                                    <?= e(
-                                        moneyFa(
-                                            $item['unit_price']
-                                                ?? 0
-                                        )
-                                    ) ?>
-                                </div>
-
-                            </div>
-
-                            <div>
-
-                                <div class="mobile-stat-label">
-                                    مبلغ
-                                </div>
-
-                                <div class="mobile-stat-value number">
-                                    <?= e(
-                                        moneyFa(
-                                            $item['subtotal']
-                                                ?? 0
-                                        )
-                                    ) ?>
-                                </div>
-
-                            </div>
-
-                        </div>
-
-                    </article>
-
-                <?php endforeach; ?>
-
-            </div>
-
-
-            <section class="bottom-grid">
-
-                <div class="note-box">
-
-                    <div class="note-title">
-                        توضیحات
-                    </div>
-
-                    <div>
-                        <?= nl2br(
-                            e(
-                                (string)(
-                                    $invoice['order_note']
-                                    ?? ''
-                                )
-                            )
-                        ) ?: '—' ?>
-                    </div>
-
-                </div>
-
-
-                <div class="totals">
-
-                    <div class="total-row">
-
-                        <span>
-                            جمع کالاها
-                        </span>
-
-                        <strong class="number">
-                            <?= e(
-                                moneyFa(
-                                    $totals['subtotal'] ?? 0
-                                )
-                            ) ?>
-                        </strong>
-
-                    </div>
-
-
-                    <div class="total-row">
-
-                        <span>
-                            تخفیف
-                        </span>
-
-                        <strong class="number">
-                            <?= e(
-                                moneyFa(
-                                    $totals['discount'] ?? 0
-                                )
-                            ) ?>
-                        </strong>
-
-                    </div>
-
-
-                    <div class="total-row">
-
-                        <span>
-                            مالیات
-                        </span>
-
-                        <strong class="number">
-                            <?= e(
-                                moneyFa(
-                                    $totals['tax'] ?? 0
-                                )
-                            ) ?>
-                        </strong>
-
-                    </div>
-
-
-                    <div class="total-row total-final">
-
-                        <span>
-                            مبلغ نهایی
-                        </span>
-
-                        <strong class="number">
-                            <?= e(
-                                moneyFa(
-                                    $totals['total'] ?? 0
-                                )
-                            ) ?>
-                        </strong>
-
-                    </div>
-
-                </div>
-
-            </section>
-
-
-            <footer class="invoice-footer">
-
-                <span>
-                    این فاکتور به‌صورت الکترونیکی صادر شده است.
-                </span>
-
-                <span>
-                    شماره فاکتور:
-                    <?= e($invoice['invoice_number']) ?>
-                </span>
-
-            </footer>
 
         </div>
 
+
+        <!-- =========================================================
+         FOOTER
+    ========================================================== -->
+
+        <footer class="invoice-footer">
+
+            <div class="footer-brand">
+                رابطی — تولید مستقیم جوراب
+            </div>
+
+            <div class="footer-contact">
+                تمامی اطلاعات مالی این فاکتور از سیستم مالی ثبت‌شده سفارش خوانده می‌شود.
+            </div>
+
+        </footer>
+
     </main>
+
 
 </body>
 

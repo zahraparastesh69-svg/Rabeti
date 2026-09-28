@@ -7,30 +7,53 @@ require_once ROOT_PATH . '/config/auth.php';
 
 require_admin();
 
-$countCustom = (int)db()->query("
+
+/*
+|--------------------------------------------------------------------------
+| Dashboard Data
+|--------------------------------------------------------------------------
+*/
+
+$countCustom = (int) db()->query("
     SELECT COUNT(*)
     FROM custom_order_requests
     WHERE status = 'new'
 ")->fetchColumn();
 
-$countMessages = (int)db()->query("
+
+$countMessages = (int) db()->query("
     SELECT COUNT(*)
     FROM contact_messages
     WHERE status = 'new'
 ")->fetchColumn();
 
-$countProducts = (int)db()->query("
+
+$countProducts = (int) db()->query("
     SELECT COUNT(*)
     FROM products
     WHERE is_active = 1
 ")->fetchColumn();
 
-$countCats = (int)db()->query("
+
+$countCats = (int) db()->query("
     SELECT COUNT(*)
     FROM categories
     WHERE is_active = 1
 ")->fetchColumn();
-$countPendingCustomers = (int)db()->query("SELECT COUNT(*) FROM companies WHERE status='pending'")->fetchColumn();
+
+
+$countPendingCustomers = (int) db()->query("
+    SELECT COUNT(*)
+    FROM companies
+    WHERE status = 'pending'
+")->fetchColumn();
+
+
+/*
+|--------------------------------------------------------------------------
+| Latest Custom Orders
+|--------------------------------------------------------------------------
+*/
 
 $latestCustom = db()->query("
     SELECT
@@ -46,19 +69,33 @@ $latestCustom = db()->query("
     LIMIT 5
 ")->fetchAll();
 
+
 $activeMenu = 'dashboard';
 $pageTitle  = 'داشبورد';
 
+
+/*
+|--------------------------------------------------------------------------
+| Dashboard Content
+|--------------------------------------------------------------------------
+*/
+
 ob_start();
+
 ?>
 
 <div class="admin-dashboard">
 
+    <!-- =====================================================
+         PAGE INTRO
+    ====================================================== -->
+
     <div class="admin-page-intro">
 
         <div>
+
             <span class="admin-kicker">
-                نمای کلی
+                نمای کلی فروشگاه
             </span>
 
             <h1>
@@ -66,23 +103,32 @@ ob_start();
             </h1>
 
             <p>
-                وضعیت فعلی فروشگاه و درخواست‌های اخیر را در یک نگاه ببینید.
+                وضعیت فعلی فروشگاه و فعالیت‌های مهم را در یک نگاه ببینید.
             </p>
+
         </div>
 
         <a
             href="/"
-            class="admin-soft-action">
-            مشاهده سایت
+            class="admin-soft-action"
+            target="_blank"
+            rel="noopener">
+            مشاهده فروشگاه
         </a>
 
     </div>
+
+
+    <!-- =====================================================
+         KPI
+    ====================================================== -->
 
     <div class="stat-cards">
 
         <div class="stat-card stat-card-accent">
 
             <div class="stat-card-top">
+
                 <span class="stat-card-label">
                     درخواست اختصاصی جدید
                 </span>
@@ -90,10 +136,11 @@ ob_start();
                 <span class="stat-card-icon">
                     ↗
                 </span>
+
             </div>
 
             <div class="num">
-                <?= $countCustom ?>
+                <?= number_format($countCustom) ?>
             </div>
 
             <div class="stat-card-note">
@@ -102,9 +149,11 @@ ob_start();
 
         </div>
 
+
         <div class="stat-card">
 
             <div class="stat-card-top">
+
                 <span class="stat-card-label">
                     پیام‌های جدید
                 </span>
@@ -112,10 +161,11 @@ ob_start();
                 <span class="stat-card-icon">
                     ≋
                 </span>
+
             </div>
 
             <div class="num">
-                <?= $countMessages ?>
+                <?= number_format($countMessages) ?>
             </div>
 
             <div class="stat-card-note">
@@ -124,9 +174,11 @@ ob_start();
 
         </div>
 
+
         <div class="stat-card">
 
             <div class="stat-card-top">
+
                 <span class="stat-card-label">
                     محصولات فعال
                 </span>
@@ -134,10 +186,11 @@ ob_start();
                 <span class="stat-card-icon">
                     □
                 </span>
+
             </div>
 
             <div class="num">
-                <?= $countProducts ?>
+                <?= number_format($countProducts) ?>
             </div>
 
             <div class="stat-card-note">
@@ -146,9 +199,11 @@ ob_start();
 
         </div>
 
+
         <div class="stat-card">
 
             <div class="stat-card-top">
+
                 <span class="stat-card-label">
                     دسته‌بندی‌ها
                 </span>
@@ -156,10 +211,11 @@ ob_start();
                 <span class="stat-card-icon">
                     ◇
                 </span>
+
             </div>
 
             <div class="num">
-                <?= $countCats ?>
+                <?= number_format($countCats) ?>
             </div>
 
             <div class="stat-card-note">
@@ -170,12 +226,142 @@ ob_start();
 
     </div>
 
+
+    <!-- =====================================================
+         QUICK STATUS
+    ====================================================== -->
+
     <div class="admin-section-head">
 
         <div>
 
             <span class="admin-kicker">
-                درخواست‌ها
+                وضعیت سیستم
+            </span>
+
+            <h2>
+                خلاصه وضعیت
+            </h2>
+
+        </div>
+
+    </div>
+
+
+    <div class="stat-cards">
+
+        <div class="stat-card">
+
+            <div class="stat-card-top">
+
+                <span class="stat-card-label">
+                    مشتریان در انتظار تأیید
+                </span>
+
+                <span class="stat-card-icon">
+                    +
+                </span>
+
+            </div>
+
+            <div class="num">
+                <?= number_format($countPendingCustomers) ?>
+            </div>
+
+            <div class="stat-card-note">
+                نیازمند بررسی مدیر
+            </div>
+
+        </div>
+
+
+        <div class="stat-card">
+
+            <div class="stat-card-top">
+
+                <span class="stat-card-label">
+                    درخواست اختصاصی
+                </span>
+
+                <span class="stat-card-icon">
+                    ↗
+                </span>
+
+            </div>
+
+            <div class="num">
+                <?= number_format($countCustom) ?>
+            </div>
+
+            <div class="stat-card-note">
+                درخواست‌های جدید
+            </div>
+
+        </div>
+
+
+        <div class="stat-card">
+
+            <div class="stat-card-top">
+
+                <span class="stat-card-label">
+                    پیام‌های جدید
+                </span>
+
+                <span class="stat-card-icon">
+                    ≋
+                </span>
+
+            </div>
+
+            <div class="num">
+                <?= number_format($countMessages) ?>
+            </div>
+
+            <div class="stat-card-note">
+                نیازمند پاسخ
+            </div>
+
+        </div>
+
+
+        <div class="stat-card">
+
+            <div class="stat-card-top">
+
+                <span class="stat-card-label">
+                    محصولات فعال
+                </span>
+
+                <span class="stat-card-icon">
+                    □
+                </span>
+
+            </div>
+
+            <div class="num">
+                <?= number_format($countProducts) ?>
+            </div>
+
+            <div class="stat-card-note">
+                قابل فروش در سایت
+            </div>
+
+        </div>
+
+    </div>
+
+
+    <!-- =====================================================
+         LATEST CUSTOM ORDERS
+    ====================================================== -->
+
+    <div class="admin-section-head">
+
+        <div>
+
+            <span class="admin-kicker">
+                عملیات
             </span>
 
             <h2>
@@ -191,6 +377,7 @@ ob_start();
         </a>
 
     </div>
+
 
     <div class="admin-table-wrap">
 
@@ -217,17 +404,19 @@ ob_start();
                     <?php foreach ($latestCustom as $r): ?>
 
                         <?php
+
                         $statusLabels = [
-                            'new'       => 'جدید',
-                            'in_review' => 'در بررسی',
-                            'quoted'    => 'قیمت داده شد',
-                            'converted' => 'تبدیل شد',
-                            'rejected'  => 'رد شد',
+                            'new'        => 'جدید',
+                            'in_review'  => 'در بررسی',
+                            'quoted'     => 'قیمت داده شد',
+                            'converted'  => 'تبدیل شد',
+                            'rejected'   => 'رد شد',
                         ];
 
                         $statusLabel =
                             $statusLabels[$r['status']]
                             ?? $r['status'];
+
                         ?>
 
                         <tr>
@@ -235,7 +424,7 @@ ob_start();
                             <td>
                                 <strong>
                                     CR-<?= str_pad(
-                                            $r['id'],
+                                            (string) $r['id'],
                                             5,
                                             '0',
                                             STR_PAD_LEFT
@@ -268,12 +457,11 @@ ob_start();
                             </td>
 
                             <td>
-                                <?= number_format(
-                                    (int)$r['qty']
-                                ) ?>
+                                <?= number_format((int) $r['qty']) ?>
                             </td>
 
                             <td>
+
                                 <span
                                     class="st-badge st-<?= htmlspecialchars(
                                                             $r['status'],
@@ -286,6 +474,7 @@ ob_start();
                                         'UTF-8'
                                     ) ?>
                                 </span>
+
                             </td>
 
                             <td>
@@ -323,6 +512,7 @@ ob_start();
 </div>
 
 <?php
+
 $content = ob_get_clean();
 
 require ROOT_PATH . '/views/layouts/admin.php';

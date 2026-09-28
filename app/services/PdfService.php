@@ -6,13 +6,8 @@ final class PdfService
 {
     private static bool $loaded = false;
 
-    /* ══════════ ابعاد لوگو — تأیید‌شده ══════════ */
-    private const LOGO_MAX_WIDTH_MM  = 25;
-    private const LOGO_MAX_HEIGHT_MM = 35;
-    private const LOGO_PATH          = '/Image/logo2.jpg';
-
     /**
-     * Load TCPDF.
+     * Load TCPDF from Composer.
      */
     private static function loadTcpdf(): void
     {
@@ -23,540 +18,1408 @@ final class PdfService
         $autoload = ROOT_PATH . '/vendor/autoload.php';
 
         if (!is_file($autoload)) {
-            throw new RuntimeException('Composer autoload پیدا نشد.');
+            throw new RuntimeException(
+                'Composer autoload پیدا نشد.'
+            );
         }
 
         require_once $autoload;
 
         if (!class_exists('TCPDF')) {
-            throw new RuntimeException('TCPDF در Composer نصب نشده است.');
+            throw new RuntimeException(
+                'TCPDF در Composer نصب نشده است.'
+            );
         }
 
         self::$loaded = true;
     }
 
     /**
-     * Generate and stream invoice PDF.
+     * Generate invoice PDF and force download.
      */
     public static function output(array $invoice): void
     {
         self::loadTcpdf();
 
-        $pdf = new TCPDF('P', 'mm', 'A4', true, 'UTF-8', false);
+        $pdf = new TCPDF(
+            'P',
+            'mm',
+            'A4',
+            true,
+            'UTF-8',
+            false
+        );
 
-        $pdf->SetCreator('sock-b2b');
-        $pdf->SetAuthor('sock-b2b');
-        $pdf->SetTitle('فاکتور ' . (string)($invoice['invoice_number'] ?? ''));
+        $pdf->SetCreator('RABETI');
+        $pdf->SetAuthor('رابطی');
+        $pdf->SetTitle(
+            'فاکتور ' .
+                (string)($invoice['invoice_number'] ?? '')
+        );
+
         $pdf->SetSubject('فاکتور فروش');
 
         $pdf->setPrintHeader(false);
         $pdf->setPrintFooter(false);
+
         $pdf->setRTL(true);
 
-        $pdf->SetMargins(10, 9, 10);
-        $pdf->SetAutoPageBreak(true, 9);
+        /*
+         * A4 margins
+         */
+        $pdf->SetMargins(
+            9,
+            8,
+            9
+        );
 
-        $pdf->SetFont('dejavusans', '', 8.5);
+        $pdf->SetAutoPageBreak(
+            true,
+            8
+        );
+
+        /*
+         * Persian-compatible font.
+         */
+        $pdf->SetFont(
+            'dejavusans',
+            '',
+            8
+        );
 
         $pdf->AddPage();
 
         $html = self::buildHtml($invoice);
 
-        $pdf->writeHTML($html, true, false, true, false, '');
+        $pdf->writeHTML(
+            $html,
+            true,
+            false,
+            true,
+            false,
+            ''
+        );
 
-        $invoiceNumber = (string)($invoice['invoice_number'] ?? 'invoice');
-        $safeNumber = preg_replace('/[^A-Za-z0-9\-_]/', '', $invoiceNumber);
-        if ($safeNumber === '') $safeNumber = 'invoice';
+        /*
+         * Safe filename
+         */
+        $invoiceNumber = (string)(
+            $invoice['invoice_number']
+            ?? 'invoice'
+        );
 
-        $pdf->Output('invoice-' . $safeNumber . '.pdf', 'I');
-    }
+        $safeNumber = preg_replace(
+            '/[^A-Za-z0-9\-_]/',
+            '',
+            $invoiceNumber
+        );
 
-    /**
-     * تبدیل میلادی به جلالی — بدون کتابخانه
-     */
-    private static function toJalali(?string $mysqlDate): string
-    {
-        if (!$mysqlDate) return '—';
-
-        $ts = strtotime($mysqlDate);
-        if ($ts === false) return '—';
-
-        $gy = (int)date('Y', $ts);
-        $gm = (int)date('n', $ts);
-        $gd = (int)date('j', $ts);
-
-        $g_d_m = [0, 31, 59, 90, 120, 151, 181, 212, 243, 273, 304, 334];
-
-        $jy = ($gy <= 1600) ? 0 : 979;
-        $gy -= ($gy <= 1600) ? 621 : 1600;
-        $gy2 = ($gm > 2) ? $gy + 1 : $gy;
-
-        $days = (365 * $gy)
-            + intdiv($gy2 + 3, 4)
-            - intdiv($gy2 + 99, 100)
-            + intdiv($gy2 + 399, 400)
-            - 80
-            + $gd
-            + $g_d_m[$gm - 1];
-
-        $jy += 33 * intdiv($days, 12053);
-        $days %= 12053;
-        $jy += 4 * intdiv($days, 1461);
-        $days %= 1461;
-
-        if ($days > 365) {
-            $jy += intdiv($days - 1, 365);
-            $days = ($days - 1) % 365;
+        if ($safeNumber === '') {
+            $safeNumber = 'invoice';
         }
 
-        $jm = ($days < 186) ? 1 + intdiv($days, 31) : 7 + intdiv($days - 186, 30);
-        $jd = 1 + (($days < 186) ? ($days % 31) : (($days - 186) % 30));
+        $filename =
+            'RABETI-invoice-' .
+            $safeNumber .
+            '.pdf';
 
-        $months = [
-            '',
-            'فروردین',
-            'اردیبهشت',
-            'خرداد',
-            'تیر',
-            'مرداد',
-            'شهریور',
-            'مهر',
-            'آبان',
-            'آذر',
-            'دی',
-            'بهمن',
-            'اسفند'
-        ];
-
-        return $jy . '/' . str_pad((string)$jm, 2, '0', STR_PAD_LEFT)
-            . '/' . str_pad((string)$jd, 2, '0', STR_PAD_LEFT)
-            . ' (' . $months[$jm] . ')';
+        /*
+         * D = force download
+         */
+        $pdf->Output(
+            $filename,
+            'D'
+        );
     }
 
+
     /**
-     * Build PDF HTML.
+     * Build invoice HTML.
      */
-    private static function buildHtml(array $invoice): string
-    {
+    private static function buildHtml(
+        array $invoice
+    ): string {
+
+        /*
+         * Escape
+         */
         $e = static function ($value): string {
-            return htmlspecialchars((string)$value, ENT_QUOTES | ENT_SUBSTITUTE, 'UTF-8');
+
+            return htmlspecialchars(
+                (string)$value,
+                ENT_QUOTES |
+                    ENT_SUBSTITUTE,
+                'UTF-8'
+            );
         };
 
-        $faDigits = static function ($value): string {
-            return strtr(number_format((float)$value, 0, '.', ','), [
-                '0' => '۰',
-                '1' => '۱',
-                '2' => '۲',
-                '3' => '۳',
-                '4' => '۴',
-                '5' => '۵',
-                '6' => '۶',
-                '7' => '۷',
-                '8' => '۸',
-                '9' => '۹',
-            ]);
+
+        /*
+         * Persian number formatting
+         */
+        $faDigits = static function (
+            string $value
+        ): string {
+
+            return strtr(
+                $value,
+                [
+                    '0' => '۰',
+                    '1' => '۱',
+                    '2' => '۲',
+                    '3' => '۳',
+                    '4' => '۴',
+                    '5' => '۵',
+                    '6' => '۶',
+                    '7' => '۷',
+                    '8' => '۸',
+                    '9' => '۹',
+                ]
+            );
         };
 
-        $money = static function ($value) use ($faDigits): string {
-            return $faDigits($value) . ' تومان';
+
+        /*
+         * Number
+         */
+        $number = static function (
+            $value
+        ) use ($faDigits): string {
+
+            return $faDigits(
+                number_format(
+                    (int)$value,
+                    0,
+                    '.',
+                    ','
+                )
+            );
         };
 
-        /* ═══ اطلاعات فاکتور ═══ */
 
-        $invoiceNumber = $e($invoice['invoice_number'] ?? '—');
-        $orderNumber   = $e($invoice['order_number'] ?? '—');
-        $customerName  = $e($invoice['customer_name'] ?? '—');
-        $customerMobile = $e($invoice['customer_mobile'] ?? '—');
+        /*
+         * Money
+         */
+        $money = static function (
+            $value
+        ) use ($number): string {
 
-        $companyName = trim((string)($invoice['customer_company'] ?? ''));
+            return $number($value) .
+                ' تومان';
+        };
 
-        $invoiceStatus = InvoiceService::statusLabel(
-            (string)($invoice['invoice_status'] ?? '')
+
+        /*
+         * =====================================================
+         * Invoice data
+         * =====================================================
+         */
+
+        $invoiceNumber = (string)(
+            $invoice['invoice_number']
+            ?? '—'
         );
-        $orderStatus = InvoiceService::orderStatusLabel(
-            (string)($invoice['order_status'] ?? '')
+
+        $orderNumber = (string)(
+            $invoice['order_number']
+            ?? '—'
         );
 
-        $issuedDate = self::toJalali($invoice['invoice_issued_at'] ?? null);
-        $issuedTime = InvoiceService::timeFa($invoice['invoice_issued_at'] ?? null);
+        $customerName = (string)(
+            $invoice['shipping_name']
+            ?? $invoice['customer_name']
+            ?? '—'
+        );
 
-        /* ═══ مجموع‌ها ═══ */
+        $customerMobile = (string)(
+            $invoice['shipping_mobile']
+            ?? $invoice['customer_mobile']
+            ?? '—'
+        );
 
-        $totals    = $invoice['totals'] ?? [];
-        $subtotal  = (int)($totals['subtotal'] ?? 0);
-        $total     = (int)($totals['total'] ?? $invoice['invoice_total'] ?? 0);
-        $paid      = (int)($totals['paid'] ?? $invoice['invoice_paid_total'] ?? 0);
-        $remaining = (int)($totals['remaining'] ?? max(0, $total - $paid));
+        $province = trim(
+            (string)(
+                $invoice['shipping_province']
+                ?? ''
+            )
+        );
 
-        /* ═══ لوگو — ۲۵ عرض × ۳۵ ارتفاع میلی‌متر ═══ */
+        $city = trim(
+            (string)(
+                $invoice['shipping_city']
+                ?? ''
+            )
+        );
 
-        $logoPath = PUBLIC_PATH . self::LOGO_PATH;
+        $address = trim(
+            (string)(
+                $invoice['shipping_address']
+                ?? ''
+            )
+        );
+
+        $postal = trim(
+            (string)(
+                $invoice['shipping_postal']
+                ?? ''
+            )
+        );
+
+
+        /*
+         * =====================================================
+         * Date
+         * =====================================================
+         */
+
+        $issuedAt =
+            $invoice['invoice_issued_at']
+            ?? $invoice['order_created_at']
+            ?? null;
+
+        $issuedDate = '—';
+        $issuedTime = '—';
+
+        if ($issuedAt) {
+
+            $timestamp = strtotime(
+                (string)$issuedAt
+            );
+
+            if ($timestamp !== false) {
+
+                $issuedDate =
+                    $faDigits(
+                        date(
+                            'Y/m/d',
+                            $timestamp
+                        )
+                    );
+
+                $issuedTime =
+                    $faDigits(
+                        date(
+                            'H:i',
+                            $timestamp
+                        )
+                    );
+            }
+        }
+
+
+        /*
+         * =====================================================
+         * Status
+         * =====================================================
+         */
+
+        $orderStatus = (string)(
+            $invoice['status']
+            ?? $invoice['order_status']
+            ?? '—'
+        );
+
+
+        /*
+         * =====================================================
+         * Totals
+         * =====================================================
+         */
+
+        $totals =
+            $invoice['totals']
+            ?? [];
+
+        $subtotal = (int)(
+            $totals['subtotal']
+            ?? $invoice['subtotal']
+            ?? 0
+        );
+
+        $discount = (int)(
+            $totals['discount']
+            ?? $invoice['discount_total']
+            ?? 0
+        );
+
+        $shipping = (int)(
+            $totals['shipping']
+            ?? $invoice['shipping_fee']
+            ?? $invoice['shipping_cost']
+            ?? 0
+        );
+
+        $tax = (int)(
+            $totals['tax']
+            ?? 0
+        );
+
+        $afterDiscount = max(
+            0,
+            $subtotal - $discount
+        );
+
+        $total = (int)(
+            $totals['total']
+            ?? $invoice['invoice_total']
+            ?? (
+                $afterDiscount +
+                $shipping +
+                $tax
+            )
+        );
+
+        $paid = (int)(
+            $totals['paid']
+            ?? $invoice['invoice_paid_total']
+            ?? 0
+        );
+
+        $remaining = max(
+            0,
+            $total - $paid
+        );
+
+
+        /*
+         * =====================================================
+         * Logo
+         * =====================================================
+         */
+
+        $logoPath =
+            ROOT_PATH .
+            '/public/Image/logo3.jpg';
+
         $logoHtml = '';
 
         if (is_file($logoPath)) {
-            $logoPathForPdf = str_replace('\\', '/', $logoPath);
+
+            $logoPathForPdf =
+                str_replace(
+                    '\\',
+                    '/',
+                    $logoPath
+                );
+
             $logoHtml = '
-                <td class="logo-area" width="30%">
-                    <div class="logo-box">
-                        <img src="' . $e($logoPathForPdf) . '"
-                             style="max-width:' . self::LOGO_MAX_WIDTH_MM . 'mm;
-                                    max-height:' . self::LOGO_MAX_HEIGHT_MM . 'mm;
-                                    width:auto; height:auto;">
-                    </div>
-                </td>';
+                <img
+                    src="' .
+                $e($logoPathForPdf) .
+                '"
+                    width="58"
+                    height="58"
+                    style="
+                        max-width:58mm;
+                        max-height:58mm;
+                    "
+                >
+            ';
         }
 
-        /* ═══ اقلام ═══ */
+
+        /*
+         * =====================================================
+         * Customer address
+         * =====================================================
+         */
+
+        $addressParts = array_filter(
+            [
+                $province,
+                $city,
+                $address,
+            ],
+            static function ($value) {
+                return trim(
+                    (string)$value
+                ) !== '';
+            }
+        );
+
+        $fullAddress = implode(
+            '، ',
+            $addressParts
+        );
+
+        if ($postal !== '') {
+
+            $fullAddress .=
+                ($fullAddress !== '' ? ' — ' : '') .
+                'کد پستی: ' .
+                $postal;
+        }
+
+        if ($fullAddress === '') {
+            $fullAddress = '—';
+        }
+
+
+        /*
+         * =====================================================
+         * Items
+         * =====================================================
+         */
+
+        $items =
+            $invoice['items']
+            ?? [];
 
         $itemsHtml = '';
-        $items = $invoice['items'] ?? [];
 
-        foreach ($items as $index => $item) {
-            $productName = $e($item['product_name'] ?? 'محصول');
-            $productCode = trim((string)($item['product_code'] ?? ''));
-            $qty      = (int)($item['qty'] ?? 0);
-            $unitPrice = (int)($item['unit_price'] ?? 0);
-            $lineTotal = (int)($item['line_total'] ?? 0);
+        foreach (
+            $items as $index => $item
+        ) {
+
+            $productName = (string)(
+                $item['product_name']
+                ?? 'محصول'
+            );
+
+            $productCode = trim(
+                (string)(
+                    $item['product_code']
+                    ?? ''
+                )
+            );
+
+            $qty = (int)(
+                $item['qty']
+                ?? 0
+            );
+
+            $baseUnitPrice = (int)(
+                $item['base_unit_price']
+                ?? $item['unit_price']
+                ?? 0
+            );
+
+            $unitPrice = (int)(
+                $item['unit_price']
+                ?? 0
+            );
+
+            $discountPercent = (float)(
+                $item['discount_percent']
+                ?? 0
+            );
+
+            $discountAmount = (int)(
+                $item['discount_amount']
+                ?? max(
+                    0,
+                    (
+                        $baseUnitPrice -
+                        $unitPrice
+                    ) * $qty
+                )
+            );
+
+            $lineTotal = (int)(
+                $item['line_total']
+                ?? (
+                    $unitPrice * $qty
+                )
+            );
+
+
+            $discountText = '—';
+
+            if (
+                $discountPercent > 0
+            ) {
+
+                $discountText =
+                    $faDigits(
+                        rtrim(
+                            rtrim(
+                                number_format(
+                                    $discountPercent,
+                                    2,
+                                    '.',
+                                    ''
+                                ),
+                                '0'
+                            ),
+                            '.'
+                        )
+                    ) .
+                    '٪';
+            }
+
 
             $codeHtml = '';
+
             if ($productCode !== '') {
-                $codeHtml = '<div class="product-code">کد:
-                    <span dir="ltr">' . $e($productCode) . '</span>
-                </div>';
+
+                $codeHtml = '
+                    <div class="product-code">
+                        کد: ' .
+                    $e($productCode) .
+                    '</div>
+                ';
             }
+
 
             $itemsHtml .= '
                 <tr>
-                    <td class="item-cell center" width="8%">' . $faDigits($index + 1) . '</td>
-                    <td class="item-cell product" width="37%">
-                        <div class="product-name">' . $productName . '</div>
-                        ' . $codeHtml . '
+
+                    <td
+                        class="center"
+                        width="7%"
+                    >
+                        ' .
+                $number(
+                    $index + 1
+                ) .
+                '
                     </td>
-                    <td class="item-cell center" width="12%">' . $faDigits($qty) . '</td>
-                    <td class="item-cell money" width="21.5%">' . $money($unitPrice) . '</td>
-                    <td class="item-cell money strong" width="21.5%">' . $money($lineTotal) . '</td>
-                </tr>';
+
+                    <td
+                        class="product"
+                        width="29%"
+                    >
+                        <div class="product-name">
+                            ' .
+                $e($productName) .
+                '
+                        </div>
+
+                        ' .
+                $codeHtml .
+                '
+                    </td>
+
+                    <td
+                        class="center"
+                        width="10%"
+                    >
+                        ' .
+                $number($qty) .
+                '
+                    </td>
+
+                    <td
+                        class="money"
+                        width="16%"
+                    >
+                        ' .
+                $money(
+                    $baseUnitPrice
+                ) .
+                '
+                    </td>
+
+                    <td
+                        class="center"
+                        width="11%"
+                    >
+                        ' .
+                $discountText .
+                '
+                    </td>
+
+                    <td
+                        class="money"
+                        width="27%"
+                    >
+                        ' .
+                $money($lineTotal) .
+                '
+                    </td>
+
+                </tr>
+            ';
         }
+
 
         if ($itemsHtml === '') {
-            $itemsHtml = '<tr><td colspan="5" class="empty-cell">موردی برای نمایش وجود ندارد.</td></tr>';
-        }
 
-        /* ═══ شرکت ═══ */
-        $companyHtml = '';
-        if ($companyName !== '') {
-            $companyHtml = '
+            $itemsHtml = '
                 <tr>
-                    <td class="info-label">شرکت</td>
-                    <td class="info-value">' . $e($companyName) . '</td>
-                </tr>';
+
+                    <td
+                        colspan="6"
+                        class="empty"
+                    >
+                        موردی برای نمایش وجود ندارد.
+                    </td>
+
+                </tr>
+            ';
         }
 
-        /* ═══ آدرس ═══ */
-        $shippingAddress = trim(implode('، ', array_filter([
-            $invoice['shipping_province'] ?? '',
-            $invoice['shipping_city'] ?? '',
-            $invoice['shipping_address'] ?? '',
-        ])));
 
-        $addressHtml = '';
-        if ($shippingAddress !== '') {
-            $addressHtml = '
-                <tr>
-                    <td class="info-label">آدرس ارسال</td>
-                    <td class="info-value address">' . $e($shippingAddress) . '</td>
-                </tr>';
-        }
+        /*
+         * =====================================================
+         * Note
+         * =====================================================
+         */
 
-        /* ═══ یادداشت ═══ */
+        $note =
+            trim(
+                (string)(
+                    $invoice['customer_note']
+                    ?? ''
+                )
+            );
+
         $noteHtml = '';
-        $note = trim((string)($invoice['customer_note'] ?? ''));
+
         if ($note !== '') {
+
             $noteHtml = '
-                <div class="section-title">یادداشت سفارش</div>
-                <div class="note-box">' . nl2br($e($note)) . '</div>';
+                <div class="bottom-box">
+
+                    <div class="box-title">
+                        یادداشت سفارش
+                    </div>
+
+                    <div class="note">
+                        ' .
+                nl2br(
+                    $e($note)
+                ) .
+                '
+                    </div>
+
+                </div>
+            ';
+        } else {
+
+            $noteHtml = '
+                <div class="bottom-box">
+
+                    <div class="box-title">
+                        یادداشت سفارش
+                    </div>
+
+                    <div class="note muted">
+                        —
+                    </div>
+
+                </div>
+            ';
         }
 
-        /* ═══ HTML نهایی ═══ */
+
+        /*
+         * =====================================================
+         * HTML
+         * =====================================================
+         */
 
         return '
 <!DOCTYPE html>
-<html lang="fa" dir="rtl">
+
+<html
+    lang="fa"
+    dir="rtl"
+>
+
 <head>
+
 <meta charset="UTF-8">
+
 <style>
 
-    body {
-        direction: rtl;
-        font-family: dejavusans;
-        font-size: 8.5pt;
-        color: #222222;
-        line-height: 1.65;
-    }
+* {
+    font-family: dejavusans;
+}
 
-    table { border-collapse: collapse; }
+body {
+    direction: rtl;
+    font-family: dejavusans;
+    font-size: 8pt;
+    color: #222222;
+    line-height: 1.55;
+}
 
-    /* ─── Header ─── */
-    .header {
-        width: 100%;
-        border-bottom: 0.7mm solid #222222;
-        padding-bottom: 4mm;
-        margin-bottom: 5mm;
-    }
-    .header-table { width: 100%; }
+table {
+    border-collapse: collapse;
+}
 
-    .logo-area {
-        vertical-align: middle;
-        text-align: right;
-    }
+.header {
+    width: 100%;
+    border-bottom: 0.7mm solid #222222;
+    padding-bottom: 3mm;
+    margin-bottom: 4mm;
+}
 
-    /* کادر لوگو: ۲۵ عرض × ۳۵ ارتفاع میلی‌متر */
-    .logo-box {
-        width: ' . self::LOGO_MAX_WIDTH_MM . 'mm;
-        height: ' . self::LOGO_MAX_HEIGHT_MM . 'mm;
-        text-align: right;
-        vertical-align: middle;
-        overflow: hidden;
-    }
-    .logo-box img {
-        max-width: ' . self::LOGO_MAX_WIDTH_MM . 'mm !important;
-        max-height: ' . self::LOGO_MAX_HEIGHT_MM . 'mm !important;
-        width: auto !important;
-        height: auto !important;
-    }
+.header-table {
+    width: 100%;
+}
 
-    .title-area {
-        width: 70%;
-        vertical-align: middle;
-        text-align: left;
-    }
-    .invoice-title {
-        font-size: 15pt;
-        font-weight: bold;
-        line-height: 1.3;
-        margin-bottom: 2mm;
-    }
-    .invoice-subtitle {
-        font-size: 8pt;
-        color: #777777;
-        line-height: 1.5;
-    }
+.logo-cell {
+    width: 25%;
+    vertical-align: middle;
+    text-align: right;
+}
 
-    /* ─── Meta — کدها LTR داخل متن RTL ─── */
-    .meta { width: 100%; margin-bottom: 5mm; }
-    .meta td {
-        border: 0.25mm solid #dddddd;
-        padding: 3mm;
-        vertical-align: middle;
-        line-height: 1.5;
-    }
-    .meta-label { width: 18%; background-color: #f5f5f5; font-weight: bold; }
-    .meta-value { width: 32%; }
-    .ltr-code {
-        direction: ltr;
-        unicode-bidi: embed;
-        font-family: dejavusans;
-        font-weight: normal;
-    }
+.logo-cell img {
+    max-width: 22mm;
+    max-height: 22mm;
+}
 
-    /* ─── Section title ─── */
-    .section-title {
-        font-size: 9.5pt;
-        font-weight: bold;
-        margin-top: 4mm;
-        margin-bottom: 2.5mm;
-        padding-bottom: 2mm;
-        border-bottom: 0.64mm solid #222222;
-        line-height: 1.5;
-    }
+.title-cell {
+    width: 75%;
+    vertical-align: middle;
+    text-align: right;
+}
 
-    /* ─── Customer ─── */
-    .customer { width: 100%; margin-bottom: 5mm; }
-    .customer td {
-        border: 0.25mm solid #dddddd;
-        padding: 3mm;
-        vertical-align: middle;
-        line-height: 1.7;
-    }
-    .info-label { width: 20%; background-color: #f7f7f7; font-weight: bold; }
-    .info-value { width: 80%; }
-    .address { line-height: 1.9; }
+.brand {
+    font-size: 16pt;
+    font-weight: bold;
+    line-height: 1.3;
+}
 
-    /* ─── Items — فشرده‌تر ─── */
-    .items { width: 100%; margin-top: 2mm; }
-    .items th {
-        background-color: #222222;
-        color: #ffffff;
-        border: 0.25mm solid #222222;
-        padding: 3mm 2mm;
-        vertical-align: middle;
-        font-size: 8pt;
-        line-height: 1.5;
-    }
-    .item-cell {
-        border: 0.25mm solid #d5d5d5;
-        padding: 2.8mm 2.5mm;
-        vertical-align: middle;
-        line-height: 1.5;
-    }
-    .center { text-align: center; }
-    .product { text-align: right; }
-    .product-name {
-        font-size: 8.5pt;
-        line-height: 1.6;
-        margin-bottom: 0.5mm;
-    }
-    .product-code {
-        font-size: 7pt;
-        color: #777777;
-        margin-top: 0.5mm;
-        line-height: 1.6;
-    }
-    .money { text-align: center; direction: rtl; line-height: 1.6; }
-    .strong { font-weight: bold; }
-    .empty-cell { text-align: center; padding: 6mm; color: #777777; }
+.subtitle {
+    color: #777777;
+    font-size: 8pt;
+    line-height: 1.5;
+}
 
-    /* ─── Totals ─── */
-    .totals-wrapper { width: 100%; margin-top: 6mm; }
-    .totals { width: 55%; }
-    .totals td {
-        border-bottom: 0.25mm solid #dddddd;
-        padding: 3mm;
-        line-height: 1.6;
-    }
-    .totals-label { width: 48%; background-color: #f7f7f7; font-weight: bold; }
-    .totals-value { width: 52%; text-align: left; font-weight: bold; }
-    .grand-total td {
-        border-top: 0.7mm solid #222222;
-        border-bottom: 0.7mm solid #222222;
-        padding: 3.5mm 3mm;
-        font-size: 9.5pt;
-    }
-    .remaining td { background-color: #f1f1f1; }
+.invoice-title {
+    font-size: 12pt;
+    font-weight: bold;
+    margin-top: 1mm;
+}
 
-    /* ─── Note ─── */
-    .note-box {
-        border: 0.25mm solid #dddddd;
-        background-color: #fafafa;
-        padding: 3.5mm;
-        line-height: 1.9;
-    }
 
-    /* ─── Footer ─── */
-    .footer {
-        width: 100%;
-        border-top: 0.25mm solid #dddddd;
-        margin-top: 7mm;
-        padding-top: 3mm;
-        text-align: center;
-        color: #777777;
-        font-size: 7pt;
-        line-height: 1.8;
-    }
+/*
+|--------------------------------------------------------------------------
+| META
+|--------------------------------------------------------------------------
+*/
+
+.meta {
+    width: 100%;
+    margin-bottom: 4mm;
+}
+
+.meta td {
+    border: 0.25mm solid #dddddd;
+    padding: 2.2mm;
+    vertical-align: middle;
+    line-height: 1.45;
+}
+
+.meta-label {
+    width: 14%;
+    background-color: #f5f5f5;
+    font-weight: bold;
+}
+
+.meta-value {
+    width: 19.3%;
+}
+
+
+/*
+|--------------------------------------------------------------------------
+| PARTIES
+|--------------------------------------------------------------------------
+*/
+
+.parties {
+    width: 100%;
+    margin-bottom: 4mm;
+}
+
+.party {
+    width: 50%;
+    vertical-align: top;
+}
+
+.party-gap {
+    width: 2%;
+}
+
+.party-box {
+    border: 0.25mm solid #dddddd;
+    padding: 3mm;
+    min-height: 29mm;
+}
+
+.party-title {
+    font-size: 9pt;
+    font-weight: bold;
+    border-bottom: 0.5mm solid #222222;
+    padding-bottom: 1.5mm;
+    margin-bottom: 2mm;
+}
+
+.party-row {
+    line-height: 1.65;
+    margin-bottom: 0.8mm;
+}
+
+.party-label {
+    font-weight: bold;
+}
+
+
+/*
+|--------------------------------------------------------------------------
+| ITEMS
+|--------------------------------------------------------------------------
+*/
+
+.section-title {
+    font-size: 9pt;
+    font-weight: bold;
+    border-bottom: 0.5mm solid #222222;
+    padding-bottom: 1.5mm;
+    margin-bottom: 2mm;
+}
+
+.items {
+    width: 100%;
+}
+
+.items th {
+    background-color: #222222;
+    color: #ffffff;
+    border: 0.25mm solid #222222;
+    padding: 2.2mm 1.5mm;
+    vertical-align: middle;
+    font-size: 7.5pt;
+    line-height: 1.4;
+}
+
+.items td {
+    border: 0.25mm solid #d5d5d5;
+    padding: 2.5mm 1.5mm;
+    vertical-align: middle;
+    line-height: 1.55;
+}
+
+.center {
+    text-align: center;
+}
+
+.product {
+    text-align: right;
+}
+
+.product-name {
+    font-size: 8pt;
+    line-height: 1.55;
+}
+
+.product-code {
+    font-size: 6.8pt;
+    color: #777777;
+    margin-top: 0.7mm;
+}
+
+.money {
+    text-align: center;
+    direction: rtl;
+}
+
+.empty {
+    text-align: center;
+    padding: 5mm;
+    color: #777777;
+}
+
+
+/*
+|--------------------------------------------------------------------------
+| BOTTOM
+|--------------------------------------------------------------------------
+*/
+
+.bottom {
+    width: 100%;
+    margin-top: 4mm;
+}
+
+.bottom-left {
+    width: 55%;
+    vertical-align: top;
+    padding-left: 3mm;
+}
+
+.bottom-right {
+    width: 45%;
+    vertical-align: top;
+}
+
+.bottom-box {
+    border: 0.25mm solid #dddddd;
+    padding: 2.8mm;
+}
+
+.box-title {
+    font-weight: bold;
+    font-size: 8.5pt;
+    border-bottom: 0.4mm solid #222222;
+    padding-bottom: 1.3mm;
+    margin-bottom: 2mm;
+}
+
+.note {
+    line-height: 1.8;
+}
+
+.muted {
+    color: #777777;
+}
+
+
+/*
+|--------------------------------------------------------------------------
+| TOTALS
+|--------------------------------------------------------------------------
+*/
+
+.totals {
+    width: 100%;
+}
+
+.totals td {
+    border-bottom: 0.25mm solid #dddddd;
+    padding: 2mm;
+    line-height: 1.45;
+}
+
+.total-label {
+    width: 48%;
+    background-color: #f7f7f7;
+    font-weight: bold;
+}
+
+.total-value {
+    width: 52%;
+    text-align: left;
+    font-weight: bold;
+}
+
+.grand-total td {
+    border-top: 0.6mm solid #222222;
+    border-bottom: 0.6mm solid #222222;
+    font-size: 9pt;
+    padding-top: 2.5mm;
+    padding-bottom: 2.5mm;
+}
+
+.remaining td {
+    background-color: #f1f1f1;
+}
+
+
+/*
+|--------------------------------------------------------------------------
+| FOOTER
+|--------------------------------------------------------------------------
+*/
+
+.footer {
+    width: 100%;
+    border-top: 0.25mm solid #dddddd;
+    margin-top: 4mm;
+    padding-top: 2mm;
+    text-align: center;
+    color: #777777;
+    font-size: 6.5pt;
+}
 
 </style>
+
 </head>
+
 <body>
 
-    <!-- HEADER -->
-    <div class="header">
-        <table class="header-table">
-            <tr>
-                ' . $logoHtml . '
-                <td class="title-area" width="70%">
-                    <div class="invoice-title">فاکتور فروش</div>
-                    <div class="invoice-subtitle">فروش عمده جوراب</div>
-                </td>
-            </tr>
-        </table>
-    </div>
 
-    <!-- META -->
-    <table class="meta">
+<!-- =========================================================
+     HEADER
+========================================================= -->
+
+<div class="header">
+
+    <table class="header-table">
+
         <tr>
-            <td class="meta-label">شماره فاکتور</td>
-            <td class="meta-value"><span class="ltr-code">' . $invoiceNumber . '</span></td>
-            <td class="meta-label">تاریخ</td>
-            <td class="meta-value">' . $issuedDate . '</td>
+
+            <td class="logo-cell">
+                ' .
+            $logoHtml .
+            '
+            </td>
+
+            <td class="title-cell">
+
+                <div class="brand">
+                    رابطی
+                </div>
+
+                <div class="subtitle">
+                    تولید مستقیم · فروش عمده
+                </div>
+
+                <div class="invoice-title">
+                    فاکتور فروش
+                </div>
+
+            </td>
+
         </tr>
-        <tr>
-            <td class="meta-label">شماره سفارش</td>
-            <td class="meta-value"><span class="ltr-code">' . $orderNumber . '</span></td>
-            <td class="meta-label">ساعت صدور</td>
-            <td class="meta-value">' . $issuedTime . '</td>
-        </tr>
-        <tr>
-            <td class="meta-label">وضعیت فاکتور</td>
-            <td class="meta-value">' . $e($invoiceStatus) . '</td>
-            <td class="meta-label">وضعیت سفارش</td>
-            <td class="meta-value">' . $e($orderStatus) . '</td>
-        </tr>
+
     </table>
 
-    <!-- CUSTOMER -->
-    <div class="section-title">مشخصات مشتری</div>
-    <table class="customer">
+</div>
+
+
+<!-- =========================================================
+     META
+========================================================= -->
+
+<table class="meta">
+
+    <tr>
+
+        <td class="meta-label">
+            شماره فاکتور
+        </td>
+
+        <td class="meta-value">
+            ' .
+            $e($invoiceNumber) .
+            '
+        </td>
+
+        <td class="meta-label">
+            تاریخ
+        </td>
+
+        <td class="meta-value">
+            ' .
+            $issuedDate .
+            '
+        </td>
+
+    </tr>
+
+    <tr>
+
+        <td class="meta-label">
+            شماره سفارش
+        </td>
+
+        <td class="meta-value">
+            ' .
+            $e($orderNumber) .
+            '
+        </td>
+
+        <td class="meta-label">
+            ساعت
+        </td>
+
+        <td class="meta-value">
+            ' .
+            $issuedTime .
+            '
+        </td>
+
+    </tr>
+
+    <tr>
+
+        <td class="meta-label">
+            وضعیت سفارش
+        </td>
+
+        <td class="meta-value">
+            ' .
+            $e($orderStatus) .
+            '
+        </td>
+
+        <td class="meta-label">
+            نوع فروش
+        </td>
+
+        <td class="meta-value">
+            عمده
+        </td>
+
+    </tr>
+
+</table>
+
+
+<!-- =========================================================
+     PARTIES
+========================================================= -->
+
+<table class="parties">
+
+    <tr>
+
+        <td class="party">
+
+            <div class="party-box">
+
+                <div class="party-title">
+                    فروشنده
+                </div>
+
+                <div class="party-row">
+                    <span class="party-label">
+                        نام:
+                    </span>
+                    رابطی
+                </div>
+
+                <div class="party-row">
+                    <span class="party-label">
+                        نوع فعالیت:
+                    </span>
+                    تولید و فروش عمده جوراب
+                </div>
+
+            </div>
+
+        </td>
+
+        <td class="party-gap">
+        </td>
+
+        <td class="party">
+
+            <div class="party-box">
+
+                <div class="party-title">
+                    مشتری
+                </div>
+
+                <div class="party-row">
+                    <span class="party-label">
+                        نام:
+                    </span>
+                    ' .
+            $e($customerName) .
+            '
+                </div>
+
+                <div class="party-row">
+                    <span class="party-label">
+                        موبایل:
+                    </span>
+                    ' .
+            $e($customerMobile) .
+            '
+                </div>
+
+                <div class="party-row">
+                    <span class="party-label">
+                        آدرس:
+                    </span>
+                    ' .
+            $e($fullAddress) .
+            '
+                </div>
+
+            </div>
+
+        </td>
+
+    </tr>
+
+</table>
+
+
+<!-- =========================================================
+     ITEMS
+========================================================= -->
+
+<div class="section-title">
+    جزئیات اقلام
+</div>
+
+<table class="items">
+
+    <thead>
+
         <tr>
-            <td class="info-label">نام مشتری</td>
-            <td class="info-value">' . $customerName . '</td>
+
+            <th width="7%">
+                ردیف
+            </th>
+
+            <th width="29%">
+                محصول
+            </th>
+
+            <th width="10%">
+                تعداد
+            </th>
+
+            <th width="16%">
+                قیمت پایه
+            </th>
+
+            <th width="11%">
+                تخفیف
+            </th>
+
+            <th width="27%">
+                مبلغ نهایی
+            </th>
+
         </tr>
-        ' . $companyHtml . '
-        <tr>
-            <td class="info-label">شماره موبایل</td>
-            <td class="info-value">' . $customerMobile . '</td>
-        </tr>
-        ' . $addressHtml . '
-    </table>
 
-    <!-- ITEMS -->
-    <div class="section-title">جزئیات اقلام</div>
-    <table class="items">
-        <thead>
-            <tr>
-                <th width="8%">ردیف</th>
-                <th width="37%">محصول</th>
-                <th width="12%">تعداد</th>
-                <th width="21.5%">قیمت واحد</th>
-                <th width="21.5%">مبلغ</th>
-            </tr>
-        </thead>
-        <tbody>
-            ' . $itemsHtml . '
-        </tbody>
-    </table>
+    </thead>
 
-    <!-- TOTALS -->
-    <div class="totals-wrapper">
-        <table class="totals">
-            <tr>
-                <td class="totals-label">جمع اقلام</td>
-                <td class="totals-value">' . $money($subtotal) . '</td>
-            </tr>
-            <tr class="grand-total">
-                <td class="totals-label">مبلغ کل</td>
-                <td class="totals-value">' . $money($total) . '</td>
-            </tr>
-            <tr>
-                <td class="totals-label">پرداخت‌شده</td>
-                <td class="totals-value">' . $money($paid) . '</td>
-            </tr>
-            <tr class="remaining">
-                <td class="totals-label">مانده قابل پرداخت</td>
-                <td class="totals-value">' . $money($remaining) . '</td>
-            </tr>
-        </table>
-    </div>
+    <tbody>
 
-    ' . $noteHtml . '
+        ' .
+            $itemsHtml .
+            '
 
-    <!-- FOOTER -->
-    <div class="footer">
-        این فاکتور به‌صورت الکترونیکی صادر شده است.
-        <br>
-        sock-b2b
-    </div>
+    </tbody>
+
+</table>
+
+
+<!-- =========================================================
+     BOTTOM
+========================================================= -->
+
+<table class="bottom">
+
+    <tr>
+
+        <td class="bottom-left">
+
+            ' .
+            $noteHtml .
+            '
+
+        </td>
+
+        <td class="bottom-right">
+
+            <div class="bottom-box">
+
+                <div class="box-title">
+                    خلاصه مالی
+                </div>
+
+                <table class="totals">
+
+                    <tr>
+
+                        <td class="total-label">
+                            جمع اقلام
+                        </td>
+
+                        <td class="total-value">
+                            ' .
+            $money($subtotal) .
+            '
+                        </td>
+
+                    </tr>
+
+                    <tr>
+
+                        <td class="total-label">
+                            تخفیف
+                        </td>
+
+                        <td class="total-value">
+                            ' .
+            $money($discount) .
+            '
+                        </td>
+
+                    </tr>
+
+                    <tr>
+
+                        <td class="total-label">
+                            هزینه ارسال
+                        </td>
+
+                        <td class="total-value">
+                            ' .
+            $money($shipping) .
+            '
+                        </td>
+
+                    </tr>
+
+                    <tr class="grand-total">
+
+                        <td class="total-label">
+                            مبلغ کل
+                        </td>
+
+                        <td class="total-value">
+                            ' .
+            $money($total) .
+            '
+                        </td>
+
+                    </tr>
+
+                    <tr>
+
+                        <td class="total-label">
+                            پرداخت‌شده
+                        </td>
+
+                        <td class="total-value">
+                            ' .
+            $money($paid) .
+            '
+                        </td>
+
+                    </tr>
+
+                    <tr class="remaining">
+
+                        <td class="total-label">
+                            مانده قابل پرداخت
+                        </td>
+
+                        <td class="total-value">
+                            ' .
+            $money($remaining) .
+            '
+                        </td>
+
+                    </tr>
+
+                </table>
+
+            </div>
+
+        </td>
+
+    </tr>
+
+</table>
+
+
+<!-- =========================================================
+     FOOTER
+========================================================= -->
+
+<div class="footer">
+
+    این فاکتور به‌صورت الکترونیکی توسط رابطی صادر شده است.
+
+</div>
+
 
 </body>
-</html>';
+
+</html>
+';
     }
 }

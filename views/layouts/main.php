@@ -45,7 +45,7 @@ if (is_logged_in()) {
 
     <link
         rel="stylesheet"
-        href="/assets/css/app.css?v=22">
+        href="/assets/css/app.css?v=29">
 
     <style>
         /* ══════════ Auth Modal ══════════ */
@@ -915,7 +915,7 @@ if (is_logged_in()) {
 
     </div>
 
-    <script src="/assets/js/app.js?v=21"></script>
+    <script src="/assets/js/app.js?v=23"></script>
 
 </body>
 
