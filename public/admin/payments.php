@@ -95,6 +95,7 @@ $invStatusLabel = static fn(string $s): string => match ($s) {
 
 /* ═══ نتیجه مالی — COMPUTED از حقیقت (total / paid_total) ═══ */
 
+
 $reconcile = static function (int $invoiceId) use ($db): array {
 
     $stmt = $db->prepare("
@@ -153,7 +154,9 @@ $reconcile = static function (int $invoiceId) use ($db): array {
         'amount' => $amount,
         'status' => $status
     ];
-};/* ═══ CSRF ═══ */
+};
+
+/* ═══ CSRF ═══ */
 
 if (!function_exists('csrf_token')) {
     function csrf_token(): string
@@ -207,7 +210,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             $db->prepare("UPDATE payment_submissions SET status='verified', updated_at=NOW() WHERE id=? AND status='pending'")
                 ->execute([$subId]);
 
-            $fin = $reconcile((int)$sub['invoice_id']);
+            $preFin = $reconcile((int)$sub['invoice_id']);
 
             /* تاریخچه — با ستون‌های واقعی جدول */
             $db->prepare("INSERT INTO payment_verification_history
@@ -379,6 +382,13 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             $stmt->execute([$invoiceId]);
             $invoice = $stmt->fetch();
             if (!$invoice) throw new RuntimeException('فاکتور پیدا نشد.');
+            /* اگر قبلاً تسویه شده → فقط اصلاح و اطلاع */
+            $preFin = $reconcile($invoiceId);
+            if ($preFin['type'] !== 'creditor') {
+                $db->commit();
+                header('Location: /admin/payments?success=' . urlencode('این فاکتور قبلاً تسویه شده است.'));
+                exit;
+            }
 
             $fin = $reconcile($invoiceId);
             if ($fin['type'] !== 'creditor') throw new RuntimeException('این فاکتور بستانکار نیست.');
@@ -389,6 +399,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 VALUES (?,?, 'creditor_settlement', ?, ?, ?, ?, 'completed', ?, NOW())")
                 ->execute([$invoiceId, (int)$invoice['user_id'], $amount, $method, $docNo ?: null, $refNo ?: null, $adminId]);
             $txnId = (int)$db->lastInsertId();
+            /* ⭐ بازمحاسبه بعد از تسویه — با کم‌شدن وجه برگشتی */
+            $fin = $reconcile($invoiceId);
 
             /* درخواست بازگشت وجه مشتری → paid */
             $stmt = $db->prepare("SELECT id FROM refund_requests
@@ -405,9 +417,11 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
             $db->commit();
 
-            $remainingAfter = $fin['amount'] - $amount;
+            /* $fin بعد از reconcile دوم است — مانده بعد از تسویه را از قبل دارد */
             header('Location: /admin/payments?success=' . urlencode(
-                $remainingAfter === 0 ? 'بستانکاری کاملاً تسویه شد.' : 'تسویه ثبت شد. مانده: ' . $money($remainingAfter)
+                $fin['amount'] === 0
+                    ? 'بستانکاری کاملاً تسویه شد.'
+                    : 'تسویه ثبت شد. مانده بستانکاری: ' . $money($fin['amount'])
             ));
             exit;
         } catch (Throwable $e) {
