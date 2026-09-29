@@ -110,7 +110,18 @@ $reconcile = static function (int $invoiceId) use ($db): array {
     $stmt->execute([$invoiceId]);
     $total = (int)$stmt->fetchColumn();
 
-    $remaining = $total - $paid;
+    /* ⭐ تسویه‌های بستانکاری انجام‌شده کم می‌شوند —
+       پولی که برگشته دیگر «دریافت‌شده» نیست */
+    $stmt = $db->prepare("
+        SELECT COALESCE(SUM(amount), 0)
+        FROM financial_transactions
+        WHERE invoice_id = ? AND type = 'creditor_settlement' AND status = 'completed'
+    ");
+    $stmt->execute([$invoiceId]);
+    $settledRefunds = (int)$stmt->fetchColumn();
+
+    $effectivePaid = $paid - $settledRefunds;   /* پولی که نزد شرکت مانده */
+    $remaining = $total - $effectivePaid;
 
     if ($remaining > 0) {
         $type = 'debtor';
@@ -123,11 +134,11 @@ $reconcile = static function (int $invoiceId) use ($db): array {
         $amount = 0;
     }
 
-    $status = ($paid >= $total && $paid > 0) ? 'paid'
-        : (($paid > 0) ? 'partial' : 'unpaid');
+    $status = ($effectivePaid >= $total && $effectivePaid > 0) ? 'paid'
+        : (($effectivePaid > 0) ? 'partial' : 'unpaid');
 
     $db->prepare("UPDATE invoices SET paid_total=?, status=?, reconciliation_type=?, reconciliation_amount=? WHERE id=?")
-        ->execute([$paid, $status, $type, $amount, $invoiceId]);
+        ->execute([$effectivePaid, $status, $type, $amount, $invoiceId]);
 
     if ($status === 'paid') {
         $db->prepare("UPDATE orders SET status='processing' WHERE id=(SELECT order_id FROM invoices WHERE id=?) AND status='pending_review'")
@@ -135,16 +146,14 @@ $reconcile = static function (int $invoiceId) use ($db): array {
     }
 
     return [
-        'paid' => $paid,
+        'paid' => $effectivePaid,
         'total' => $total,
         'remaining' => $remaining,
         'type' => $type,
         'amount' => $amount,
         'status' => $status
     ];
-};
-
-/* ═══ CSRF ═══ */
+};/* ═══ CSRF ═══ */
 
 if (!function_exists('csrf_token')) {
     function csrf_token(): string
