@@ -85,7 +85,15 @@ $methodLabel = static fn(string $m): string => match ($m) {
     default => $m,
 };
 
-/* ═══════════ محاسبه نتیجه مالی — از حقیقت (total / paid_total) ═══════════ */
+$invStatusLabel = static fn(string $s): string => match ($s) {
+    'unpaid' => 'پرداخت نشده',
+    'partial' => 'پرداخت ناقص',
+    'paid' => 'پرداخت کامل',
+    'void' => 'باطل',
+    default => $s,
+};
+
+/* ═══ نتیجه مالی — COMPUTED از حقیقت (total / paid_total) ═══ */
 
 $reconcile = static function (int $invoiceId) use ($db): array {
 
@@ -136,7 +144,7 @@ $reconcile = static function (int $invoiceId) use ($db): array {
     ];
 };
 
-/* ═══════════ CSRF ═══════════ */
+/* ═══ CSRF ═══ */
 
 if (!function_exists('csrf_token')) {
     function csrf_token(): string
@@ -160,7 +168,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
     $action = trim((string)($_POST['action'] ?? ''));
 
-    /* ═══ تأیید پرداخت با مبلغ واقعی ═══ */
+    /* ═══ تأیید با مبلغ واقعی ═══ */
     if ($action === 'verify_payment') {
 
         $subId  = (int)($_POST['submission_id'] ?? 0);
@@ -192,9 +200,11 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
             $fin = $reconcile((int)$sub['invoice_id']);
 
+            /* تاریخچه — با ستون‌های واقعی جدول */
             $db->prepare("INSERT INTO payment_verification_history
-    (payment_submission_id, invoice_id, old_verified_amount, new_verified_amount, old_status, new_status, reason, changed_by, ip)
-    VALUES (?,?,?,?,?,?,?,?,?)")
+                (payment_submission_id, invoice_id, old_verified_amount, new_verified_amount,
+                 old_status, new_status, reason, changed_by, ip)
+                VALUES (?,?,?,?,?,?,?,?,?)")
                 ->execute([
                     $subId,
                     (int)$sub['invoice_id'],
@@ -211,7 +221,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
             $msg = 'تأیید شد — مبلغ واقعی: ' . $money($actual);
             if ((int)$sub['claimed_amount'] !== $actual) {
-                $msg .= ' | ادعا: ' . $money((int)$sub['claimed_amount']);
+                $msg .= ' | ادعای مشتری: ' . $money((int)$sub['claimed_amount']);
             }
             if ($fin['remaining'] > 0) {
                 $msg .= ' | بدهکار خودکار: ' . $money($fin['remaining']);
@@ -262,8 +272,9 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             $fin = $reconcile((int)$sub['invoice_id']);
 
             $db->prepare("INSERT INTO payment_verification_history
-    (payment_submission_id, invoice_id, old_verified_amount, new_verified_amount, old_status, new_status, reason, changed_by, ip)
-    VALUES (?,?,?,?,?,?,?,?,?)")
+                (payment_submission_id, invoice_id, old_verified_amount, new_verified_amount,
+                 old_status, new_status, reason, changed_by, ip)
+                VALUES (?,?,?,?,?,?,?,?,?)")
                 ->execute([
                     $subId,
                     (int)$sub['invoice_id'],
@@ -280,7 +291,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
             header('Location: /admin/payments?success=' . urlencode(
                 'اصلاح شد: ' . $money($oldAmount) . ' ← ' . $money($newAmt) .
-                    ' | بدهکار فعلی: ' . $money(max(0, $fin['remaining']))
+                    ' | نتیجه فعلی: ' . $fin['type'] . ($fin['amount'] > 0 ? ' ' . $money($fin['amount']) : '')
             ));
             exit;
         } catch (Throwable $e) {
@@ -318,8 +329,9 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             $reconcile((int)$sub['invoice_id']);
 
             $db->prepare("INSERT INTO payment_verification_history
-    (payment_submission_id, invoice_id, old_verified_amount, new_verified_amount, old_status, new_status, reason, changed_by, ip)
-    VALUES (?,?,?,?,?,?,?,?,?)")
+                (payment_submission_id, invoice_id, old_verified_amount, new_verified_amount,
+                 old_status, new_status, reason, changed_by, ip)
+                VALUES (?,?,?,?,?,?,?,?,?)")
                 ->execute([
                     $subId,
                     (int)$sub['invoice_id'],
@@ -342,10 +354,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         }
     }
 
-
-    if ($action !== 'verify_payment') { /* فقط نشانه‌گذاری جای درج */
-    }
-    /* ═══ تسویه بستانکاری + علامت‌گذاری درخواست بازگشت وجه مشتری ═══ */
+    /* ═══ تسویه بستانکاری + علامت‌گذاری درخواست بازگشت وجه ═══ */
     if ($action === 'settle_creditor') {
 
         $invoiceId = (int)($_POST['invoice_id'] ?? 0);
@@ -372,19 +381,13 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 ->execute([$invoiceId, (int)$invoice['user_id'], $amount, $method, $docNo ?: null, $refNo ?: null, $adminId]);
             $txnId = (int)$db->lastInsertId();
 
-            /* ⭐ درخواست بازگشت وجه مشتری → paid */
+            /* درخواست بازگشت وجه مشتری → paid */
             $stmt = $db->prepare("SELECT id FROM refund_requests
                                   WHERE invoice_id=? AND status='pending' ORDER BY id DESC LIMIT 1");
             $stmt->execute([$invoiceId]);
             if ($refundRow = $stmt->fetch()) {
-                $db->prepare("UPDATE refund_requests
-                              SET status='paid', paid_at=NOW(),
-                                  admin_note=?
-                              WHERE id=?")
-                    ->execute([
-                        'سند تسویه #' . $txnId . ($refNo !== '' ? ' | پیگیری: ' . $refNo : null),
-                        (int)$refundRow['id']
-                    ]);
+                $db->prepare("UPDATE refund_requests SET status='paid', paid_at=NOW(), admin_note=? WHERE id=?")
+                    ->execute(['سند تسویه #' . $txnId . ($refNo !== '' ? ' | پیگیری: ' . $refNo : null), (int)$refundRow['id']]);
             }
 
             $db->prepare("INSERT INTO audit_logs (user_id, action, entity, entity_id, ip)
@@ -409,50 +412,50 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     exit;
 }
 
-/* ═══════════ داده‌های صفحه ═══════════ */
+/* ═══════════ فیلترها — شامل بدهکار/بستانکار/تسویه ═══════════ */
 
 $filter = trim((string)($_GET['filter'] ?? 'all'));
-if (!in_array($filter, ['all', 'pending', 'verified', 'rejected'], true)) $filter = 'all';
+
+$allowedFilters = ['all', 'pending', 'verified', 'rejected', 'debtor', 'creditor', 'settled'];
+if (!in_array($filter, $allowedFilters, true)) $filter = 'all';
+
 $search = trim((string)($_GET['q'] ?? ''));
 
-$success = trim((string)($_GET['success'] ?? ''));
-$error   = trim((string)($_GET['error'] ?? ''));
+/* ═══════════ آمار ═══════════ */
 
-/* آمار */
 $stats = [
     'pending'  => (int)$db->query("SELECT COUNT(*) FROM payment_submissions WHERE status='pending'")->fetchColumn(),
     'verified' => (int)$db->query("SELECT COUNT(*) FROM payment_submissions WHERE status='verified'")->fetchColumn(),
     'rejected' => (int)$db->query("SELECT COUNT(*) FROM payment_submissions WHERE status='rejected'")->fetchColumn(),
-
+    'debtor'   => (int)$db->query("SELECT COUNT(*) FROM invoices WHERE reconciliation_type='debtor' AND reconciliation_amount>0")->fetchColumn(),
+    'creditor' => (int)$db->query("SELECT COUNT(*) FROM invoices WHERE reconciliation_type='creditor' AND reconciliation_amount>0")->fetchColumn(),
+    'settled'  => (int)$db->query("SELECT COUNT(*) FROM invoices WHERE reconciliation_type='settled'")->fetchColumn(),
 ];
-$stats['debtor']   = (int)$db->query("SELECT COUNT(*) FROM invoices WHERE reconciliation_type='debtor' AND reconciliation_amount>0")->fetchColumn();
-$stats['creditor'] = (int)$db->query("SELECT COUNT(*) FROM invoices WHERE reconciliation_type='creditor' AND reconciliation_amount>0")->fetchColumn();
 
-/* فاکتورهای بستانکار (computed) با درخواست بازگشت وجه */
-$creditorInvoices = $db->query("
-    SELECT i.id, i.invoice_number, i.total, i.paid_total,
-           o.order_number, u.full_name,
-           (i.paid_total - i.total) AS creditor_amount,
-           (SELECT r.id FROM refund_requests r WHERE r.invoice_id = i.id AND r.status='pending' ORDER BY r.id DESC LIMIT 1) AS refund_id,
-           (SELECT r.sheba FROM refund_requests r WHERE r.invoice_id = i.id AND r.status='pending' ORDER BY r.id DESC LIMIT 1) AS refund_sheba,
-           (SELECT r.account_holder FROM refund_requests r WHERE r.invoice_id = i.id AND r.status='pending' ORDER BY r.id DESC LIMIT 1) AS refund_holder
-    FROM invoices i
-    INNER JOIN orders o ON o.id = i.order_id
-    INNER JOIN users u ON u.id = i.user_id
-    WHERE i.paid_total > i.total
-    ORDER BY (i.paid_total - i.total) DESC
-")->fetchAll();
+/* ═══════════ لیست فاکتورها — یک ردیف برای هر فاکتور ═══════════ */
 
-/* لیست submissions */
 $where = [];
 $params = [];
-if ($filter === 'pending')  $where[] = "ps.status='pending'";
-if ($filter === 'verified') $where[] = "ps.status='verified'";
-if ($filter === 'rejected') $where[] = "ps.status='rejected'";
 
-if ($filter === 'debtor' || $filter === 'creditor' || $filter === 'settled') {
-    $expectedType = $filter;   // debtor / creditor / settled
-    $where[] = "i.reconciliation_type = " . $db->quote($expectedType);
+switch ($filter) {
+    case 'pending':
+        $where[] = "EXISTS (SELECT 1 FROM payment_submissions f WHERE f.invoice_id=i.id AND f.status='pending')";
+        break;
+    case 'verified':
+        $where[] = "EXISTS (SELECT 1 FROM payment_submissions f WHERE f.invoice_id=i.id AND f.status='verified')";
+        break;
+    case 'rejected':
+        $where[] = "EXISTS (SELECT 1 FROM payment_submissions f WHERE f.invoice_id=i.id AND f.status='rejected')";
+        break;
+    case 'debtor':
+        $where[] = "i.reconciliation_type='debtor' AND i.reconciliation_amount>0";
+        break;
+    case 'creditor':
+        $where[] = "i.reconciliation_type='creditor' AND i.reconciliation_amount>0";
+        break;
+    case 'settled':
+        $where[] = "i.reconciliation_type='settled'";
+        break;
 }
 
 if ($search !== '') {
@@ -463,18 +466,33 @@ if ($search !== '') {
 $whereSql = $where ? 'WHERE ' . implode(' AND ', $where) : '';
 
 $stmt = $db->prepare("
-    SELECT ps.*, i.invoice_number, i.total AS invoice_total, i.paid_total,
-           o.order_number, u.full_name, u.company_name, u.mobile
-    FROM payment_submissions ps
-    INNER JOIN invoices i ON i.id = ps.invoice_id
+    SELECT i.id, i.invoice_number, i.total, i.paid_total,
+           i.status AS invoice_status, i.reconciliation_type, i.reconciliation_amount,
+           i.issued_at,
+           o.order_number, o.status AS order_status,
+           u.full_name, u.mobile, u.company_name,
+           (SELECT COALESCE(SUM(ps.claimed_amount),0) FROM payment_submissions ps
+            WHERE ps.invoice_id=i.id AND ps.status='pending') AS pending_amount,
+           (SELECT COUNT(*) FROM payment_submissions ps
+            WHERE ps.invoice_id=i.id) AS submission_count
+    FROM invoices i
     INNER JOIN orders o ON o.id = i.order_id
-    INNER JOIN users u ON u.id = ps.user_id
+    INNER JOIN users u ON u.id = i.user_id
     {$whereSql}
-    ORDER BY (ps.status='pending') DESC, ps.id DESC
+    ORDER BY
+        (i.reconciliation_type='debtor') DESC,
+        (EXISTS (SELECT 1 FROM payment_submissions p2 WHERE p2.invoice_id=i.id AND p2.status='pending')) DESC,
+        i.issued_at DESC
     LIMIT 100
 ");
 $stmt->execute($params);
-$submissions = $stmt->fetchAll();
+$invoices = $stmt->fetchAll();
+
+$success = trim((string)($_GET['success'] ?? ''));
+$error   = trim((string)($_GET['error'] ?? ''));
+
+$recLabels = ['debtor' => 'بدهکار', 'creditor' => 'بستانکار', 'settled' => 'تسویه'];
+$recClasses = ['debtor' => 'danger', 'creditor' => 'info', 'settled' => 'success'];
 
 $pageTitle  = 'مرکز مالی';
 $activeMenu = 'payments';
@@ -482,494 +500,22 @@ $activeMenu = 'payments';
 ob_start();
 ?>
 
-<style>
-    /* ═══ Financial Center v2 — self-contained ═══ */
-    .finc {
-        display: flex;
-        flex-direction: column;
-        gap: 16px;
-    }
-
-    .finc-alert {
-        padding: 12px 16px;
-        border-radius: 10px;
-        font-size: .8rem;
-        font-weight: 700;
-    }
-
-    .finc-alert.ok {
-        background: #ecfdf5;
-        color: #047857;
-        border: 1px solid #a7f3d0;
-    }
-
-    .finc-alert.err {
-        background: #fef2f2;
-        color: #b91c1c;
-        border: 1px solid #fecaca;
-    }
-
-    .finc-stats {
-        display: grid;
-        grid-template-columns: repeat(3, minmax(0, 1fr));
-        gap: 10px;
-    }
-
-    .finc-stat {
-        background: #fff;
-        border: 1px solid #e5e7eb;
-        border-radius: 14px;
-        padding: 15px;
-    }
-
-    .finc-stat span {
-        display: block;
-        font-size: 11px;
-        color: #64748b;
-        margin-bottom: 7px;
-    }
-
-    .finc-stat strong {
-        font-size: 22px;
-    }
-
-    .finc-toolbar {
-        background: #fff;
-        border: 1px solid #e5e7eb;
-        border-radius: 14px;
-        padding: 12px 14px;
-        display: flex;
-        flex-wrap: wrap;
-        gap: 8px;
-        align-items: center;
-    }
-
-    .finc-filter {
-        padding: 7px 14px;
-        border: 1px solid #e5e7eb;
-        border-radius: 20px;
-        font-size: 12px;
-        font-weight: 700;
-        color: #475569;
-        text-decoration: none;
-        background: #fff;
-    }
-
-    .finc-filter.on {
-        background: #173e4a;
-        border-color: #173e4a;
-        color: #fff;
-    }
-
-    .finc-search {
-        margin-right: auto;
-        display: flex;
-        gap: 6px;
-    }
-
-    .finc-search input {
-        min-width: 230px;
-        height: 38px;
-        border: 1px solid #dbe2ea;
-        border-radius: 9px;
-        padding: 0 11px;
-        font-family: inherit;
-    }
-
-    .finc-search button {
-        height: 38px;
-        padding: 0 16px;
-        border: 0;
-        border-radius: 9px;
-        background: #173e4a;
-        color: #fff;
-        cursor: pointer;
-        font-family: inherit;
-        font-weight: 700;
-    }
-
-    .finc-card {
-        background: #fff;
-        border: 1px solid #e5e7eb;
-        border-radius: 16px;
-        padding: 16px 18px;
-    }
-
-    .finc-head {
-        display: flex;
-        justify-content: space-between;
-        flex-wrap: wrap;
-        gap: 10px;
-        margin-bottom: 12px;
-    }
-
-    .finc-inv {
-        font-size: 15px;
-        font-weight: 800;
-    }
-
-    .finc-inv small {
-        display: block;
-        font-weight: 400;
-        color: #64748b;
-        font-size: 11px;
-    }
-
-    .finc-cust {
-        text-align: left;
-        font-size: 12px;
-        color: #475569;
-    }
-
-    .finc-cust b {
-        display: block;
-        color: #111827;
-        font-size: 13px;
-    }
-
-    .finc-grid {
-        display: grid;
-        grid-template-columns: repeat(4, minmax(0, 1fr));
-        gap: 9px;
-        margin-bottom: 12px;
-    }
-
-    .finc-box {
-        background: #f8fafc;
-        border-radius: 10px;
-        padding: 10px 12px;
-    }
-
-    .finc-box span {
-        display: block;
-        font-size: 10px;
-        color: #64748b;
-        margin-bottom: 4px;
-    }
-
-    .finc-box strong {
-        font-size: 13.5px;
-    }
-
-    .finc-box.ok {
-        background: #ecfdf5;
-    }
-
-    .finc-box.ok strong {
-        color: #047857;
-    }
-
-    .finc-box.deb {
-        background: #fef2f2;
-    }
-
-    .finc-box.deb strong {
-        color: #b91c1c;
-    }
-
-    .finc-box.hot {
-        background: #fffbeb;
-        border: 1px solid #fde68a;
-    }
-
-    .finc-box.hot strong {
-        color: #b45309;
-    }
-
-    .finc-badge {
-        display: inline-flex;
-        padding: 4px 11px;
-        border-radius: 99px;
-        font-size: 11px;
-        font-weight: 700;
-    }
-
-    .finc-badge.warning {
-        background: #fffbeb;
-        color: #b45309;
-    }
-
-    .finc-badge.success {
-        background: #ecfdf5;
-        color: #047857;
-    }
-
-    .finc-badge.danger {
-        background: #fef2f2;
-        color: #b91c1c;
-    }
-
-    .finc-badge.info {
-        background: #eff6ff;
-        color: #1d4ed8;
-    }
-
-    .finc-badge.muted {
-        background: #f1f5f9;
-        color: #64748b;
-    }
-
-    .finc-badge.accent {
-        background: #fff2e7;
-        color: #c96f12;
-    }
-
-    .finc-sub {
-        border: 1px solid #e5e7eb;
-        border-radius: 12px;
-        padding: 12px 14px;
-        margin-bottom: 9px;
-    }
-
-    .finc-sub.pending {
-        background: #fffdf5;
-        border-color: #fde68a;
-    }
-
-    .finc-sub-head {
-        display: flex;
-        justify-content: space-between;
-        align-items: center;
-        flex-wrap: wrap;
-        gap: 8px;
-    }
-
-    .finc-meta {
-        display: flex;
-        flex-wrap: wrap;
-        gap: 5px 16px;
-        font-size: 11.5px;
-        color: #64748b;
-        margin-top: 7px;
-    }
-
-    .finc-meta a {
-        color: #2563eb;
-    }
-
-    .finc-verify {
-        display: flex;
-        flex-wrap: wrap;
-        gap: 7px;
-        align-items: center;
-        margin-top: 10px;
-        padding-top: 10px;
-        border-top: 1px dashed #e5e7eb;
-    }
-
-    .finc-verify input[type="number"] {
-        width: 155px;
-        padding: 8px 10px;
-        border: 1px solid #dbe2ea;
-        border-radius: 9px;
-        font-family: inherit;
-        text-align: center;
-    }
-
-    .finc-verify input[type="text"] {
-        flex: 1;
-        min-width: 150px;
-        padding: 8px 10px;
-        border: 1px solid #dbe2ea;
-        border-radius: 9px;
-        font-family: inherit;
-    }
-
-    .finc-verify button {
-        padding: 8px 15px;
-        border: 0;
-        border-radius: 9px;
-        font-family: inherit;
-        font-weight: 700;
-        cursor: pointer;
-        font-size: 12px;
-    }
-
-    .finc-verify .go {
-        background: #059669;
-        color: #fff;
-    }
-
-    .finc-verify .no {
-        background: #fee2e2;
-        color: #b91c1c;
-    }
-
-    .finc-note {
-        font-size: 11px;
-        color: #64748b;
-        margin-top: 6px;
-    }
-
-    .finc-hist summary {
-        cursor: pointer;
-        font-size: 12px;
-        color: #2563eb;
-        font-weight: 600;
-    }
-
-    .finc-hist ul {
-        padding: 8px 14px 0;
-        margin: 8px 0 0;
-    }
-
-    .finc-hist li {
-        font-size: 11.5px;
-        color: #475569;
-        padding: 6px 0;
-        border-bottom: 1px dashed #eef2f7;
-        list-style: none;
-    }
-
-    /* ═══ تسویه بستانکار ═══ */
-    .finc-settle {
-        background: #f6f2ff;
-        border: 1px solid #ddd0f7;
-        border-radius: 14px;
-        padding: 16px 18px;
-    }
-
-    .finc-settle-head {
-        display: flex;
-        justify-content: space-between;
-        align-items: center;
-        flex-wrap: wrap;
-        gap: 10px;
-        margin-bottom: 12px;
-    }
-
-    .finc-settle-head h3 {
-        margin: 0;
-        font-size: 15px;
-        font-weight: 800;
-        color: #5b21b6;
-    }
-
-    .finc-settle-amount {
-        font-size: 18px;
-        font-weight: 800;
-        color: #5b21b6;
-    }
-
-    .finc-settle form {
-        display: grid;
-        grid-template-columns: 1fr 1fr;
-        gap: 10px;
-    }
-
-    .finc-settle .full {
-        grid-column: 1 / -1;
-    }
-
-    .finc-settle label {
-        display: block;
-        font-size: 11px;
-        font-weight: 700;
-        color: #334155;
-        margin-bottom: 5px;
-    }
-
-    .finc-settle input,
-    .finc-settle select {
-        width: 100%;
-        box-sizing: border-box;
-        padding: 9px 11px;
-        border: 1px solid #dbe2ea;
-        border-radius: 9px;
-        font-family: inherit;
-        font-size: 13px;
-    }
-
-    .finc-settle .actions {
-        grid-column: 1 / -1;
-        display: flex;
-        gap: 8px;
-        align-items: center;
-    }
-
-    .finc-settle .actions button {
-        padding: 10px 20px;
-        border: 0;
-        border-radius: 9px;
-        background: #5b21b6;
-        color: #fff;
-        font-family: inherit;
-        font-weight: 700;
-        cursor: pointer;
-    }
-
-    .finc-refund-info {
-        background: #ecfdf5;
-        border: 1px solid #a7f3d0;
-        border-radius: 10px;
-        padding: 10px 14px;
-        font-size: 12px;
-        color: #047857;
-        margin-bottom: 12px;
-    }
-
-    .finc-refund-info b {
-        display: block;
-        margin-bottom: 3px;
-    }
-
-    .finc-links a {
-        font-size: 12px;
-        color: #2563eb;
-        text-decoration: none;
-        font-weight: 600;
-        margin-left: 14px;
-    }
-
-    .finc-empty {
-        text-align: center;
-        color: #94a3b8;
-        padding: 40px;
-        background: #fff;
-        border: 1px dashed #e5e7eb;
-        border-radius: 14px;
-    }
-
-    @media (max-width: 900px) {
-        .finc-stats {
-            grid-template-columns: 1fr 1fr;
-        }
-
-        .finc-grid {
-            grid-template-columns: 1fr 1fr;
-        }
-    }
-
-    @media (max-width: 560px) {
-        .finc-stats {
-            grid-template-columns: 1fr;
-        }
-
-        .finc-grid {
-            grid-template-columns: 1fr;
-        }
-
-        .finc-settle form {
-            grid-template-columns: 1fr;
-        }
-    }
-</style>
-
 <div class="finc">
 
     <?php if ($success): ?><div class="finc-alert ok">✅ <?= $h($success) ?></div><?php endif; ?>
     <?php if ($error): ?><div class="finc-alert err">⚠️ <?= $h($error) ?></div><?php endif; ?>
 
-    <!-- ═══ آمار ═══ -->
+    <!-- ═══ آمار — شامل بدهکار/بستانکار/تسویه ═══ -->
     <div class="finc-stats">
         <div class="finc-stat"><span>در انتظار بررسی</span><strong><?= number_format($stats['pending']) ?></strong></div>
         <div class="finc-stat"><span>تأییدشده</span><strong><?= number_format($stats['verified']) ?></strong></div>
         <div class="finc-stat"><span>ردشده</span><strong><?= number_format($stats['rejected']) ?></strong></div>
+        <div class="finc-stat hot"><span>بدهکار</span><strong><?= number_format($stats['debtor']) ?></strong></div>
+        <div class="finc-stat"><span>بستانکار</span><strong><?= number_format($stats['creditor']) ?></strong></div>
+        <div class="finc-stat"><span>تسویه</span><strong><?= number_format($stats['settled']) ?></strong></div>
     </div>
-    <div class="finc-stat"><span>بدهکار</span><strong><?= number_format($stats['debtor']) ?></strong></div>
-    <div class="finc-stat"><span>بستانکار</span><strong><?= number_format($stats['creditor']) ?></strong></div>
 
-    <!-- ═══ فیلتر ═══ -->
+    <!-- ═══ فیلتر — هفت حالت کامل ═══ -->
     <div class="finc-toolbar">
         <?php
         $filters = [
@@ -993,184 +539,175 @@ ob_start();
         </form>
     </div>
 
-    <!-- ═══ تسویه بستانکار + درخواست بازگشت وجه مشتری ═══ -->
-    <?php if ($creditorInvoices): ?>
-        <?php foreach ($creditorInvoices as $ci): ?>
-            <div class="finc-settle">
-                <div class="finc-settle-head">
-                    <h3>💰 تسویه بستانکاری</h3>
-                    <span class="finc-settle-amount"><?= $money((int)$ci['creditor_amount']) ?></span>
-                </div>
-
-                <div style="font-size:12px;color:#475569;margin-bottom:10px;">
-                    فاکتور <b dir="ltr"><?= $h($ci['invoice_number']) ?></b> —
-                    سفارش <span dir="ltr"><?= $h($ci['order_number']) ?></span> —
-                    <?= $h($ci['full_name']) ?>
-                </div>
-
-                <?php if ($ci['refund_id']): ?>
-                    <div class="finc-refund-info">
-                        <b>📋 درخواست بازگشت وجه مشتری (در انتظار پرداخت)</b>
-                        شبا: <span dir="ltr"><?= $h($ci['refund_sheba']) ?></span>
-                        — به نام: <b><?= $h($ci['refund_holder']) ?></b>
-                    </div>
-                <?php endif; ?>
-
-                <form method="post">
-                    <input type="hidden" name="csrf" value="<?= $h($csrf) ?>">
-                    <input type="hidden" name="action" value="settle_creditor">
-                    <input type="hidden" name="invoice_id" value="<?= (int)$ci['id'] ?>">
-
-                    <div>
-                        <label>مبلغ بازگشتی</label>
-                        <input type="number" name="amount" min="1" max="<?= (int)$ci['creditor_amount'] ?>"
-                            value="<?= (int)$ci['creditor_amount'] ?>" required>
-                    </div>
-                    <div>
-                        <label>روش</label>
-                        <select name="method">
-                            <option value="sheba">شبا</option>
-                            <option value="card_to_card">کارت به کارت</option>
-                            <option value="cash">نقدی</option>
-                        </select>
-                    </div>
-                    <div>
-                        <label>شماره سند</label>
-                        <input type="text" name="document_no" dir="ltr">
-                    </div>
-                    <div>
-                        <label>شماره پیگیری</label>
-                        <input type="text" name="reference_no" dir="ltr">
-                    </div>
-                    <div class="actions">
-                        <button type="submit">ثبت تسویه و اعلان به مشتری ←</button>
-                    </div>
-                </form>
-            </div>
-        <?php endforeach; ?>
+    <!-- ═══ فاکتورها ═══ -->
+    <?php if (!$invoices): ?>
+        <div class="finc-empty">با فیلتر فعلی فاکتوری وجود ندارد.</div>
     <?php endif; ?>
 
-    <!-- ═══ پرداخت‌ها ═══ -->
-    <?php if (!$submissions): ?>
-        <div class="finc-empty">با فیلتر فعلی پرداختی وجود ندارد.</div>
-    <?php endif; ?>
+    <?php foreach ($invoices as $inv):
+        $invId     = (int)$inv['id'];
+        $invTotal  = (int)$inv['total'];
+        $paidTotal = (int)$inv['paid_total'];
+        $pending   = (int)$inv['pending_amount'];
+        $remaining = $invTotal - $paidTotal;      /* منفی = بستانکار */
 
-    <?php foreach ($submissions as $s):
-        $invTotal  = (int)$s['invoice_total'];
-        $paidTotal = (int)$s['paid_total'];
-        $remaining = max(0, $invTotal - $paidTotal);
-        $claimed   = (int)$s['claimed_amount'];
+        /* نتیجه مالی — COMPUTED (منبع حقیقت) */
+        if ($remaining > 0) {
+            $recType = 'بدهکار';
+            $recAmount = $remaining;
+            $recClass = 'danger';
+        } elseif ($remaining < 0) {
+            $recType = 'بستانکار';
+            $recAmount = abs($remaining);
+            $recClass = 'info';
+        } else {
+            $recType = 'تسویه';
+            $recAmount = 0;
+            $recClass = 'success';
+        }
+
+        /* پرداخت‌های این فاکتور */
+        $stmt = $db->prepare("
+            SELECT ps.*, v.verified_amount, v.status AS v_status, v.note AS v_note,
+                   v.verified_at, vu.full_name AS verifier_name
+            FROM payment_submissions ps
+            LEFT JOIN payment_verifications v ON v.payment_submission_id = ps.id
+            LEFT JOIN users vu ON vu.id = v.verified_by
+            WHERE ps.invoice_id = ?
+            ORDER BY ps.id DESC
+        ");
+        $stmt->execute([$invId]);
+        $subs = $stmt->fetchAll();
+
+        /* تاریخچه — با ستون‌های واقعی */
+        $stmt = $db->prepare("SELECT h.*, u.full_name AS changer
+                              FROM payment_verification_history h
+                              LEFT JOIN users u ON u.id = h.changed_by
+                              WHERE h.invoice_id = ? ORDER BY h.id DESC LIMIT 15");
+        $stmt->execute([$invId]);
+        $histories = $stmt->fetchAll();
+
+        /* فرم اصلاح فقط وقتی فاکتور تسویه قطعی نشده */
+        $canAdjust = ($remaining !== 0);
     ?>
 
         <div class="finc-card">
 
             <div class="finc-head">
                 <div>
-                    <div class="finc-inv"><span dir="ltr"><?= $h($s['invoice_number']) ?></span>
-                        <small dir="ltr">سفارش: <?= $h($s['order_number']) ?></small>
+                    <div class="finc-inv"><span dir="ltr"><?= $h($inv['invoice_number']) ?></span>
+                        <small dir="ltr">سفارش: <?= $h($inv['order_number']) ?> · <?= $h($invStatusLabel($inv['invoice_status'])) ?></small>
                     </div>
                 </div>
                 <div class="finc-cust">
-                    <b><?= $h($s['full_name']) ?></b>
-                    <?= $h($s['company_name'] ?: '') ?> · <span dir="ltr"><?= $h($s['mobile']) ?></span>
+                    <b><?= $h($inv['full_name']) ?></b>
+                    <?= $h($inv['company_name'] ?: '') ?> · <span dir="ltr"><?= $h($inv['mobile']) ?></span>
                 </div>
             </div>
 
             <div class="finc-grid">
                 <div class="finc-box"><span>مبلغ فاکتور</span><strong><?= $money($invTotal) ?></strong></div>
                 <div class="finc-box ok"><span>پرداخت تأییدشده</span><strong><?= $money($paidTotal) ?></strong></div>
-                <div class="finc-box <?= $s['status'] === 'pending' ? 'hot' : 'ok' ?>">
-                    <span>ادعای مشتری</span><strong><?= $money($claimed) ?></strong>
+                <div class="finc-box <?= $pending > 0 ? 'hot' : '' ?>"><span>در انتظار بررسی (ادعا)</span>
+                    <strong><?= $pending > 0 ? $money($pending) : '—' ?></strong>
                 </div>
-                <div class="finc-box <?= $remaining > 0 ? 'deb' : 'ok' ?>">
-                    <span>مانده فاکتور</span><strong><?= $money($remaining) ?></strong>
+                <div class="finc-box <?= $remaining > 0 ? 'deb' : 'ok' ?>"><span>مانده قطعی</span>
+                    <strong><?= $money(max(0, $remaining)) ?></strong>
                 </div>
             </div>
 
-            <div class="fin2-badge <?= $subStatusClass($s['status']) ?>" style="margin-bottom:10px;">
-                <?= $h($subStatusLabel($s['status'])) ?>
+            <div style="margin-bottom:12px;">
+                <span class="finc-badge <?= $recClasses[$inv['reconciliation_type']] ?? 'muted' ?>">
+                    نتیجه سیستمی: <?= $recLabels[$inv['reconciliation_type']] ?? '—' ?>
+                    <?= (int)$inv['reconciliation_amount'] > 0 ? ' — ' . $money((int)$inv['reconciliation_amount']) : '' ?>
+                </span>
+                <span class="finc-badge muted">صدور: <?= $jalali($inv['issued_at']) ?></span>
             </div>
 
-            <div class="finc-sub <?= $s['status'] === 'pending' ? 'pending' : '' ?>">
+            <?php foreach ($subs as $s): ?>
+                <div class="finc-sub <?= $s['status'] === 'pending' ? 'pending' : '' ?>">
 
-                <div class="finc-sub-head">
-                    <div class="finc-meta" style="margin:0;">
-                        <b><?= $h($methodLabel($s['method'])) ?></b>
-                        <?php if ($s['reference_no']): ?>
-                            <span dir="ltr">پیگیری: <?= $h($s['reference_no']) ?></span>
-                        <?php endif; ?>
-                        <?php if ($s['receipt_path']): ?>
-                            <a href="<?= $h($s['receipt_path']) ?>" target="_blank">🖼 مشاهده فیش</a>
-                        <?php endif; ?>
-                        <span><?= $jalali($s['created_at'], true) ?></span>
+                    <div class="finc-sub-head">
+                        <div class="finc-meta" style="margin:0;">
+                            <b><?= $h($methodLabel($s['method'])) ?></b>
+                            <span>ادعا: <b><?= $money((int)$s['claimed_amount']) ?></b></span>
+                            <?php if ($s['reference_no']): ?>
+                                <span dir="ltr">پیگیری: <?= $h($s['reference_no']) ?></span>
+                            <?php endif; ?>
+                            <?php if ($s['receipt_path']): ?>
+                                <a href="<?= $h($s['receipt_path']) ?>" target="_blank">🖼 فیش</a>
+                            <?php endif; ?>
+                            <span><?= $jalali($s['created_at'], true) ?></span>
+                        </div>
+                        <span class="finc-badge <?= $subStatusClass($s['status']) ?>">
+                            <?= $h($subStatusLabel($s['status'])) ?>
+                        </span>
                     </div>
+
+                    <?php if ($s['verified_amount'] !== null): ?>
+                        <div class="finc-note">
+                            تأیید مالی: <b><?= $money((int)$s['verified_amount']) ?></b>
+                            <?php if ($s['v_note']): ?> — <?= $h($s['v_note']) ?><?php endif; ?>
+                                <?php if ($s['verifier_name']): ?>
+                                    (<?= $h($s['verifier_name']) ?> — <?= $jalali($s['verified_at'], true) ?>)
+                                <?php endif; ?>
+                        </div>
+                    <?php endif; ?>
+
+                    <?php if ($s['status'] === 'pending'): ?>
+                        <form method="post" class="finc-verify">
+                            <input type="hidden" name="csrf" value="<?= $h($csrf) ?>">
+                            <input type="hidden" name="action" value="verify_payment">
+                            <input type="hidden" name="submission_id" value="<?= (int)$s['id'] ?>">
+                            <label style="font-size:11px;font-weight:700;">مبلغ واقعی بانک:</label>
+                            <input type="number" name="actual_amount" min="1" required placeholder="مبلغ رسید بانکی">
+                            <input type="text" name="note" placeholder="توضیح مالی (اختیاری)">
+                            <button type="submit" class="go">✓ تأیید و ثبت</button>
+                        </form>
+                        <form method="post" class="finc-verify">
+                            <input type="hidden" name="csrf" value="<?= $h($csrf) ?>">
+                            <input type="hidden" name="action" value="reject_payment">
+                            <input type="hidden" name="submission_id" value="<?= (int)$s['id'] ?>">
+                            <input type="text" name="reason" required placeholder="دلیل رد (الزامی)">
+                            <button type="submit" class="no">✗ رد</button>
+                        </form>
+                    <?php endif; ?>
+
+                    <?php if (in_array($s['status'], ['verified', 'adjusted'], true) && $canAdjust): ?>
+                        <form method="post" class="finc-verify">
+                            <input type="hidden" name="csrf" value="<?= $h($csrf) ?>">
+                            <input type="hidden" name="action" value="adjust_payment">
+                            <input type="hidden" name="submission_id" value="<?= (int)$s['id'] ?>">
+                            <label style="font-size:11px;font-weight:700;">اصلاح مبلغ تأییدشده:</label>
+                            <input type="number" name="actual_amount" min="1" required value="<?= (int)$s['verified_amount'] ?>">
+                            <input type="text" name="reason" required placeholder="دلیل اصلاح (الزامی)">
+                            <button type="submit" class="go" style="background:#2563eb;">ثبت اصلاح</button>
+                        </form>
+                    <?php endif; ?>
+
                 </div>
-
-                <?php if ($s['status'] === 'pending'): ?>
-                    <form method="post" class="finc-verify">
-                        <input type="hidden" name="csrf" value="<?= $h($csrf) ?>">
-                        <input type="hidden" name="action" value="verify_payment">
-                        <input type="hidden" name="submission_id" value="<?= (int)$s['id'] ?>">
-                        <label style="font-size:11px;font-weight:700;">مبلغ واقعی بانک:</label>
-                        <input type="number" name="actual_amount" min="1" required
-                            placeholder="مبلغ رسید بانکی">
-                        <input type="text" name="note" placeholder="توضیح مالی (اختیاری)">
-                        <button type="submit" class="go">✓ تأیید و ثبت</button>
-                    </form>
-                    <form method="post" class="finc-verify">
-                        <input type="hidden" name="csrf" value="<?= $h($csrf) ?>">
-                        <input type="hidden" name="action" value="reject_payment">
-                        <input type="hidden" name="submission_id" value="<?= (int)$s['id'] ?>">
-                        <input type="text" name="reason" required placeholder="دلیل رد (الزامی)">
-                        <button type="submit" class="no">✗ رد</button>
-                    </form>
-                <?php endif; ?>
-
-                <?php
-                /* اصلاح فقط وقتی فاکتور هنوز تسویه قطعی نشده */
-                $isFullySettled = ($remaining === 0);
-                ?>
-                <?php if (in_array($s['status'], ['verified', 'adjusted'], true) && !$isFullySettled): ?>
-                    <form method="post" class="finc-verify">
-                        <input type="hidden" name="csrf" value="<?= $h($csrf) ?>">
-                        <input type="hidden" name="action" value="adjust_payment">
-                        <input type="hidden" name="submission_id" value="<?= (int)$s['id'] ?>">
-                        <label style="font-size:11px;font-weight:700;">اصلاح مبلغ تأییدشده:</label>
-                        <input type="number" name="actual_amount" min="1" required value="<?= (int)($s['claimed_amount']) ?>">
-                        <input type="text" name="reason" required placeholder="دلیل اصلاح (الزامی)">
-                        <button type="submit" class="go" style="background:#2563eb;">
-                            <?= $isFullySettled ? 'تسویه شده' : 'ثبت اصلاح' ?>
-                        </button>
-                    </form>
-                <?php endif; ?>
-
-            </div>
-
-            <?php
-            /* تاریخچه */
-            $stmt = $db->prepare("SELECT h.*, u.full_name AS changer
-                      FROM payment_verification_history h
-                      LEFT JOIN users u ON u.id = h.changed_by
-                      WHERE h.payment_submission_id = ? ORDER BY h.id DESC LIMIT 10");
-            $stmt->execute([(int)$s['id']]);
-            $histories = $stmt->fetchAll();
-            ?>
+            <?php endforeach; ?>
 
             <?php if ($histories): ?>
                 <details class="finc-hist">
-                    <summary>📜 تاریخچه بررسی (<?= count($histories) ?>)</summary>
+                    <summary>📜 تاریخچه مالی (<?= count($histories) ?>)</summary>
                     <ul>
                         <?php foreach ($histories as $hh): ?>
                             <li>
                                 <?= $jalali($hh['changed_at'], true) ?> — <?= $h($hh['changer'] ?? '—') ?>:
-                                <?= number_format((int)($hh['old_amount'] ?? 0)) ?> ←
-                                <?= number_format((int)($hh['new_amount'] ?? 0)) ?>
+                                <?= number_format((int)($hh['old_verified_amount'] ?? 0)) ?> ←
+                                <?= number_format((int)($hh['new_verified_amount'] ?? 0)) ?>
                                 <?= !empty($hh['reason']) ? ' — ' . $h($hh['reason']) : '' ?>
                             </li>
                         <?php endforeach; ?>
                     </ul>
                 </details>
             <?php endif; ?>
+
+            <div class="finc-links">
+                <a href="/invoice-print?inv=<?= $h($inv['invoice_number']) ?>" target="_blank">🧾 فاکتور</a>
+                <a href="/invoice-pdf.php?inv=<?= $h($inv['invoice_number']) ?>" target="_blank">📄 PDF</a>
+            </div>
 
         </div>
     <?php endforeach; ?>
