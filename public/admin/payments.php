@@ -342,6 +342,9 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         }
     }
 
+
+    if ($action !== 'verify_payment') { /* فقط نشانه‌گذاری جای درج */
+    }
     /* ═══ تسویه بستانکاری + علامت‌گذاری درخواست بازگشت وجه مشتری ═══ */
     if ($action === 'settle_creditor') {
 
@@ -420,7 +423,10 @@ $stats = [
     'pending'  => (int)$db->query("SELECT COUNT(*) FROM payment_submissions WHERE status='pending'")->fetchColumn(),
     'verified' => (int)$db->query("SELECT COUNT(*) FROM payment_submissions WHERE status='verified'")->fetchColumn(),
     'rejected' => (int)$db->query("SELECT COUNT(*) FROM payment_submissions WHERE status='rejected'")->fetchColumn(),
+
 ];
+$stats['debtor']   = (int)$db->query("SELECT COUNT(*) FROM invoices WHERE reconciliation_type='debtor' AND reconciliation_amount>0")->fetchColumn();
+$stats['creditor'] = (int)$db->query("SELECT COUNT(*) FROM invoices WHERE reconciliation_type='creditor' AND reconciliation_amount>0")->fetchColumn();
 
 /* فاکتورهای بستانکار (computed) با درخواست بازگشت وجه */
 $creditorInvoices = $db->query("
@@ -443,6 +449,11 @@ $params = [];
 if ($filter === 'pending')  $where[] = "ps.status='pending'";
 if ($filter === 'verified') $where[] = "ps.status='verified'";
 if ($filter === 'rejected') $where[] = "ps.status='rejected'";
+
+if ($filter === 'debtor' || $filter === 'creditor' || $filter === 'settled') {
+    $expectedType = $filter;   // debtor / creditor / settled
+    $where[] = "i.reconciliation_type = " . $db->quote($expectedType);
+}
 
 if ($search !== '') {
     $where[] = "(i.invoice_number LIKE ? OR o.order_number LIKE ? OR u.full_name LIKE ? OR u.mobile LIKE ? OR u.company_name LIKE ?)";
@@ -955,11 +966,21 @@ ob_start();
         <div class="finc-stat"><span>تأییدشده</span><strong><?= number_format($stats['verified']) ?></strong></div>
         <div class="finc-stat"><span>ردشده</span><strong><?= number_format($stats['rejected']) ?></strong></div>
     </div>
+    <div class="finc-stat"><span>بدهکار</span><strong><?= number_format($stats['debtor']) ?></strong></div>
+    <div class="finc-stat"><span>بستانکار</span><strong><?= number_format($stats['creditor']) ?></strong></div>
 
     <!-- ═══ فیلتر ═══ -->
     <div class="finc-toolbar">
         <?php
-        $filters = ['all' => 'همه', 'pending' => 'در انتظار بررسی', 'verified' => 'تأییدشده', 'rejected' => 'ردشده'];
+        $filters = [
+            'all'      => 'همه',
+            'pending'  => 'در انتظار بررسی',
+            'verified' => 'تأییدشده',
+            'rejected' => 'ردشده',
+            'debtor'   => 'بدهکار',
+            'creditor' => 'بستانکار',
+            'settled'  => 'تسویه',
+        ];
         foreach ($filters as $k => $lbl):
             $url = '/admin/payments' . ($k !== 'all' ? '?filter=' . $k : '');
         ?>
@@ -1105,7 +1126,11 @@ ob_start();
                     </form>
                 <?php endif; ?>
 
-                <?php if (in_array($s['status'], ['verified'], true)): ?>
+                <?php
+                /* اصلاح فقط وقتی فاکتور هنوز تسویه قطعی نشده */
+                $isFullySettled = ($remaining === 0);
+                ?>
+                <?php if (in_array($s['status'], ['verified', 'adjusted'], true) && !$isFullySettled): ?>
                     <form method="post" class="finc-verify">
                         <input type="hidden" name="csrf" value="<?= $h($csrf) ?>">
                         <input type="hidden" name="action" value="adjust_payment">
@@ -1113,7 +1138,9 @@ ob_start();
                         <label style="font-size:11px;font-weight:700;">اصلاح مبلغ تأییدشده:</label>
                         <input type="number" name="actual_amount" min="1" required value="<?= (int)($s['claimed_amount']) ?>">
                         <input type="text" name="reason" required placeholder="دلیل اصلاح (الزامی)">
-                        <button type="submit" class="go" style="background:#2563eb;">ثبت اصلاح</button>
+                        <button type="submit" class="go" style="background:#2563eb;">
+                            <?= $isFullySettled ? 'تسویه شده' : 'ثبت اصلاح' ?>
+                        </button>
                     </form>
                 <?php endif; ?>
 
