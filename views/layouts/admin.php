@@ -252,6 +252,14 @@ $menuGroups = [
             ],
         ],
     ],
+    [
+        'label' => 'گزارشات',
+        'items' => [
+            ['key' => 'reports', 'label' => 'دفتر مالی', 'url' => '/admin/report-ledger', 'icon' => 'invoice'],
+            ['key' => 'reports-discount', 'label' => 'گزارش تخفیف‌ها', 'url' => '/admin/report-discounts', 'icon' => 'invoice'],
+            ['key' => 'reports-shipping', 'label' => 'گزارش ارسال', 'url' => '/admin/report-shipping', 'icon' => 'invoice'],
+        ],
+    ],
 
     [
         'label' => 'بازاریابی',

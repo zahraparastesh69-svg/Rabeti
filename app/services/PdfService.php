@@ -2,6 +2,8 @@
 
 declare(strict_types=1);
 
+require_once __DIR__ . '/PdfStyle.php';
+
 /* [FILE] app/services/PdfService.php — Invoice PDF generator (v3) */
 
 final class PdfService
@@ -76,7 +78,7 @@ final class PdfService
         $jd = 1 + (($d < 186) ? $d % 31 : ($d - 186) % 30);
 
         return $jy . '/' . str_pad((string)$jm, 2, '0', STR_PAD_LEFT)
-                    . '/' . str_pad((string)$jd, 2, '0', STR_PAD_LEFT);
+            . '/' . str_pad((string)$jd, 2, '0', STR_PAD_LEFT);
     }
 
     /* ─────────────────────────────────────────────
@@ -131,19 +133,26 @@ final class PdfService
     private static function buildHtml(array $invoice): string
     {
         $e = static fn($v): string =>
-            htmlspecialchars((string)$v, ENT_QUOTES | ENT_SUBSTITUTE, 'UTF-8');
+        htmlspecialchars((string)$v, ENT_QUOTES | ENT_SUBSTITUTE, 'UTF-8');
 
         $faDigits = static fn(string $v): string => strtr($v, [
-            '0' => '۰', '1' => '۱', '2' => '۲', '3' => '۳', '4' => '۴',
-            '5' => '۵', '6' => '۶', '7' => '۷', '8' => '۸', '9' => '۹',
+            '0' => '۰',
+            '1' => '۱',
+            '2' => '۲',
+            '3' => '۳',
+            '4' => '۴',
+            '5' => '۵',
+            '6' => '۶',
+            '7' => '۷',
+            '8' => '۸',
+            '9' => '۹',
         ]);
 
-        $number = static fn($v) use ($faDigits): string =>
-            $faDigits(number_format((int)$v, 0, '.', ','));
+        $number = static fn($v): string =>
+        $faDigits(number_format((int)$v, 0, '.', ','));
 
-        $money = static fn($v) use ($number): string =>
-            $number($v) . ' تومان';
-
+        $money = static fn($v): string =>
+        $number($v) . ' تومان';
         /*
          * ═══ داده‌های فاکتور ═══
          */
@@ -219,8 +228,8 @@ final class PdfService
         $totalRefunded = 0;
 
         try {
-      
-         $refundsStmt = db()->prepare("
+
+            $refundsStmt = db()->prepare("
     SELECT amount, method, document_no, reference_no, completed_at
     FROM financial_transactions
     WHERE invoice_id = ?
@@ -229,7 +238,7 @@ final class PdfService
     ORDER BY completed_at ASC
 ");
 
- $refundsStmt->execute([(int)($invoice['id'] ?? 0)]);
+            $refundsStmt->execute([(int)($invoice['id'] ?? 0)]);
 
             $refunds = $refundsStmt->fetchAll(PDO::FETCH_ASSOC);
 
@@ -333,8 +342,8 @@ final class PdfService
             <div class="bottom-box">
                 <div class="box-title">یادداشت سفارش</div>
                 <div class="note ' . ($note === '' ? 'muted' : '') . '">'
-                    . ($note !== '' ? nl2br($e($note)) : '—') .
-                '</div>
+            . ($note !== '' ? nl2br($e($note)) : '—') .
+            '</div>
             </div>';
 
         /*
