@@ -326,60 +326,16 @@ final class PdfService
          * =====================================================
          */
 
-        $totals =
-            $invoice['totals']
-            ?? [];
+        $totals = $invoice['totals'] ?? [];
 
-        $subtotal = (int)(
-            $totals['subtotal']
-            ?? $invoice['subtotal']
-            ?? 0
-        );
+        $subtotal = (int)($totals['subtotal'] ?? 0);
 
-        $discount = (int)(
-            $totals['discount']
-            ?? $invoice['discount_total']
-            ?? 0
-        );
+        /* فیکس: مستقیم از ردیف invoices */
+        $total = (int)($invoice['total'] ?? $invoice['invoice_total'] ?? 0);
+        $paid  = (int)($invoice['paid_total'] ?? $invoice['invoice_paid_total'] ?? 0);
 
-        $shipping = (int)(
-            $totals['shipping']
-            ?? $invoice['shipping_fee']
-            ?? $invoice['shipping_cost']
-            ?? 0
-        );
-
-        $tax = (int)(
-            $totals['tax']
-            ?? 0
-        );
-
-        $afterDiscount = max(
-            0,
-            $subtotal - $discount
-        );
-
-        $total = (int)(
-            $totals['total']
-            ?? $invoice['invoice_total']
-            ?? (
-                $afterDiscount +
-                $shipping +
-                $tax
-            )
-        );
-
-        $paid = (int)(
-            $totals['paid']
-            ?? $invoice['invoice_paid_total']
-            ?? 0
-        );
-
-        $remaining = max(
-            0,
-            $total - $paid
-        );
-
+        /* بستانکاری هم محاسبه می‌شود — بدون max(0) */
+        $remaining = $total - $paid;
 
         /*
          * =====================================================
@@ -968,6 +924,50 @@ table {
     color: #777777;
 }
 
+/*
+ * =====================================================
+ * نتیجه مالی — COMPUTED
+ * =====================================================
+ */
+
+ $reconciliationLabel2 = match(true) {
+    $remaining > 0 => 'بدهکار',
+    $remaining < 0 => 'بستانکار',
+    default        => 'تسویه',
+};
+
+ $reconciliationAmount2 = abs($remaining);
+
+ $reconHtml = '
+    <table class="meta" style="margin-top:3mm;">
+
+        <tr>
+
+            <td class="meta-label">
+                نتیجه مالی (محاسبه‌شده سیستمی)
+            </td>
+
+            <td class="meta-value">
+                ' . $e($reconciliationLabel2) . '
+            </td>
+
+        </tr>
+
+        ' . ($reconciliationAmount2 > 0 ? '
+        <tr>
+
+            <td class="meta-label">
+                مبلغ
+            </td>
+
+            <td class="meta-value">
+                ' . $money($reconciliationAmount2) . '
+            </td>
+
+        </tr>' : '') . '
+
+    </table>
+';
 
 /*
 |--------------------------------------------------------------------------
@@ -1372,6 +1372,33 @@ table {
                         <td class="total-label">
                             پرداخت‌شده
                         </td>
+                        <tr>
+
+    <td class="totals-label">
+        در انتظار تأیید مالی
+    </td>
+
+    <td class="totals-value">
+        ' . $money(
+                (int)($invoice['pending_amount'] ?? 0)
+            ) . '
+    </td>
+
+</tr>
+
+<tr class="grand-total">
+
+    <td class="totals-label">
+        مانده قطعی
+    </td>
+
+    <td class="totals-value">
+        ' . $money(
+                max(0, $remaining)
+            ) . '
+    </td>
+
+</tr>
 
                         <td class="total-value">
                             ' .

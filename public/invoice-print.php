@@ -135,7 +135,10 @@ if (!$isAdmin && $invoiceUserId !== $userId) {
     exit('دسترسی غیرمجاز.');
 }
 
-/* ═══ تاریخچه پرداخت — از جداول جدید ═══ */
+/* ══════════════════════════════════════════════
+   تاریخچه پرداخت — از جداول جدید
+   ══════════════════════════════════════════════ */
+
 $paymentStmt = $db->prepare("
     SELECT
         ps.id,
@@ -161,13 +164,16 @@ $paymentStmt = $db->prepare("
 $paymentStmt->execute([(int)$invoice['id']]);
 $payments = $paymentStmt->fetchAll(PDO::FETCH_ASSOC);
 
-/* ═══ محاسبات — سه عدد جدا + نتیجه computed ═══ */
-$pendingAmount       = 0;
-$hasPendingPayment   = false;
+/* ══════════════════════════════════════════════
+   محاسبات — بستانکار هم لحاظ می‌شود
+   ══════════════════════════════════════════════ */
+
+$pendingAmount     = 0;
+$hasPendingPayment = false;
 
 foreach ($payments as &$payment) {
     $claimed = max(0, (int)($payment['claimed_amount'] ?? 0));
-    $payment['_claimed'] = $claimed;
+    $payment['_claimed']  = $claimed;
     $payment['_verified'] = $payment['verified_amount'] !== null
         ? max(0, (int)$payment['verified_amount'])
         : null;
@@ -179,51 +185,35 @@ foreach ($payments as &$payment) {
 }
 unset($payment);
 
-/* حقیقت مالی */
-$total     = (int)($invoice['total'] ?? 0);
-$paid      = max(0, (int)($invoice['paid_total'] ?? 0));
-$remaining = max(0, $total - $paid);
-
-/* نتیجه مالی — COMPUTED (فیکس «تسویه» در حالت pending) */
-if ($remaining > 0) {
-    $recType  = 'بدهکار';
-    $recAmount = $remaining;
-} elseif ($remaining < 0) {
-    $recType  = 'بستانکار';
-    $recAmount = abs($remaining);
-} else {
-    $recType  = 'تسویه';
-    $recAmount = 0;
-}
 /* ═══ داده‌های نمایش ═══ */
- $items  = $invoice['items'] ?? [];
- $totals = $invoice['totals'] ?? [];
+$items  = $invoice['items'] ?? [];
+$totals = $invoice['totals'] ?? [];
 
- $invoiceNo  = (string)($invoice['invoice_number'] ?? $invoiceNumber ?? '—');
- $orderNo    = (string)($invoice['order_number'] ?? '—');
- $invoiceDate = (string)($invoice['issued_at'] ?? '');
+$invoiceNo  = (string)($invoice['invoice_number'] ?? $invoiceNumber ?? '—');
+$orderNo    = (string)($invoice['order_number'] ?? '—');
+$invoiceDate = (string)($invoice['issued_at'] ?? '');
 
- $invoiceStatus = (string)($invoice['status'] ?? 'unpaid');
+$invoiceStatus = (string)($invoice['status'] ?? 'unpaid');
 
- $customerName     = (string)($invoice['customer_name'] ?? $invoice['shipping_name'] ?? '—');
- $customerMobile   = (string)($invoice['customer_mobile'] ?? $invoice['shipping_mobile'] ?? '—');
- $customerProvince = (string)($invoice['shipping_province'] ?? '');
- $customerCity     = (string)($invoice['shipping_city'] ?? '');
- $customerAddress  = (string)($invoice['shipping_address'] ?? '');
- $customerPostal   = (string)($invoice['shipping_postal'] ?? '');
- $customerNote     = (string)($invoice['customer_note'] ?? $invoice['note'] ?? '');
+$customerName     = (string)($invoice['customer_name'] ?? $invoice['shipping_name'] ?? '—');
+$customerMobile   = (string)($invoice['customer_mobile'] ?? $invoice['shipping_mobile'] ?? '—');
+$customerProvince = (string)($invoice['shipping_province'] ?? '');
+$customerCity     = (string)($invoice['shipping_city'] ?? '');
+$customerAddress  = (string)($invoice['shipping_address'] ?? '');
+$customerPostal   = (string)($invoice['shipping_postal'] ?? '');
+$customerNote     = (string)($invoice['customer_note'] ?? $invoice['note'] ?? '');
 
- $subtotal = (int)($totals['subtotal'] ?? $invoice['subtotal'] ?? 0);
- $shipping = (int)($totals['shipping'] ?? $invoice['shipping_fee'] ?? 0);
- $tax      = (int)($totals['tax'] ?? 0);
+$subtotal = (int)($totals['subtotal'] ?? $invoice['subtotal'] ?? 0);
+$shipping = (int)($totals['shipping'] ?? $invoice['shipping_fee'] ?? 0);
+$tax      = (int)($totals['tax'] ?? 0);
 
 /* ═══ فیکس صفرها: مبلغ نهایی و پرداخت‌شده مستقیم از جدول invoices ═══ */
- $stmt = $db->prepare("SELECT total, paid_total FROM invoices WHERE id = ? LIMIT 1");
- $stmt->execute([(int)$invoice['id']]);
- $invRow = $stmt->fetch(PDO::FETCH_ASSOC) ?: [];
+$stmt = $db->prepare("SELECT total, paid_total FROM invoices WHERE id = ? LIMIT 1");
+$stmt->execute([(int)$invoice['id']]);
+$invRow = $stmt->fetch(PDO::FETCH_ASSOC) ?: [];
 
- $total = (int)($invRow['total'] ?? 0);
- $paid  = (int)($invRow['paid_total'] ?? 0);
+$total = (int)($invRow['total'] ?? 0);
+$paid  = (int)($invRow['paid_total'] ?? 0);
 
 /* اگر total در DB صفر بود، از جمع اقلام بساز */
 if ($total <= 0) {
@@ -234,27 +224,35 @@ if ($total <= 0) {
     $total = $sum + $shipping + $tax;
 }
 
- $remaining = max(0, $total - $paid);
+/* ═══ نتیجه مالی — COMPUTED (بستانکاری ممکن است) ═══ */
+$remaining = $total - $paid;          /* منفی یعنی بستانکار */
 
-/* ═══ نتیجه مالی — computed ═══ */
 if ($remaining > 0) {
-    $recType = 'بدهکار';
+    $recType   = 'بدهکار';
     $recAmount = $remaining;
 } elseif ($remaining < 0) {
-    $recType = 'بستانکار';
+    $recType   = 'بستانکار';
     $recAmount = abs($remaining);
 } else {
-    $recType = 'تسویه';
+    $recType   = 'تسویه';
     $recAmount = 0;
 }
 
- $logoPath = '/Image/logo3.jpg';
+/* ═══ قواعد CTA ═══ */
+$canPay = !$hasPendingPayment
+    && $remaining > 0
+    && $recType !== 'بستانکار'
+    && $invoiceStatus !== 'void';
 
- $itemsCount = 0;
+$logoPath = '/Image/logo3.jpg';
+
+$itemsCount = 0;
 foreach ($items as $item) $itemsCount += (int)($item['qty'] ?? 0);
 
 header('X-Robots-Tag: noindex, nofollow, noarchive');
 ?>
+<!doctype html>
+<html lang="fa" dir="rtl">
 
 <head>
     <meta charset="utf-8">
@@ -389,7 +387,6 @@ header('X-Robots-Tag: noindex, nofollow, noarchive');
                                     $qty = (int)($item['qty'] ?? 0);
                                     $baseUnitPrice = (int)($item['base_unit_price'] ?? $item['base_price'] ?? $item['price'] ?? 0);
                                     $discountPercent = (float)($item['discount_percent'] ?? 0);
-                                    $discountAmount = (int)($item['discount_amount'] ?? 0);
                                     $unitPrice = (int)($item['unit_price'] ?? $baseUnitPrice);
                                     $lineTotal = (int)($item['line_total'] ?? ($unitPrice * $qty));
                                 ?>
@@ -404,11 +401,9 @@ header('X-Robots-Tag: noindex, nofollow, noarchive');
                                         <td><span class="qty-value"><?= number_format($qty) ?></span> جفت</td>
                                         <td class="price"><?= $moneyFa($baseUnitPrice) ?></td>
                                         <td class="discount-cell">
-                                            <?php if ($discountPercent > 0): ?>
-                                                <span class="discount-percent"><?= rtrim(rtrim(number_format($discountPercent, 2, '.', ''), '0'), '.') ?>٪</span>
-                                            <?php else: ?>
-                                                <span class="no-discount">—</span>
-                                            <?php endif; ?>
+                                            <?= $discountPercent > 0
+                                                ? rtrim(rtrim(number_format($discountPercent, 2, '.', ''), '0'), '.') . '٪'
+                                                : '—' ?>
                                         </td>
                                         <td class="price final-price"><?= $moneyFa($unitPrice) ?></td>
                                         <td class="price line-total"><?= $moneyFa($lineTotal) ?></td>
@@ -551,15 +546,11 @@ header('X-Robots-Tag: noindex, nofollow, noarchive');
                         <span class="payment-alert-icon">✓</span>
                         <div>
                             <strong>این فاکتور به‌طور کامل پرداخت شده است.</strong>
-                            <p>مانده قابل پرداخت این فاکتور صفر است.</p>
-                        </div>
-                    </div>
-                <?php elseif ($recType === 'بستانکار'): ?>
-                    <div class="payment-alert payment-alert-creditor">
-                        <span class="payment-alert-icon">✓</span>
-                        <div>
-                            <strong>وضعیت مالی: بستانکار</strong>
-                            <p>مبلغ بستانکاری: <?= $moneyFa($recAmount) ?> — نیازی به پرداخت جدید نیست.</p>
+                            <?php if ($remaining < 0): ?>
+                                <p>مبلغ بستانکاری شما: <?= $moneyFa(abs($remaining)) ?> — در سفارش بعدی قابل اعمال است.</p>
+                            <?php else: ?>
+                                <p>مانده قابل پرداخت این فاکتور صفر است.</p>
+                            <?php endif; ?>
                         </div>
                     </div>
                 <?php endif; ?>
@@ -574,7 +565,7 @@ header('X-Robots-Tag: noindex, nofollow, noarchive');
                         </div>
                     <?php endif; ?>
 
-                    <!-- نتیجه مالی — COMPUTED (فیکس تسویه/پرداخت‌نشده) -->
+                    <!-- نتیجه مالی — COMPUTED -->
                     <div class="reconciliation-box">
                         <div class="reconciliation-title">نتیجه مالی (محاسبه‌شده سیستمی)</div>
 
@@ -638,9 +629,16 @@ header('X-Robots-Tag: noindex, nofollow, noarchive');
                         </div>
                     <?php endif; ?>
 
+                    <?php if ($remaining < 0): ?>
+                        <div class="total-row">
+                            <span class="total-label">بستانکاری (مازاد پرداخت)</span>
+                            <span class="total-value"><?= $moneyFa(abs($remaining)) ?></span>
+                        </div>
+                    <?php endif; ?>
+
                     <div class="total-row grand-total">
                         <span class="total-label">مانده قطعی</span>
-                        <strong class="total-value"><?= $moneyFa($remaining) ?></strong>
+                        <strong class="total-value"><?= $moneyFa(max(0, $remaining)) ?></strong>
                     </div>
                 </div>
             </section>

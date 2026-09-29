@@ -1351,3 +1351,341 @@
   font-size: 1.05rem;
   color: #23303a;
 }
+/* ═══ Financial Center v2 — هماهنگ با Design System ادمین ═══ */
+
+.finance2-page {
+  display: flex;
+  flex-direction: column;
+  gap: 18px;
+}
+
+.finance2-head {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  gap: 16px;
+  flex-wrap: wrap;
+}
+.finance2-head h1 {
+  margin: 0 0 6px;
+  font-size: 24px;
+  font-weight: 800;
+}
+.finance2-head p {
+  margin: 0;
+  color: #64748b;
+  font-size: 13px;
+}
+
+.finance2-stats {
+  display: grid;
+  grid-template-columns: repeat(6, minmax(0, 1fr));
+  gap: 10px;
+}
+@media (max-width: 1000px) {
+  .finance2-stats {
+    grid-template-columns: repeat(3, 1fr);
+  }
+}
+@media (max-width: 640px) {
+  .finance2-stats {
+    grid-template-columns: repeat(2, 1fr);
+  }
+}
+
+.finance2-stat {
+  background: #fff;
+  border: 1px solid #e5e7eb;
+  border-radius: 14px;
+  padding: 16px;
+  text-decoration: none;
+  transition: 0.2s;
+}
+.finance2-stat:hover {
+  border-color: #2a5f78;
+}
+.finance2-stat span {
+  display: block;
+  font-size: 11px;
+  color: #64748b;
+  margin-bottom: 8px;
+}
+.finance2-stat strong {
+  font-size: 22px;
+  color: #111827;
+}
+.finance2-stat.hot {
+  border-color: #f0c36d;
+  background: #fffdf5;
+}
+.finance2-stat.hot strong {
+  color: #b45309;
+}
+
+.finance2-toolbar {
+  background: #fff;
+  border: 1px solid #e5e7eb;
+  border-radius: 14px;
+  padding: 12px 14px;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  align-items: center;
+}
+.finance2-filter {
+  padding: 7px 14px;
+  border: 1px solid #e5e7eb;
+  border-radius: 20px;
+  font-size: 12px;
+  font-weight: 700;
+  color: #475569;
+  text-decoration: none;
+  background: #fff;
+  transition: 0.15s;
+}
+.finance2-filter:hover {
+  border-color: #2a5f78;
+  color: #2a5f78;
+}
+.finance2-filter.on {
+  background: #2a5f78;
+  border-color: #2a5f78;
+  color: #fff;
+}
+.finance2-search {
+  margin-right: auto;
+  display: flex;
+  gap: 6px;
+}
+.finance2-search input {
+  min-width: 240px;
+  height: 38px;
+  border: 1px solid #dbe2ea;
+  border-radius: 9px;
+  padding: 0 11px;
+  font-family: inherit;
+  font-size: 13px;
+}
+.finance2-search button {
+  height: 38px;
+  padding: 0 16px;
+  border: 0;
+  border-radius: 9px;
+  background: #2a5f78;
+  color: #fff;
+  cursor: pointer;
+  font-family: inherit;
+  font-weight: 700;
+}
+
+/* کارت فاکتور */
+.fin2-card {
+  background: #fff;
+  border: 1px solid #e5e7eb;
+  border-radius: 16px;
+  padding: 16px 18px;
+}
+.fin2-head {
+  display: flex;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: 10px;
+  margin-bottom: 14px;
+}
+.fin2-inv {
+  font-size: 15px;
+  font-weight: 800;
+}
+.fin2-inv small {
+  display: block;
+  font-weight: 400;
+  color: #64748b;
+  font-size: 11px;
+}
+.fin2-cust {
+  text-align: left;
+  font-size: 12px;
+  color: #475569;
+}
+.fin2-cust b {
+  display: block;
+  color: #111827;
+  font-size: 13px;
+}
+
+/* جعبه‌های مالی */
+.fin2-grid {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 9px;
+  margin-bottom: 14px;
+}
+.fin2-box {
+  background: #f8fafc;
+  border-radius: 11px;
+  padding: 11px 13px;
+}
+.fin2-box span {
+  display: block;
+  font-size: 10px;
+  color: #64748b;
+  margin-bottom: 4px;
+}
+.fin2-box strong {
+  font-size: 13.5px;
+}
+.fin2-box.ok {
+  background: #ecfdf5;
+}
+.fin2-box.ok strong {
+  color: #047857;
+}
+.fin2-box.deb {
+  background: #fef2f2;
+}
+.fin2-box.deb strong {
+  color: #b91c1c;
+}
+.fin2-box.hot {
+  background: #fffbeb;
+  border: 1px solid #fde68a;
+}
+.fin2-box.hot strong {
+  color: #b45309;
+}
+
+.fin2-badge {
+  display: inline-flex;
+  padding: 4px 11px;
+  border-radius: 99px;
+  font-size: 11px;
+  font-weight: 700;
+}
+.fin2-badge.warning {
+  background: #fffbeb;
+  color: #b45309;
+}
+.fin2-badge.success {
+  background: #ecfdf5;
+  color: #047857;
+}
+.fin2-badge.danger {
+  background: #fef2f2;
+  color: #b91c1c;
+}
+.fin2-badge.info {
+  background: #eff6ff;
+  color: #1d4ed8;
+}
+.fin2-badge.muted {
+  background: #f1f5f9;
+  color: #64748b;
+}
+
+/* پرداخت‌های داخل کارت */
+.fin2-sub {
+  border: 1px solid #e5e7eb;
+  border-radius: 12px;
+  padding: 12px 14px;
+  margin-bottom: 9px;
+}
+.fin2-sub.pending {
+  background: #fffdf5;
+  border-color: #fde68a;
+}
+.fin2-sub-head {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+.fin2-meta {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 5px 16px;
+  font-size: 11.5px;
+  color: #64748b;
+  margin-top: 7px;
+}
+.fin2-verify {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 7px;
+  align-items: center;
+  margin-top: 10px;
+  padding-top: 10px;
+  border-top: 1px dashed #e5e7eb;
+}
+.fin2-verify input[type="number"] {
+  width: 155px;
+  padding: 8px 10px;
+  border: 1px solid #dbe2ea;
+  border-radius: 9px;
+  font-family: inherit;
+  text-align: center;
+}
+.fin2-verify input[type="text"] {
+  flex: 1;
+  min-width: 150px;
+  padding: 8px 10px;
+  border: 1px solid #dbe2ea;
+  border-radius: 9px;
+  font-family: inherit;
+}
+.fin2-verify button {
+  padding: 8px 15px;
+  border: 0;
+  border-radius: 9px;
+  font-family: inherit;
+  font-weight: 700;
+  cursor: pointer;
+  font-size: 12px;
+}
+.fin2-verify .go {
+  background: #059669;
+  color: #fff;
+}
+.fin2-verify .no {
+  background: #fee2e2;
+  color: #b91c1c;
+}
+.fin2-note {
+  font-size: 11px;
+  color: #64748b;
+  margin-top: 6px;
+}
+
+/* تاریخچه */
+.fin2-hist summary {
+  cursor: pointer;
+  font-size: 12px;
+  color: #2563eb;
+  font-weight: 600;
+}
+.fin2-hist ul {
+  padding: 8px 14px 0;
+  margin: 8px 0 0;
+}
+.fin2-hist li {
+  font-size: 11.5px;
+  color: #475569;
+  padding: 6px 0;
+  border-bottom: 1px dashed #eef2f7;
+  list-style: none;
+}
+
+.fin2-links a {
+  font-size: 12px;
+  color: #2563eb;
+  text-decoration: none;
+  font-weight: 600;
+}
+.fin2-empty {
+  text-align: center;
+  color: #94a3b8;
+  padding: 40px;
+  background: #fff;
+  border: 1px dashed #e5e7eb;
+  border-radius: 14px;
+}

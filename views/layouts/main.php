@@ -496,7 +496,7 @@ if (is_logged_in()) {
 
             </div>
             <?php if ($isCustomer): ?>
-                <a href="/account/orders" class="r6-drawer-link">سفارش‌های من</a>
+                <a href="/account-orders" class="r6-drawer-link">سفارش‌های من</a>
             <?php endif; ?>
 
         <?php endif; ?>

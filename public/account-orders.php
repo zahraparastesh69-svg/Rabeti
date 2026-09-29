@@ -1,4 +1,6 @@
 <?php
+/* [FILE] public/account-orders.php — Customer my-orders */
+
 require_once __DIR__ . '/../config/bootstrap.php';
 require_once ROOT_PATH . '/config/database.php';
 require_once ROOT_PATH . '/config/auth.php';
@@ -58,11 +60,16 @@ $stmt = $db->prepare("
 $stmt->execute([$userId]);
 $orders = $stmt->fetchAll();
 
-/* برای هر سفارش: تأییدشده و در انتظار و مانده — جدا و صادقانه */
+/* ═══ برای هر سفارش: تأییدشده / در انتظار / مانده (بستانکار هم محاسبه می‌شود) ═══ */
 $orderFinancials = [];
 foreach ($orders as $o) {
     if (!$o['invoice_number']) {
-        $orderFinancials[(int)$o['id']] = ['paid' => 0, 'pending' => 0, 'remaining' => (int)$o['total'], 'has_pending' => false];
+        $orderFinancials[(int)$o['id']] = [
+            'paid' => 0,
+            'pending' => 0,
+            'remaining' => (int)$o['total'],
+            'has_pending' => false,
+        ];
         continue;
     }
     $stmt = $db->prepare("
@@ -75,12 +82,15 @@ foreach ($orders as $o) {
     ");
     $stmt->execute([$o['invoice_number']]);
     $fin = $stmt->fetch();
+
     $paid    = (int)($fin['paid'] ?? 0);
     $pending = (int)($fin['pending'] ?? 0);
+
+    /* ⭐ بدون max(0) — عدد منفی یعنی بستانکار (مازاد پرداخت) */
     $orderFinancials[(int)$o['id']] = [
-        'paid'       => $paid,
-        'pending'    => $pending,
-        'remaining'  => max(0, (int)$o['total'] - $paid),
+        'paid'        => $paid,
+        'pending'     => $pending,
+        'remaining'   => (int)$o['total'] - $paid,
         'has_pending' => $pending > 0,
     ];
 }
@@ -103,6 +113,7 @@ ob_start();
             $fin = $orderFinancials[(int)$o['id']];
             $remaining  = $fin['remaining'];
             $hasPending = $fin['has_pending'];
+            $isCreditor = ($remaining < 0);
         ?>
             <article class="my-order-card">
 
@@ -140,9 +151,13 @@ ob_start();
 
                     <div class="mo-row">
                         <span>مانده بدهی</span>
-                        <b class="<?= $remaining > 0 ? 'stock out' : 'stock in' ?>">
-                            <?= $remaining > 0 ? number_format($remaining) . ' تومان' : 'تسویه کامل ✓' ?>
-                        </b>
+                        <?php if ($remaining > 0): ?>
+                            <b class="stock out"><?= number_format($remaining) ?> تومان</b>
+                        <?php elseif ($isCreditor): ?>
+                            <b class="stock in">بستانکار: <?= number_format(abs($remaining)) ?> تومان</b>
+                        <?php else: ?>
+                            <b class="stock in">تسویه کامل ✓</b>
+                        <?php endif; ?>
                     </div>
                 </div>
 
@@ -155,24 +170,54 @@ ob_start();
                         <a href="/payment?order=<?= $h($o['order_number']) ?>" class="btn btn-outline">
                             پیگیری پرداخت در انتظار بررسی
                         </a>
-                    <?php endif; ?>
+                        <?php elseif ($isCreditor): ?>
+    <?php
+    /* آیا درخواست بازگشت قبلی pending است؟ */
+    $stmt = $db->prepare("SELECT id, status FROM refund_requests
+                          WHERE invoice_id = (SELECT id FROM invoices WHERE invoice_number = ?)
+                          ORDER BY id DESC LIMIT 1");
+    $stmt->execute([$o['invoice_number']]);
+    $existingRefund = $stmt->fetch();
+    ?>
+    <?php if ($existingRefund && $existingRefund['status'] === 'pending'): ?>
+        <span class="btn btn-outline" style="cursor:default;">
+            ⏳ درخواست بازگشت وجه در انتظار بررسی
+        </span>
+    <?php elseif ($existingRefund && $existingRefund['status'] === 'paid'): ?>
+        <span class="btn btn-outline" style="cursor:default;">
+            ✓ بازگشت وجه انجام شد
+        </span>
+    <?php else: ?>
+        <button type="button" class="btn btn-primary"
+                onclick="document.getElementById('refundBox<?= (int)$o['id'] ?>').style.display='block'">
+            💰 درخواست بازگشت وجه (<?= number_format(abs($remaining)) ?> تومان)
+        </button>
 
-                    <?php if ($o['invoice_number']): ?>
-                        <a href="/invoice-print?inv=<?= $h($o['invoice_number']) ?>" target="_blank" class="btn btn-outline">🧾 فاکتور</a>
-                    <?php endif; ?>
+        <div id="refundBox<?= (int)$o['id'] ?>" style="display:none;margin-top:10px;
+             background:#fff;border:1px solid var(--line,#E6E2D8);border-radius:12px;padding:14px;">
+            <form method="post" action="/refund-request">
+                <input type="hidden" name="csrf_token" value="<?= $h(csrf_token()) ?>">
+                <input type="hidden" name="invoice_number" value="<?= $h($o['invoice_number']) ?>">
+
+                <div class="form-field">
+                    <label>شماره شبا <i>*</i></label>
+                    <input type="text" name="sheba" dir="ltr" maxlength="26"
+                           placeholder="IRxxxxxxxxxxxxxxxxxxxxxx" required>
+                    <span class="field-hint">شبا باید به نام خودتان باشد</span>
                 </div>
 
-            </article>
-        <?php endforeach; ?>
+                <div class="form-field">
+                    <label>نام صاحب حساب <i>*</i></label>
+                    <input type="text" name="account_holder" required>
+                </div>
 
-    </div>
-<?php else: ?>
-    <div class="empty-state">
-        <div class="empty-icon">📦</div>
-        <h2>هنوز سفارشی ثبت نکرده‌اید</h2>
-        <a href="/products" class="btn btn-primary">شروع خرید</a>
-    </div>
+                <button type="submit" class="btn btn-primary">ثبت درخواست بازگشت ←</button>
+                <p class="field-hint">وجه بستانکاری ظرف ۲۴ ساعت کاری به این شبا واریز می‌شود</p>
+            </form>
+        </div>
+    <?php endif; ?>
 <?php endif; ?>
+
 
 <?php
 $content = ob_get_clean();

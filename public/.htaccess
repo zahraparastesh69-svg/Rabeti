@@ -57,8 +57,6 @@ RewriteRule ^invoice-print/?$ invoice-print.php [L,QSA]
 
 RewriteRule ^checkout-address/?$ checkout-address.php [L,QSA]
 
-RewriteRule ^account/orders/?$ account-orders.php [L,QSA]
-
 RewriteRule ^checkout-shipping/?$ checkout-shipping.php [L,QSA]
 
 RewriteRule ^checkout-review/?$ checkout-review.php [L,QSA]
@@ -68,4 +66,9 @@ RewriteRule ^payment/?$ payment.php [L,QSA]
 RewriteRule ^invoice-print/?$ invoice-print.php [L,QSA]
 
 RewriteRule ^invoice-pdf/?$ invoice-pdf.php [L,QSA]
+
+RewriteRule ^account-orders/?$ account-orders.php [L,QSA]
+
+RewriteRule ^refund-request/?$ refund-request.php [L,QSA]
+
 
