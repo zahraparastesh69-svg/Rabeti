@@ -193,8 +193,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             $fin = $reconcile((int)$sub['invoice_id']);
 
             $db->prepare("INSERT INTO payment_verification_history
-                (payment_id, invoice_id, old_amount, new_amount, old_status, new_status, reason, changed_by, ip)
-                VALUES (?,?,?,?,?,?,?,?,?)")
+    (payment_submission_id, invoice_id, old_verified_amount, new_verified_amount, old_status, new_status, reason, changed_by, ip)
+    VALUES (?,?,?,?,?,?,?,?,?)")
                 ->execute([
                     $subId,
                     (int)$sub['invoice_id'],
@@ -262,8 +262,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             $fin = $reconcile((int)$sub['invoice_id']);
 
             $db->prepare("INSERT INTO payment_verification_history
-                (payment_id, invoice_id, old_amount, new_amount, old_status, new_status, reason, changed_by, ip)
-                VALUES (?,?,?,?,?,?,?,?,?)")
+    (payment_submission_id, invoice_id, old_verified_amount, new_verified_amount, old_status, new_status, reason, changed_by, ip)
+    VALUES (?,?,?,?,?,?,?,?,?)")
                 ->execute([
                     $subId,
                     (int)$sub['invoice_id'],
@@ -318,8 +318,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             $reconcile((int)$sub['invoice_id']);
 
             $db->prepare("INSERT INTO payment_verification_history
-                (payment_id, invoice_id, old_amount, new_amount, old_status, new_status, reason, changed_by, ip)
-                VALUES (?,?,?,?,?,?,?,?,?)")
+    (payment_submission_id, invoice_id, old_verified_amount, new_verified_amount, old_status, new_status, reason, changed_by, ip)
+    VALUES (?,?,?,?,?,?,?,?,?)")
                 ->execute([
                     $subId,
                     (int)$sub['invoice_id'],
@@ -1122,9 +1122,9 @@ ob_start();
             <?php
             /* تاریخچه */
             $stmt = $db->prepare("SELECT h.*, u.full_name AS changer
-                              FROM payment_verification_history h
-                              LEFT JOIN users u ON u.id = h.changed_by
-                              WHERE h.payment_id = ? ORDER BY h.id DESC LIMIT 10");
+                      FROM payment_verification_history h
+                      LEFT JOIN users u ON u.id = h.changed_by
+                      WHERE h.payment_submission_id = ? ORDER BY h.id DESC LIMIT 10");
             $stmt->execute([(int)$s['id']]);
             $histories = $stmt->fetchAll();
             ?>
