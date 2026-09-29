@@ -392,7 +392,17 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
             $fin = $reconcile($invoiceId);
             if ($fin['type'] !== 'creditor') throw new RuntimeException('این فاکتور بستانکار نیست.');
-            if ($amount > $fin['amount']) throw new RuntimeException('مبلغ بیشتر از بستانکاری است.');
+            if ($amount <= 0) throw new RuntimeException('مبلغ تسویه باید بیشتر از صفر باشد.');
+            if ($amount > $fin['amount']) throw new RuntimeException('مبلغ تسویه بیشتر از بستانکاری فعلی است.');
+
+            $allowedSettlementMethods = ['sheba', 'card_to_card', 'cash_receipt', 'online'];
+            if (!in_array($method, $allowedSettlementMethods, true)) {
+                throw new RuntimeException('روش تسویه نامعتبر است.');
+            }
+
+            if ($docNo === '' && $refNo === '') {
+                throw new RuntimeException('ثبت شماره سند یا شماره پیگیری برای تسویه الزامی است.');
+            }
 
             $db->prepare("INSERT INTO financial_transactions
                 (invoice_id, user_id, type, amount, method, document_no, reference_no, status, created_by, completed_at)
@@ -610,8 +620,28 @@ ob_start();
         $stmt->execute([$invId]);
         $histories = $stmt->fetchAll();
 
-        /* فرم اصلاح فقط وقتی فاکتور تسویه قطعی نشده */
-        $canAdjust = ($remaining !== 0);
+        /*
+         * اصلاح مبلغ تأییدشده فقط برای فاکتور بدهکار مجاز است.
+         *
+         * اگر فاکتور بستانکار باشد، مبلغ تأییدشده نباید دوباره «اصلاح»
+         * شود؛ بلکه اضافه‌پرداخت باید از مسیر «تسویه بستانکاری» ثبت شود.
+         */
+        $canAdjust = ($remaining > 0);
+
+        /*
+         * مبلغ بستانکاری واقعی که باید به مشتری تسویه شود.
+         * این مبلغ از همان منبع حقیقت مالی می‌آید:
+         * total - paid_total
+         */
+        $creditorAmount = $remaining < 0 ? abs($remaining) : 0;
+
+        /* روش‌های قابل ثبت برای تسویه بستانکاری */
+        $settlementMethods = [
+            'sheba'       => 'شبا',
+            'card_to_card' => 'کارت به کارت',
+            'cash_receipt' => 'فیش نقدی',
+            'online'      => 'درگاه',
+        ];
     ?>
 
         <div class="finc-card">
@@ -634,8 +664,9 @@ ob_start();
                 <div class="finc-box <?= $pending > 0 ? 'hot' : '' ?>"><span>در انتظار بررسی (ادعا)</span>
                     <strong><?= $pending > 0 ? $money($pending) : '—' ?></strong>
                 </div>
-                <div class="finc-box <?= $remaining > 0 ? 'deb' : 'ok' ?>"><span>مانده قطعی</span>
-                    <strong><?= $money(max(0, $remaining)) ?></strong>
+                <div class="finc-box <?= $remaining > 0 ? 'deb' : ($remaining < 0 ? 'info' : 'ok') ?>">
+                    <span><?= $remaining < 0 ? 'بستانکاری قابل تسویه' : 'مانده قطعی' ?></span>
+                    <strong><?= $money(abs($remaining)) ?></strong>
                 </div>
             </div>
 
@@ -646,6 +677,75 @@ ob_start();
                 </span>
                 <span class="finc-badge muted">صدور: <?= $jalali($inv['issued_at']) ?></span>
             </div>
+
+            <?php if ($remaining < 0 && $creditorAmount > 0): ?>
+                <!-- ═══ تسویه بستانکاری — مسیر مستقل از اصلاح پرداخت ═══ -->
+                <div class="finc-creditor-settlement" style="margin:0 0 16px;padding:14px;border:1px solid #bfdbfe;border-radius:12px;background:#eff6ff;">
+                    <div style="display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap;margin-bottom:12px;">
+                        <div>
+                            <strong style="display:block;font-size:14px;">تسویه بستانکاری مشتری</strong>
+                            <span style="display:block;margin-top:4px;font-size:12px;color:#475569;">
+                                این مبلغ اضافه‌پرداخت مشتری است و باید به حساب او برگشت داده شود.
+                            </span>
+                        </div>
+                        <div style="font-size:16px;font-weight:800;color:#1d4ed8;">
+                            مبلغ قابل تسویه: <?= $money($creditorAmount) ?>
+                        </div>
+                    </div>
+
+                    <form method="post" class="finc-verify" style="display:grid;grid-template-columns:minmax(150px,1fr) minmax(150px,1fr) minmax(150px,1fr) minmax(180px,1.2fr) auto;gap:8px;align-items:end;">
+                        <input type="hidden" name="csrf" value="<?= $h($csrf) ?>">
+                        <input type="hidden" name="action" value="settle_creditor">
+                        <input type="hidden" name="invoice_id" value="<?= $invId ?>">
+
+                        <div>
+                            <label style="font-size:11px;font-weight:700;display:block;margin-bottom:5px;">مبلغ بازگشت</label>
+                            <input
+                                type="number"
+                                name="amount"
+                                min="1"
+                                max="<?= $creditorAmount ?>"
+                                required
+                                value="<?= $creditorAmount ?>"
+                                placeholder="مبلغ تسویه">
+                        </div>
+
+                        <div>
+                            <label style="font-size:11px;font-weight:700;display:block;margin-bottom:5px;">روش تسویه</label>
+                            <select name="method" required style="width:100%;min-height:38px;">
+                                <option value="">انتخاب روش</option>
+                                <?php foreach ($settlementMethods as $methodKey => $methodText): ?>
+                                    <option value="<?= $h($methodKey) ?>"><?= $h($methodText) ?></option>
+                                <?php endforeach; ?>
+                            </select>
+                        </div>
+
+                        <div>
+                            <label style="font-size:11px;font-weight:700;display:block;margin-bottom:5px;">شماره سند</label>
+                            <input
+                                type="text"
+                                name="document_no"
+                                placeholder="مثلاً سند مالی 1258">
+                        </div>
+
+                        <div>
+                            <label style="font-size:11px;font-weight:700;display:block;margin-bottom:5px;">شماره پیگیری / تراکنش</label>
+                            <input
+                                type="text"
+                                name="reference_no"
+                                placeholder="شماره پیگیری بانک">
+                        </div>
+
+                        <button
+                            type="submit"
+                            class="go"
+                            style="background:#2563eb;min-height:38px;white-space:nowrap;"
+                            onclick="return confirm('آیا مبلغ <?= $h($money($creditorAmount)) ?> به مشتری تسویه شده است؟');">
+                            ثبت تسویه بستانکاری
+                        </button>
+                    </form>
+                </div>
+            <?php endif; ?>
 
             <?php foreach ($subs as $s): ?>
                 <div class="finc-sub <?= $s['status'] === 'pending' ? 'pending' : '' ?>">

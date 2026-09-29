@@ -164,6 +164,20 @@ $paymentStmt = $db->prepare("
 $paymentStmt->execute([(int)$invoice['id']]);
 $payments = $paymentStmt->fetchAll(PDO::FETCH_ASSOC);
 
+/* ═══ اسناد بازگشت وجه (تسویه بستانکاری) ═══ */
+$refunds = [];
+$stmt = $db->prepare("
+    SELECT ft.amount, ft.method, ft.document_no, ft.reference_no, ft.completed_at
+    FROM financial_transactions ft
+    WHERE ft.invoice_id = ? AND ft.type = 'creditor_settlement' AND ft.status = 'completed'
+    ORDER BY ft.completed_at ASC
+");
+$stmt->execute([(int)$invoice['id']]);
+$refunds = $stmt->fetchAll(PDO::FETCH_ASSOC);
+
+$totalRefunded = 0;
+foreach ($refunds as $r) $totalRefunded += (int)$r['amount'];
+
 /* ══════════════════════════════════════════════
    محاسبات — بستانکار هم لحاظ می‌شود
    ══════════════════════════════════════════════ */
@@ -555,6 +569,63 @@ header('X-Robots-Tag: noindex, nofollow, noarchive');
                     </div>
                 <?php endif; ?>
             </section>
+            <?php if (!empty($refunds)): ?>
+
+                <section class="payment-section">
+                    <div class="section-title">اسناد بازگشت وجه</div>
+
+                    <div class="payment-history">
+                        <?php foreach ($refunds as $r): ?>
+                            <article class="payment-item payment-item-refund">
+                                <div class="payment-item-main">
+                                    <div class="payment-item-title">
+                                        <span class="payment-method">
+                                            بازگشت وجه به مشتری
+                                        </span>
+                                        <span class="payment-status payment-status-refunded">
+                                            تسویه بستانکاری
+                                        </span>
+                                    </div>
+                                    <div class="payment-item-amount">
+                                        <?= $moneyFa($r['amount']) ?>
+                                    </div>
+                                </div>
+                                <div class="payment-item-meta">
+                                    <div>
+                                        <span class="payment-meta-label">
+                                            تاریخ بازگشت
+                                        </span>
+                                        <span>
+                                            <?= $h($dateTimeFa($r['completed_at'])) ?>
+                                        </span>
+                                    </div>
+                                    <?php if (trim((string)($r['document_no'] ?? '')) !== ''): ?>
+                                        <div>
+                                            <span class="payment-meta-label">
+                                                شماره سند
+                                            </span>
+                                            <span class="ltr">
+                                                <?= $h($r['document_no']) ?>
+                                            </span>
+                                        </div>
+                                    <?php endif; ?>
+                                    <?php if (trim((string)($r['reference_no'] ?? '')) !== ''): ?>
+                                        <div>
+                                            <span class="payment-meta-label">
+                                                شماره پیگیری
+                                            </span>
+                                            <span class="ltr">
+                                                <?= $h($r['reference_no']) ?>
+                                            </span>
+                                        </div>
+                                    <?php endif; ?>
+                                </div>
+                            </article>
+                        <?php endforeach; ?>
+                    </div>
+                </section>
+
+            <?php endif; ?>
 
             <section class="invoice-bottom">
                 <div class="bottom-left">
@@ -621,6 +692,12 @@ header('X-Robots-Tag: noindex, nofollow, noarchive');
                         <span class="total-label">پرداخت تأییدشده</span>
                         <strong class="total-value"><?= $moneyFa($paid) ?></strong>
                     </div>
+                    <?php if ($totalRefunded > 0): ?>
+                        <div class="total-row refund-row">
+                            <span class="total-label">بازگشت وجه به مشتری</span>
+                            <span class="total-value">- <?= $moneyFa($totalRefunded) ?></span>
+                        </div>
+                    <?php endif; ?>
 
                     <?php if ($hasPendingPayment): ?>
                         <div class="total-row pending-row">
