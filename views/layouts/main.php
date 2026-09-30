@@ -688,6 +688,7 @@ if (is_logged_in()) {
 
     </nav>
     <!-- ═══ Modal ورود / ثبت‌نام / فراموشی رمز ═══ -->
+    <!-- ═══ Modal ورود / ثبت‌نام / فراموشی رمز ═══ -->
     <div class="auth-modal-overlay" id="authModalOverlay">
         <div class="auth-modal" role="dialog" aria-modal="true">
             <button class="auth-modal-close" id="authModalClose" aria-label="بستن">×</button>
@@ -768,9 +769,10 @@ if (is_logged_in()) {
 
                     <!-- فیلدهای حقوقی -->
                     <div class="utype-legal" style="display:none;">
+                       
                         <div class="form-field">
-                            <label>نام شرکت <i>*</i></label>
-                            <input type="text" name="company_name_legal" autocomplete="organization">
+                            <label>نام مغازه / شرکت</label>
+                            <input type="text" name="company_name" autocomplete="organization">
                         </div>
                         <div class="form-field">
                             <label>شناسه اقتصادی <i>*</i></label>
@@ -803,10 +805,15 @@ if (is_logged_in()) {
                             autocomplete="new-password" required>
                     </div>
 
+                </form>
+
+                <!-- دکمه ثبت — جدا از فرم اصلی، همیشه پایینِ دید -->
+                <form method="post" id="registerSubmitForm" novalidate>
                     <button type="submit" class="btn btn-primary co-submit" id="registerBtn">
                         ایجاد حساب
                     </button>
                 </form>
+
             </div>
 
             <!-- ═══ نما: فراموشی رمز ═══ -->

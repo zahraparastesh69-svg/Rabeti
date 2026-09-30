@@ -1,5 +1,5 @@
 /* ═══════════════════════════════════════════════════════════
-   RABETI — app.js (نسخه نهایی)
+   RABETI — app.js (نسخه نهایی v3)
    فهرست: ۱-کشو ۲-هدر ۳-توست ۴-ناوبری ۵-اعداد ۶-Stepper
    ۷-سبد ۸-آکاردئون ۹-مودال Auth ۱۰-ورود ۱۱-ثبت‌نام حقیقی/حقوقی
    ۱۲-فراموشی رمز
@@ -135,7 +135,7 @@ document.addEventListener(
   true,
 );
 
-// ══════════ ۷. افزودن سریع — کارت‌ها ══════════
+// ══════════ ۷. افزودن سریع — کارت‌های هر صفحه ══════════
 document.addEventListener("click", async (e) => {
   const btn = e.target.closest(".r6-add, .quick-add");
   if (!btn) return;
@@ -264,11 +264,10 @@ document.querySelectorAll('.cat-card[role="button"]').forEach((card) => {
 // ══════════ ۹. Modal ورود / ثبت‌نام / فراموشی ══════════
 const authOverlay = document.getElementById("authModalOverlay");
 const authClose = document.getElementById("authModalClose");
-const authTabsBox = document.querySelector(".auth-tabs");
 const paneLogin = document.getElementById("pane-login");
 const paneRegister = document.getElementById("pane-register");
 
-/* فقط تب‌های دارای data-tab — دکمه‌های حقیقی/حقوقی جدا هندل می‌شوند */
+/* تب‌های ورود/ثبت‌نام و حقیقی/حقوقی — جدا */
 const authTabs = document.querySelectorAll(".auth-tab[data-tab]");
 const utypeTabs = document.querySelectorAll(".auth-tab[data-utype]");
 
@@ -290,7 +289,7 @@ function closeAuthModal() {
 function switchAuthTab(tab) {
   const isRegister = tab === "register";
 
-  /* سوییچ نماها — کلید مشکل قبلی */
+  /* سوییچ نماها */
   document
     .getElementById("view-login")
     ?.classList.toggle("active", !isRegister);
@@ -299,7 +298,7 @@ function switchAuthTab(tab) {
     ?.classList.toggle("active", isRegister);
   document.getElementById("view-forgot")?.classList.remove("active");
 
-  /* نمایش دوباره تب‌ها اگر از فراموشی برگشتیم */
+  /* تب‌ها بعد از فراموشی دوباره نمایان */
   const tabsBox = document.getElementById("authTabsBox");
   if (tabsBox) tabsBox.style.display = "";
 
@@ -407,12 +406,17 @@ function switchUserType(type) {
   currentUserType = type;
   const isLegal = type === "legal";
 
-  /* نمایش/مخفی فیلدهای حقوقی */
-  paneRegister
-    ?.querySelector(".utype-legal")
-    ?.style.setProperty("display", isLegal ? "block" : "none");
+  const pane = document.getElementById("pane-register");
+  if (!pane) return;
 
-  /* اسلایدر تب نوع حساب */
+  /* نمایش/مخفی فیلدهای حقوقی */
+  pane.classList.toggle("utype-legal-on", isLegal);
+
+  const legalBox = pane.querySelector(".utype-legal");
+  const realBox = pane.querySelector(".utype-real");
+  if (legalBox) legalBox.style.display = isLegal ? "block" : "none";
+  if (realBox) realBox.style.display = isLegal ? "none" : "block";
+
   const slider = document.getElementById("utypeSlider");
   if (slider) slider.style.transform = isLegal ? "translateX(-100%)" : "none";
 
@@ -425,118 +429,117 @@ utypeTabs.forEach((b) =>
   b.addEventListener("click", () => switchUserType(b.dataset.utype)),
 );
 
-paneRegister?.addEventListener("submit", async (e) => {
-  e.preventDefault();
+/* ⭐ ثبت‌نام — دکمه در فرم جدا (registerSubmitForm)
+   داده‌ها از فرم اصلی pane-register خوانده می‌شوند */
+document
+  .getElementById("registerSubmitForm")
+  ?.addEventListener("submit", async (e) => {
+    e.preventDefault();
 
-  const form = e.currentTarget;
-  const btn = document.getElementById("registerBtn");
-  const err = document.getElementById("registerError");
+    const src = document.getElementById("pane-register");
+    const btn = document.getElementById("registerBtn");
+    const err = document.getElementById("registerError");
 
-  const fullName = form.querySelector('[name="full_name"]')?.value.trim() || "";
-  const mobile = faToEn(form.querySelector('[name="mobile"]')?.value.trim());
-  const email = form.querySelector('[name="email"]')?.value.trim() || "";
-  const password = form.querySelector('[name="password"]')?.value;
-  const password2 = form.querySelector('[name="password2"]')?.value;
+    const get = (n) => src.querySelector(`[name="${n}"]`)?.value.trim() || "";
 
-  const isLegal = currentUserType === "legal";
+    const fullName = get("full_name");
+    const mobile = faToEn(get("mobile"));
+    const email = get("email");
+    const password = src.querySelector('[name="password"]')?.value || "";
+    const password2 = src.querySelector('[name="password2"]')?.value || "";
 
-  const companyName = isLegal
-    ? form.querySelector('[name="company_name_legal"]')?.value.trim() || ""
-    : form.querySelector('[name="company_name"]')?.value.trim() || "";
+    const isLegal = currentUserType === "legal";
 
-  const nationalCode = isLegal
-    ? ""
-    : faToEn(form.querySelector('[name="national_code"]')?.value.trim());
+    const companyName = isLegal
+      ? get("company_name_legal")
+      : get("company_name");
 
-  const economicCode = isLegal
-    ? faToEn(form.querySelector('[name="economic_code"]')?.value.trim())
-    : "";
+    const nationalCode = isLegal ? "" : faToEn(get("national_code"));
+    const economicCode = isLegal ? faToEn(get("economic_code")) : "";
+    const gender = isLegal
+      ? ""
+      : src.querySelector('[name="gender"]:checked')?.value || "";
 
-  const gender = isLegal
-    ? ""
-    : form.querySelector('[name="gender"]:checked')?.value || "";
+    hideFormError(err);
 
-  hideFormError(err);
-
-  /* اعتبارسنجی سمت مشتری — منطق سرور جدا تأیید می‌کند */
-  if (!fullName) {
-    showFormError(err, "نام و نام خانوادگی را وارد کنید.");
-    return;
-  }
-  if (!/^09\d{9}$/.test(mobile)) {
-    showFormError(err, "شماره موبایل صحیح نیست.");
-    return;
-  }
-  if (password.length < 8) {
-    showFormError(err, "رمز عبور باید حداقل ۸ کاراکتر باشد.");
-    return;
-  }
-  if (password !== password2) {
-    showFormError(err, "تکرار رمز عبور صحیح نیست.");
-    return;
-  }
-  if (!isLegal && !/^\d{10}$/.test(nationalCode)) {
-    showFormError(err, "کد ملی باید ۱۰ رقم باشد.");
-    return;
-  }
-  if (isLegal) {
-    if (!companyName) {
-      showFormError(err, "نام شرکت را وارد کنید.");
+    if (!fullName) {
+      showFormError(err, "نام و نام خانوادگی را وارد کنید.");
       return;
     }
-    if (!/^\d{10,12}$/.test(economicCode)) {
-      showFormError(err, "شناسه اقتصادی باید ۱۰ تا ۱۲ رقم باشد.");
+    if (!/^09\d{9}$/.test(mobile)) {
+      showFormError(err, "شماره موبایل صحیح نیست.");
       return;
     }
-  }
+    if (password.length < 8) {
+      showFormError(err, "رمز عبور باید حداقل ۸ کاراکتر باشد.");
+      return;
+    }
+    if (password !== password2) {
+      showFormError(err, "تکرار رمز عبور صحیح نیست.");
+      return;
+    }
+    if (!isLegal && !/^\d{10}$/.test(nationalCode)) {
+      showFormError(err, "کد ملی باید ۱۰ رقم باشد.");
+      return;
+    }
+    if (isLegal) {
+      if (!companyName) {
+        showFormError(err, "نام شرکت را وارد کنید.");
+        return;
+      }
+      if (!/^\d{10,12}$/.test(economicCode)) {
+        showFormError(err, "شناسه اقتصادی باید ۱۰ تا ۱۲ رقم باشد.");
+        return;
+      }
+    }
 
-  btn.disabled = true;
-  btn.textContent = "در حال ایجاد حساب...";
+    btn.disabled = true;
+    btn.textContent = "در حال ایجاد حساب...";
 
-  try {
-    const fd = new FormData();
-    fd.append("full_name", fullName);
-    fd.append("company_name", companyName);
-    fd.append("mobile", mobile);
-    fd.append("email", email);
-    fd.append("password", password);
-    fd.append("password2", password2);
-    fd.append("user_type", currentUserType);
-    fd.append("national_code", nationalCode);
-    fd.append("gender", gender);
-    fd.append("economic_code", economicCode);
-
-    const res = await fetch("/api/register.php", {
-      method: "POST",
-      body: fd,
-      headers: { Accept: "application/json" },
-    });
-
-    const raw = await res.text();
-    let data;
     try {
-      data = JSON.parse(raw);
-    } catch {
-      console.error("REGISTER_RAW:", raw);
-      throw new Error("INVALID_REGISTER_RESPONSE");
-    }
+      const fd = new FormData();
+      fd.append("full_name", fullName);
+      fd.append("company_name", companyName);
+      fd.append("mobile", mobile);
+      fd.append("email", email);
+      fd.append("password", password);
+      fd.append("password2", password2);
+      fd.append("user_type", currentUserType);
+      fd.append("national_code", nationalCode);
+      fd.append("gender", gender);
+      fd.append("economic_code", economicCode);
 
-    if (!res.ok || !data.ok) {
-      showFormError(err, data.error || "ثبت‌نام انجام نشد.");
+      const res = await fetch("/api/register.php", {
+        method: "POST",
+        body: fd,
+        headers: { Accept: "application/json" },
+      });
+
+      const raw = await res.text();
+      let data;
+      try {
+        data = JSON.parse(raw);
+      } catch {
+        console.error("REGISTER_RAW:", raw);
+        throw new Error("INVALID_REGISTER_RESPONSE");
+      }
+
+      if (!res.ok || !data.ok) {
+        showFormError(err, data.error || "ثبت‌نام انجام نشد.");
+        btn.disabled = false;
+        btn.textContent = "ایجاد حساب";
+        return;
+      }
+
+      closeAuthModal();
+      window.location.href = "/?registered=1";
+    } catch (errObj) {
+      console.error("REGISTER_ERROR:", errObj);
+      showFormError(err, "ارتباط با سرویس ثبت‌نام برقرار نشد.");
       btn.disabled = false;
       btn.textContent = "ایجاد حساب";
-      return;
     }
-
-    closeAuthModal();
-    window.location.href = "/?registered=1";
-  } catch (errObj) {
-    console.error("REGISTER_ERROR:", errObj);
-    showFormError(err, "ارتباط با سرویس ثبت‌نام برقرار نشد.");
-    btn.disabled = false;
-    btn.textContent = "ایجاد حساب";
-  }
-});
+  });
 
 // ══════════ ۱۲. فراموشی رمز — سه مرحله ══════════
 let forgotChannel = "sms";
@@ -556,6 +559,10 @@ document.getElementById("forgotLink")?.addEventListener("click", () => {
   document.getElementById("view-login")?.classList.remove("active");
   document.getElementById("view-register")?.classList.remove("active");
   document.getElementById("view-forgot")?.classList.add("active");
+
+  /* تب‌ها در نمای فراموشی مخفی */
+  const tabsBox = document.getElementById("authTabsBox");
+  if (tabsBox) tabsBox.style.display = "none";
 
   showForgotStep(1);
   authOverlay?.classList.add("show");
@@ -587,6 +594,10 @@ document.getElementById("forgotDoneBtn")?.addEventListener("click", () => {
   setTimeout(() => {
     document.getElementById("view-forgot")?.classList.remove("active");
     document.getElementById("view-login")?.classList.add("active");
+
+    /* تب‌ها برگردند */
+    const tabsBox = document.getElementById("authTabsBox");
+    if (tabsBox) tabsBox.style.display = "";
   }, 300);
 });
 

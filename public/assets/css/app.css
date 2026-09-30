@@ -2275,63 +2275,6 @@ body.app-body {
 .r6-hero .r-btn {
   margin-top: 15px;
 }
-.r6-card {
-  background: #fff;
-  border: 1px solid var(--r6-line);
-  border-radius: 18px;
-  overflow: hidden;
-  transition: 0.22s;
-}
-.r6-card:hover {
-  transform: translateY(-4px);
-  box-shadow: var(--shadow-md);
-}
-.r6-card-image {
-  position: relative;
-  aspect-ratio: 1;
-  background: var(--r6-cream);
-  overflow: hidden;
-}
-.r6-card-image img {
-  width: 100%;
-  height: 100%;
-  object-fit: cover;
-}
-.r6-card-badge {
-  position: absolute;
-  top: 10px;
-  right: 10px;
-  padding: 4px 8px;
-  border-radius: 999px;
-  background: var(--r6-brand);
-  color: #fff;
-  font-size: 9px;
-  font-weight: 800;
-}
-.r6-card-body {
-  padding: 14px;
-}
-.r6-card-body h3 {
-  margin: 0 0 5px;
-  font-size: 15px;
-}
-.r6-card-body a {
-  font-weight: 800;
-}
-.r6-card-attr {
-  font-size: 10px;
-  color: var(--r6-mut);
-}
-.r6-card-price {
-  font-size: 16px;
-  font-weight: 900;
-  color: var(--r6-brand);
-  margin-top: 10px;
-}
-.r6-card-stock {
-  font-size: 10px;
-  color: var(--r6-ok);
-}
 .r6-stepper {
   display: flex;
   align-items: center;
@@ -2896,7 +2839,7 @@ body.app-body {
   .catalog-grid,
   .premium-product-grid,
   .r-grid {
-    grid-template-columns: 1fr 1fr;
+    grid-template-columns: 1fr;
     gap: 10px;
   }
   .cat-grid {
@@ -4779,12 +4722,12 @@ body.app-body {
   display: grid !important;
   grid-template-columns: repeat(4, minmax(0, 1fr)) !important;
   gap: 14px !important;
-  overflow: visible !important; /* گرید شد؛ اسکرول افقی حذف */
+  overflow: visible !important;
 }
 
 .r6-cat {
   width: auto !important;
-  aspect-ratio: 1 / 1 !important; /* مربع خوشگل */
+  aspect-ratio: 1 / 1 !important;
   display: flex !important;
   flex-direction: column !important;
   align-items: center !important;
@@ -4800,25 +4743,54 @@ body.app-body {
     border-color 0.25s,
     box-shadow 0.25s;
 }
+
 .r6-cat:hover {
   transform: translateY(-4px);
   border-color: var(--r6-brand, var(--brand, #2a5f78));
   box-shadow: 0 12px 26px rgba(31, 74, 94, 0.12);
 }
 
-/* عکس دسته — دو برابر قبل */
 .r6-cat img {
   width: 68px !important;
   height: 68px !important;
+  max-width: 100% !important;
   object-fit: cover !important;
   border-radius: 14px !important;
-  display: block;
-  justify-content: space-between !important;
-  margin-inline: auto !important; /* خود کادر وسطِ ستون والد */
-  width: 100% !important;
-  max-width: 200px !important;
+  display: block !important;
+  margin-inline: auto !important;
 }
 
+/* تبلت */
+@media (max-width: 1080px) {
+  .r6-cats {
+    grid-template-columns: repeat(3, minmax(0, 1fr)) !important;
+  }
+}
+
+/* موبایل */
+@media (max-width: 760px) {
+  .r6-cats {
+    grid-template-columns: repeat(2, minmax(0, 1fr)) !important;
+  }
+}
+
+/* موبایل خیلی کوچک — همچنان حداقل ۲ ستون */
+@media (max-width: 430px) {
+  .r6-cats {
+    grid-template-columns: repeat(2, minmax(0, 1fr)) !important;
+    gap: 10px !important;
+  }
+
+  .r6-cat {
+    gap: 10px !important;
+    padding: 12px 8px !important;
+  }
+
+  .r6-cat img {
+    width: 56px !important;
+    height: 56px !important;
+  }
+}
 .stepper .step,
 .stepper .r6-step {
   display: flex !important;
@@ -9276,4 +9248,146 @@ a {
 .form-field label i {
   color: #b91c1c;
   font-style: normal;
+}
+
+/* ═══ فیکس لایه‌های مودال auth ═══ */
+.auth-view {
+  display: none;
+}
+.auth-view.active {
+  display: block !important;
+}
+
+.auth-view .auth-pane {
+  display: block !important;
+}
+
+/* فیلدهای حقیقی/حقوقی */
+.utype-legal {
+  display: none;
+}
+.utype-legal.show,
+#pane-register.utype-legal-on .utype-legal {
+  display: block !important;
+}
+#pane-register.utype-legal-on .utype-real {
+  display: none !important;
+}
+
+/* تب فراموشی مخفی در نماها */
+#view-forgot {
+  display: none;
+}
+#view-forgot.active {
+  display: block !important;
+}
+/* ═══ مودال Auth — موبایل: تمام‌صفحه با دکمه ثابت ═══ */
+@media (max-width: 760px) {
+  /* مودال = تمام صفحه موبایل */
+  .auth-modal-overlay {
+    padding: 0 !important;
+    align-items: stretch !important;
+  }
+
+  .auth-modal {
+    width: 100% !important;
+    height: 100dvh !important;
+    max-height: 100dvh !important;
+    border-radius: 0 !important;
+    display: flex !important;
+    flex-direction: column !important;
+    overflow: hidden !important;
+  }
+
+  /* ناحیه اسکرول فقط فرم — دکمه‌ها پایین ثابت */
+  .auth-view {
+    flex: 1 !important;
+    overflow-y: auto !important;
+    display: none !important;
+  }
+  .auth-view.active {
+    display: block !important;
+  }
+
+  .auth-view .auth-pane {
+    display: block !important;
+    padding: 16px 18px 20px !important;
+    min-height: 0 !important;
+  }
+
+  /* دکمه ثبت/ورود — ثابت پایین، همیشه در دید */
+  .auth-view .co-submit {
+    position: sticky !important;
+    bottom: 12px !important;
+    width: calc(100% - 36px) !important;
+    margin: 10px 18px 0 !important;
+    min-height: 50px !important;
+    font-size: 0.95rem !important;
+    box-shadow: 0 -6px 20px rgba(31, 74, 94, 0.15);
+    z-index: 5;
+  }
+
+  /* تب‌ها بالا ثابت */
+  .auth-tabs {
+    flex-shrink: 0 !important;
+    margin: 12px 16px 0 !important;
+  }
+
+  /* دکمه بستن همیشه در دید */
+  .auth-modal-close {
+    position: fixed !important;
+    top: calc(10px + env(safe-area-inset-top)) !important;
+    left: 12px !important;
+    z-index: 10 !important;
+  }
+
+  /* فرم ثبت‌نام: فاصله‌ها فشرده‌تر تا دکمه بالاتر بیاید */
+  #pane-register .form-field {
+    margin-bottom: 10px !important;
+  }
+  #pane-register .form-field input {
+    height: 42px !important;
+    padding: 0 10px !important;
+  }
+  #pane-register .auth-pane-title {
+    margin-bottom: 10px !important;
+    font-size: 17px !important;
+  }
+  #pane-register .auth-pane-note {
+    margin-bottom: 10px !important;
+  }
+
+  /* radio جنسیت فشرده */
+  #pane-register [style*="display:flex;gap:14px"] {
+    gap: 10px !important;
+  }
+
+  /* فاصله برای safe-area پایین آیفون */
+  .auth-modal {
+    padding-bottom: env(safe-area-inset-bottom) !important;
+  }
+}
+
+/* دسکتاپ هم دکمه sticky در فرم بلند ثبت‌نام */
+@media (min-width: 761px) {
+  .auth-modal {
+    display: flex !important;
+    flex-direction: column !important;
+    max-height: calc(100vh - 40px) !important;
+  }
+  .auth-view {
+    flex: 1 !important;
+    overflow-y: auto !important;
+    display: none !important;
+  }
+  .auth-view.active {
+    display: block !important;
+  }
+  .auth-tabs {
+    flex-shrink: 0;
+  }
+  .auth-view .co-submit {
+    position: sticky;
+    bottom: 8px;
+  }
 }
