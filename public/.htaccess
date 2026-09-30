@@ -83,3 +83,5 @@ RewriteRule ^admin/price-update/?$ admin/price-update.php [L,QSA]
 
 RewriteRule ^admin/shipping-settings/?$ admin/shipping-settings.php [L,QSA]
 
+RewriteRule ^api/forgot-password/?$ api/forgot-password.php [L,QSA]
+

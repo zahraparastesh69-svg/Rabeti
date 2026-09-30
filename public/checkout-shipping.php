@@ -6,6 +6,67 @@ require_once ROOT_PATH . '/config/auth.php';
 require_once ROOT_PATH . '/app/services/AddressService.php';
 require_once ROOT_PATH . '/app/services/ShippingService.php';
 require_once ROOT_PATH . '/app/services/PricingService.php';
+require_once ROOT_PATH . '/app/services/Time.php';
+/* ═══ نمایش شمسی و بازه فارسی ═══ */
+
+/* میلادی → جلالی */
+$jalaliFa = static function (?string $gregorianDate): string {
+    if (!$gregorianDate) return '—';
+    $ts = strtotime($gregorianDate);
+    if ($ts === false) return '—';
+
+    $gy = (int)date('Y', $ts);
+    $gm = (int)date('n', $ts);
+    $gd = (int)date('j', $ts);
+    $g = [0, 31, 59, 90, 120, 151, 181, 212, 243, 273, 304, 334];
+    $jy = ($gy <= 1600) ? 0 : 979;
+    $gy -= ($gy <= 1600) ? 621 : 1600;
+    $gy2 = ($gm > 2) ? $gy + 1 : $gy;
+    $d = (365 * $gy) + intdiv($gy2 + 3, 4) - intdiv($gy2 + 99, 100) + intdiv($gy2 + 399, 400) - 80 + $gd + $g[$gm - 1];
+    $jy += 33 * intdiv($d, 12053);
+    $d %= 12053;
+    $jy += 4 * intdiv($d, 1461);
+    $d %= 1461;
+    if ($d > 365) {
+        $jy += intdiv($d - 1, 365);
+        $d = ($d - 1) % 365;
+    }
+    $jm = ($d < 186) ? 1 + intdiv($d, 31) : 7 + intdiv($d - 186, 30);
+    $jd = 1 + (($d < 186) ? $d % 31 : ($d - 186) % 30);
+
+    /* روز هفته فارسی */
+    $days = [7 => 'یکشنبه', 1 => 'دوشنبه', 2 => 'سه‌شنبه', 3 => 'چهارشنبه', 4 => 'پنجشنبه', 5 => 'جمعه', 6 => 'شنبه'];
+    $dayName = $days[(int)date('N', $ts)];
+
+    return $dayName . ' ' . strtr(
+        $jy . '/' . str_pad((string)$jm, 2, '0', STR_PAD_LEFT) . '/' . str_pad((string)$jd, 2, '0', STR_PAD_LEFT),
+        ['0' => '۰', '1' => '۱', '2' => '۲', '3' => '۳', '4' => '۴', '5' => '۵', '6' => '۶', '7' => '۷', '8' => '۸', '9' => '۹']
+    );
+};
+
+/* بازه: 16:00-19:00 → «از ۴ عصر تا ۷ عصر» */
+$slotFa = static function (string $range): string {
+    if (!str_contains($range, '-')) return $range;
+    [$s, $e] = array_map('trim', explode('-', $range, 2));
+
+    /* اگر قبلاً فارسی است، دست نزن */
+    if (!preg_match('/^\d{1,2}:\d{2}$/', $s)) return $range;
+
+    $sh = (int)explode(':', $s)[0];
+    $eh = (int)explode(':', $e)[0];
+
+    $fa = static fn(int $n): string => strtr(
+        (string)($n > 12 ? $n - 12 : $n),
+        ['0' => '۰', '1' => '۱', '2' => '۲', '3' => '۳', '4' => '۴', '5' => '۵', '6' => '۶', '7' => '۷', '8' => '۸', '9' => '۹']
+    );
+    $tod = static fn(int $hh): string => ($hh >= 5 && $hh < 12) ? 'صبح' : (($hh >= 12 && $hh < 17) ? 'ظهر' : (($hh >= 17 && $hh < 21) ? 'عصر' : 'شب'));
+
+    return 'از ' . $fa($sh) . ' ' . $tod($sh) . ' تا ' . $fa($eh) . ' ' . $tod($eh);
+};
+
+
+
+
 
 if (!is_logged_in()) {
     header('Location: /');
@@ -386,9 +447,8 @@ ob_start();
                                             value="<?= $h($slot['id']) ?>"
                                             <?= !$slot['available'] ? 'disabled' : '' ?>>
 
-                                        <span>
-                                            <?= $h($slot['label']) ?>
-                                        </span>
+
+                                        <span><?= $h($slotFa($slot['label'])) ?></span>
 
                                         <?php if (!$slot['available']): ?>
 

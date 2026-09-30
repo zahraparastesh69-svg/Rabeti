@@ -45,7 +45,7 @@ if (is_logged_in()) {
 
     <link
         rel="stylesheet"
-        href="/assets/css/app.css?v=33">
+        href="/assets/css/app.css?v=35">
 
     <style>
         /* ══════════ Auth Modal ══════════ */
@@ -687,232 +687,210 @@ if (is_logged_in()) {
         <?php endif; ?>
 
     </nav>
+    <!-- ═══ Modal ورود / ثبت‌نام / فراموشی رمز ═══ -->
+    <div class="auth-modal-overlay" id="authModalOverlay">
+        <div class="auth-modal" role="dialog" aria-modal="true">
+            <button class="auth-modal-close" id="authModalClose" aria-label="بستن">×</button>
 
-    <!-- ══════════ Modal ورود / ثبت‌نام ══════════ -->
-
-    <div
-        class="auth-modal-overlay"
-        id="authModalOverlay">
-
-        <div
-            class="auth-modal"
-            role="dialog"
-            aria-modal="true">
-
-            <button
-                type="button"
-                class="auth-modal-close"
-                id="authModalClose"
-                aria-label="بستن">
-                ×
-            </button>
-
-            <div class="auth-tabs">
-
-                <button
-                    type="button"
-                    class="auth-tab active"
-                    data-tab="login">
-                    ورود
-                </button>
-
-                <button
-                    type="button"
-                    class="auth-tab"
-                    data-tab="register">
-                    ثبت‌نام
-                </button>
-
-                <span
-                    class="auth-tab-slider"
-                    id="authTabSlider"></span>
-
+            <!-- ═══ تب‌های اصلی — بیرون نماها، همیشه بالای مودال ═══ -->
+            <div class="auth-tabs" id="authTabsBox">
+                <button type="button" class="auth-tab active" data-tab="login">ورود</button>
+                <button type="button" class="auth-tab" data-tab="register">ثبت‌نام</button>
+                <span class="auth-tab-slider" id="authTabSlider"></span>
             </div>
 
-            <!-- ورود -->
+            <!-- ═══ نما: ورود ═══ -->
+            <div class="auth-view active" id="view-login">
+                <form class="auth-pane active" id="pane-login" method="post">
+                    <h3 class="auth-pane-title">ورود به حساب</h3>
 
-            <form
-                class="auth-pane active"
-                id="pane-login"
-                method="post">
+                    <div class="form-error" id="loginError" style="display:none;"></div>
 
-                <div class="auth-pane-top">
+                    <div class="form-field">
+                        <label for="loginMobile">شماره موبایل</label>
+                        <input type="tel" name="mobile" id="loginMobile" dir="ltr"
+                            inputmode="numeric" autocomplete="tel"
+                            placeholder="09121234567" required>
+                    </div>
+                    <div class="form-field">
+                        <label for="loginPassword">رمز عبور</label>
+                        <input type="password" name="password" id="loginPassword" dir="ltr"
+                            autocomplete="current-password" required>
+                    </div>
 
-                    <span class="auth-pane-kicker">
-                        حساب رابطی
-                    </span>
+                    <button type="button" class="auth-forgot-link" id="forgotLink">
+                        فراموشی رمز عبور؟
+                    </button>
 
-                    <h3 class="auth-pane-title">
-                        ورود به حساب
-                    </h3>
+                    <button type="submit" class="btn btn-primary co-submit" id="loginBtn">ورود</button>
+                </form>
+            </div>
 
-                    <p class="auth-pane-note">
-                        برای ادامه سفارش وارد حساب خود شوید.
-                    </p>
+            <!-- ═══ نما: ثبت‌نام ═══ -->
+            <div class="auth-view" id="view-register">
 
+                <!-- نوع حساب: حقیقی / حقوقی -->
+                <div class="auth-tabs auth-tabs-sm" style="margin:0 0 14px;">
+                    <button type="button" class="auth-tab active" data-utype="real">شخص حقیقی</button>
+                    <button type="button" class="auth-tab" data-utype="legal">شخص حقوقی</button>
+                    <span class="auth-tab-slider" id="utypeSlider"></span>
                 </div>
 
-                <div
-                    class="form-error"
-                    id="loginError"></div>
+                <form class="auth-pane active" id="pane-register" method="post" novalidate>
+                    <h3 class="auth-pane-title">ثبت‌نام عمده‌فروشی</h3>
 
-                <div class="form-field">
+                    <div class="form-error" id="registerError" style="display:none;"></div>
 
-                    <label for="loginMobile">
-                        شماره موبایل
-                    </label>
+                    <div class="form-field">
+                        <label>نام و نام خانوادگی <i>*</i></label>
+                        <input type="text" name="full_name" autocomplete="name" required>
+                    </div>
 
-                    <input
-                        type="tel"
-                        name="mobile"
-                        id="loginMobile"
-                        dir="ltr"
-                        inputmode="numeric"
-                        autocomplete="tel"
-                        placeholder="09121234567"
-                        required>
+                    <!-- فیلدهای حقیقی -->
+                    <div class="utype-real">
+                        <div class="form-field">
+                            <label>کد ملی <i>*</i></label>
+                            <input type="text" name="national_code" dir="ltr"
+                                inputmode="numeric" maxlength="10" placeholder="کد ملی ۱۰ رقمی">
+                        </div>
+                        <div class="form-field">
+                            <label>جنسیت <i>*</i></label>
+                            <div style="display:flex;gap:14px;">
+                                <label style="display:flex;align-items:center;gap:5px;font-weight:400;">
+                                    <input type="radio" name="gender" value="male" checked> آقا
+                                </label>
+                                <label style="display:flex;align-items:center;gap:5px;font-weight:400;">
+                                    <input type="radio" name="gender" value="female"> خانم
+                                </label>
+                            </div>
+                        </div>
+                    </div>
 
-                </div>
+                    <!-- فیلدهای حقوقی -->
+                    <div class="utype-legal" style="display:none;">
+                        <div class="form-field">
+                            <label>نام شرکت <i>*</i></label>
+                            <input type="text" name="company_name_legal" autocomplete="organization">
+                        </div>
+                        <div class="form-field">
+                            <label>شناسه اقتصادی <i>*</i></label>
+                            <input type="text" name="economic_code" dir="ltr"
+                                inputmode="numeric" maxlength="12"
+                                placeholder="۱۰ تا ۱۲ رقم">
+                        </div>
+                    </div>
 
-                <div class="form-field">
+                    <div class="form-field">
+                        <label>شماره موبایل <i>*</i></label>
+                        <input type="tel" name="mobile" dir="ltr" inputmode="numeric"
+                            autocomplete="tel" placeholder="09121234567" required>
+                    </div>
 
-                    <label for="loginPassword">
-                        رمز عبور
-                    </label>
+                    <div class="form-field">
+                        <label>ایمیل</label>
+                        <input type="email" name="email" dir="ltr" autocomplete="email">
+                    </div>
 
-                    <input
-                        type="password"
-                        name="password"
-                        id="loginPassword"
-                        dir="ltr"
-                        autocomplete="current-password"
-                        required>
+                    <div class="form-field">
+                        <label>رمز عبور <i>*</i></label>
+                        <input type="password" name="password" dir="ltr"
+                            autocomplete="new-password" placeholder="حداقل ۸ کاراکتر" required>
+                    </div>
 
-                </div>
+                    <div class="form-field">
+                        <label>تکرار رمز عبور <i>*</i></label>
+                        <input type="password" name="password2" dir="ltr"
+                            autocomplete="new-password" required>
+                    </div>
 
-                <button
-                    type="submit"
-                    class="r-btn r-btn-primary"
-                    id="loginBtn">
-                    ورود
-                </button>
-
-            </form>
-
-            <!-- ثبت‌نام -->
-
-            <form
-                class="auth-pane"
-                id="pane-register"
-                method="post"
-                novalidate>
-
-                <div class="auth-pane-top">
-
-                    <span class="auth-pane-kicker">
-                        شروع همکاری
-                    </span>
-
-                    <h3 class="auth-pane-title">
+                    <button type="submit" class="btn btn-primary co-submit" id="registerBtn">
                         ایجاد حساب
-                    </h3>
+                    </button>
+                </form>
+            </div>
 
-                    <p class="auth-pane-note">
-                        اطلاعات خود را وارد کنید تا حساب شما ساخته شود.
-                    </p>
+            <!-- ═══ نما: فراموشی رمز ═══ -->
+            <div class="auth-view" id="view-forgot">
 
+                <!-- مرحله ۱: انتخاب روش -->
+                <div id="forgot-step-1">
+                    <h3 class="auth-pane-title">بازیابی رمز عبور</h3>
+                    <p class="auth-pane-note">روش دریافت کد بازیابی را انتخاب کنید.</p>
+
+                    <div class="form-error" id="forgotError" style="display:none;"></div>
+
+                    <div class="forgot-channel-grid">
+                        <button type="button" class="forgot-channel" data-channel="sms">
+                            <span class="fc-icon">📱</span>
+                            <b>ارسال به موبایل</b>
+                            <small>کد پیامکی</small>
+                        </button>
+                        <button type="button" class="forgot-channel" data-channel="email">
+                            <span class="fc-icon">📧</span>
+                            <b>ارسال به ایمیل</b>
+                            <small>کد ایمیلی</small>
+                        </button>
+                    </div>
                 </div>
 
-                <div
-                    class="form-error"
-                    id="registerError"></div>
+                <!-- مرحله ۲: ورود شماره/ایمیل -->
+                <div id="forgot-step-2" style="display:none;">
+                    <button type="button" class="auth-back" id="forgotBack1">→</button>
+                    <h3 class="auth-pane-title" id="forgotTargetTitle">ارسال کد بازیابی</h3>
 
-                <div class="form-field">
+                    <div class="form-field">
+                        <label id="forgotInputLabel">شماره موبایل</label>
+                        <input type="text" id="forgotTarget" dir="ltr" required>
+                    </div>
 
-                    <label>
-                        نام و نام خانوادگی
-                    </label>
-
-                    <input
-                        type="text"
-                        name="full_name"
-                        autocomplete="name"
-                        required>
-
+                    <button type="button" class="btn btn-primary co-submit" id="forgotSendBtn">
+                        ارسال کد بازیابی
+                    </button>
                 </div>
 
-                <div class="form-field">
+                <!-- مرحله ۳: کد + رمز جدید -->
+                <div id="forgot-step-3" style="display:none;">
+                    <button type="button" class="auth-back" id="forgotBack2">→</button>
+                    <h3 class="auth-pane-title">ثبت کد و رمز جدید</h3>
 
-                    <label>
-                        نام مغازه / شرکت
-                    </label>
+                    <div class="form-error" id="forgotError2" style="display:none;"></div>
 
-                    <input
-                        type="text"
-                        name="company_name"
-                        autocomplete="organization">
+                    <div class="form-field">
+                        <label>کد ۶ رقمی ارسال‌شده</label>
+                        <input type="text" id="forgotCode" dir="ltr" inputmode="numeric"
+                            maxlength="6" placeholder="------" required>
+                    </div>
+                    <div class="form-field">
+                        <label>رمز عبور جدید</label>
+                        <input type="password" id="forgotNewPass" dir="ltr"
+                            placeholder="حداقل ۸ کاراکتر" required>
+                    </div>
+                    <div class="form-field">
+                        <label>تکرار رمز عبور جدید</label>
+                        <input type="password" id="forgotNewPass2" dir="ltr" required>
+                    </div>
 
+                    <button type="button" class="btn btn-primary co-submit" id="forgotResetBtn">
+                        تغییر رمز عبور
+                    </button>
                 </div>
 
-                <div class="form-field">
-
-                    <label>
-                        شماره موبایل
-                    </label>
-
-                    <input
-                        type="tel"
-                        name="mobile"
-                        dir="ltr"
-                        inputmode="numeric"
-                        autocomplete="tel"
-                        placeholder="09121234567"
-                        required>
-
+                <!-- مرحله ۴: موفقیت -->
+                <div id="forgot-step-4" style="display:none;">
+                    <div class="payment-result payment-result-success">
+                        <div class="payment-result-icon">✓</div>
+                        <div>
+                            <h2>رمز عبور تغییر کرد</h2>
+                            <p>حالا با رمز جدید وارد شوید.</p>
+                        </div>
+                    </div>
+                    <button type="button" class="btn btn-primary co-submit" id="forgotDoneBtn">
+                        رفتن به ورود
+                    </button>
                 </div>
 
-                <div class="form-field">
-
-                    <label>
-                        رمز عبور
-                    </label>
-
-                    <input
-                        type="password"
-                        name="password"
-                        dir="ltr"
-                        autocomplete="new-password"
-                        placeholder="حداقل ۸ کاراکتر"
-                        required>
-
-                </div>
-
-                <div class="form-field">
-
-                    <label>
-                        تکرار رمز عبور
-                    </label>
-
-                    <input
-                        type="password"
-                        name="password2"
-                        dir="ltr"
-                        autocomplete="new-password"
-                        required>
-
-                </div>
-
-                <button
-                    type="submit"
-                    class="r-btn r-btn-primary"
-                    id="registerBtn">
-                    ایجاد حساب
-                </button>
-
-            </form>
-
+            </div>
         </div>
-
     </div>
 
     <script src="/assets/js/app.js?v=23"></script>

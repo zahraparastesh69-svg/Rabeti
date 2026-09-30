@@ -491,3 +491,155 @@ function logout_session(): void
 
     session_destroy();
 }
+/* ══════════ فراموشی رمز ══════════ */
+
+/**
+ * ساخت کد فراموشی رمز — ارسال با SMS/Email توسط سرویس‌های مربوطه
+ */
+function create_password_reset(PDO $db, int $userId, string $channel, string $destination): string
+{
+    /* توکن امن برای لینک، کد ۶ رقمی برای تأیید سریع */
+    $token = bin2hex(random_bytes(32));
+    $code  = str_pad((string)random_int(100000, 999999), 6, '0', STR_PAD_LEFT);
+
+    /* توکن‌های قبلی استفاده‌نشده باطل */
+    $db->prepare("UPDATE password_resets SET used_at = NOW() WHERE user_id = ? AND used_at IS NULL")
+        ->execute([$userId]);
+
+    $db->prepare("
+        INSERT INTO password_resets (user_id, token, channel, destination, code, expires_at)
+        VALUES (?, ?, ?, ?, ?, DATE_ADD(NOW(), INTERVAL 30 MINUTE))
+    ")->execute([$userId, $token, $channel, $destination, $code]);
+
+    return $code;
+}
+
+/**
+ * ثبت‌نام حقیقی/حقوقی
+ */
+function register_user_full(array $d): array
+{
+    $pdo = db();
+
+    $mobile = strtr(trim($d['mobile'] ?? ''), [
+        '۰' => '0',
+        '۱' => '1',
+        '۲' => '2',
+        '۳' => '3',
+        '۴' => '4',
+        '۵' => '5',
+        '۶' => '6',
+        '۷' => '7',
+        '۸' => '8',
+        '۹' => '9',
+    ]);
+
+    $userType = ($d['user_type'] ?? 'real') === 'legal' ? 'legal' : 'real';
+
+    if (mb_strlen(trim($d['full_name'] ?? '')) < 3) {
+        return ['ok' => false, 'error' => 'نام و نام خانوادگی را وارد کنید.'];
+    }
+    if (!preg_match('/^09\d{9}$/', $mobile)) {
+        return ['ok' => false, 'error' => 'شماره موبایل صحیح نیست.'];
+    }
+    if (strlen($d['password'] ?? '') < 8) {
+        return ['ok' => false, 'error' => 'رمز عبور باید حداقل ۸ کاراکتر باشد.'];
+    }
+    if (($d['password'] ?? '') !== ($d['password2'] ?? '')) {
+        return ['ok' => false, 'error' => 'تکرار رمز عبور صحیح نیست.'];
+    }
+    if (!empty($d['email']) && !filter_var($d['email'], FILTER_VALIDATE_EMAIL)) {
+        return ['ok' => false, 'error' => 'ایمیل معتبر نیست.'];
+    }
+
+    /* حقیقی: کد ملی ۱۰ رقم + جنسیت الزامی */
+    $nationalCode = strtr(trim($d['national_code'] ?? ''), [
+        '۰' => '0',
+        '۱' => '1',
+        '۲' => '2',
+        '۳' => '3',
+        '۴' => '4',
+        '۵' => '5',
+        '۶' => '6',
+        '۷' => '7',
+        '۸' => '8',
+        '۹' => '9',
+    ]);
+
+    if ($userType === 'real') {
+        if (!preg_match('/^\d{10}$/', $nationalCode)) {
+            return ['ok' => false, 'error' => 'کد ملی باید ۱۰ رقم باشد.'];
+        }
+        if (!in_array($d['gender'] ?? '', ['male', 'female'], true)) {
+            return ['ok' => false, 'error' => 'جنسیت را انتخاب کنید.'];
+        }
+    }
+
+    /* حقوقی: شناسه اقتصادی + نام شرکت الزامی */
+    $economicCode = strtr(trim($d['economic_code'] ?? ''), [
+        '۰' => '0',
+        '۱' => '1',
+        '۲' => '2',
+        '۳' => '3',
+        '۴' => '4',
+        '۵' => '5',
+        '۶' => '6',
+        '۷' => '7',
+        '۸' => '8',
+        '۹' => '9',
+    ]);
+
+    if ($userType === 'legal') {
+        $companyName = trim($d['company_name'] ?? '');
+        if (mb_strlen($companyName) < 2) {
+            return ['ok' => false, 'error' => 'نام شرکت را وارد کنید.'];
+        }
+        if (!preg_match('/^\d{10,12}$/', $economicCode)) {
+            return ['ok' => false, 'error' => 'شناسه اقتصادی باید ۱۰ تا ۱۲ رقم باشد.'];
+        }
+    }
+
+    /* تکراری نبودن موبایل و ایمیل */
+    $stmt = $pdo->prepare("SELECT id FROM users WHERE mobile = ? LIMIT 1");
+    $stmt->execute([$mobile]);
+    if ($stmt->fetch()) {
+        return ['ok' => false, 'error' => 'این شماره موبایل قبلاً ثبت شده است.'];
+    }
+
+    if (!empty($d['email'])) {
+        $stmt = $pdo->prepare("SELECT id FROM users WHERE email = ? LIMIT 1");
+        $stmt->execute([trim($d['email'])]);
+        if ($stmt->fetch()) {
+            return ['ok' => false, 'error' => 'این ایمیل قبلاً ثبت شده است.'];
+        }
+    }
+
+    $pdo->beginTransaction();
+
+    try {
+        $stmt = $pdo->prepare("
+            INSERT INTO users
+                (full_name, company_name, mobile, email, password_hash, role,
+                 user_type, national_code, gender, economic_code, is_active)
+            VALUES (?,?,?,?,?, 'customer', ?, ?, ?, ?, 1)
+        ");
+        $stmt->execute([
+            trim($d['full_name']),
+            $userType === 'legal' ? $companyName : ($d['company_name'] ?? null),
+            $mobile,
+            !empty($d['email']) ? trim($d['email']) : null,
+            password_hash($d['password'], PASSWORD_DEFAULT),
+            $userType,
+            $userType === 'real' ? $nationalCode : null,
+            $userType === 'real' ? ($d['gender'] ?? null) : null,
+            $userType === 'legal' ? $economicCode : null,
+        ]);
+        $userId = (int)$pdo->lastInsertId();
+
+        $pdo->commit();
+        return ['ok' => true, 'id' => $userId, 'name' => trim($d['full_name'])];
+    } catch (Throwable $e) {
+        $pdo->rollBack();
+        throw $e;
+    }
+}
