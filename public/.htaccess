@@ -72,6 +72,14 @@ RewriteRule ^account-orders/?$ account-orders.php [L,QSA]
 RewriteRule ^refund-request/?$ refund-request.php [L,QSA]
 
 RewriteRule ^admin/report-ledger/?$ admin/report-ledger.php [L,QSA]
+
 RewriteRule ^admin/report-discounts/?$ admin/report-discounts.php [L,QSA]
+
 RewriteRule ^admin/report-shipping/?$ admin/report-shipping.php [L,QSA]
+
+RewriteRule ^admin/report-inventory/?$ admin/report-inventory.php [L,QSA]
+
+RewriteRule ^admin/price-update/?$ admin/price-update.php [L,QSA]
+
+RewriteRule ^admin/shipping-settings/?$ admin/shipping-settings.php [L,QSA]
 

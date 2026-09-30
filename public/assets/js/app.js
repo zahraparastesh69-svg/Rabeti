@@ -443,7 +443,7 @@ paneLogin?.addEventListener("submit", async (e) => {
 
   const password = document.getElementById("loginPassword")?.value;
 
-  hideFormError(err);
+    hideFormError(err);
 
   btn.disabled = true;
   btn.textContent = "در حال ورود...";

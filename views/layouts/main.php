@@ -45,7 +45,7 @@ if (is_logged_in()) {
 
     <link
         rel="stylesheet"
-        href="/assets/css/app.css?v=30">
+        href="/assets/css/app.css?v=33">
 
     <style>
         /* ══════════ Auth Modal ══════════ */

@@ -60,7 +60,7 @@ $stmt = $db->prepare("
 $stmt->execute([$userId]);
 $orders = $stmt->fetchAll();
 
-/* ═══ برای هر سفارش: تأییدشده / در انتظار / مانده (بستانکار هم محاسبه می‌شود) ═══ */
+/* ═══ برای هر سفارش: تأییدشده / در انتظار / مانده (بستانکار هم) ═══ */
 $orderFinancials = [];
 foreach ($orders as $o) {
     if (!$o['invoice_number']) {
@@ -86,7 +86,7 @@ foreach ($orders as $o) {
     $paid    = (int)($fin['paid'] ?? 0);
     $pending = (int)($fin['pending'] ?? 0);
 
-    /* ⭐ بدون max(0) — عدد منفی یعنی بستانکار (مازاد پرداخت) */
+    /* بدون max(0) — منفی یعنی بستانکار */
     $orderFinancials[(int)$o['id']] = [
         'paid'        => $paid,
         'pending'     => $pending,
@@ -170,54 +170,28 @@ ob_start();
                         <a href="/payment?order=<?= $h($o['order_number']) ?>" class="btn btn-outline">
                             پیگیری پرداخت در انتظار بررسی
                         </a>
-                        <?php elseif ($isCreditor): ?>
-    <?php
-    /* آیا درخواست بازگشت قبلی pending است؟ */
-    $stmt = $db->prepare("SELECT id, status FROM refund_requests
-                          WHERE invoice_id = (SELECT id FROM invoices WHERE invoice_number = ?)
-                          ORDER BY id DESC LIMIT 1");
-    $stmt->execute([$o['invoice_number']]);
-    $existingRefund = $stmt->fetch();
-    ?>
-    <?php if ($existingRefund && $existingRefund['status'] === 'pending'): ?>
-        <span class="btn btn-outline" style="cursor:default;">
-            ⏳ درخواست بازگشت وجه در انتظار بررسی
-        </span>
-    <?php elseif ($existingRefund && $existingRefund['status'] === 'paid'): ?>
-        <span class="btn btn-outline" style="cursor:default;">
-            ✓ بازگشت وجه انجام شد
-        </span>
-    <?php else: ?>
-        <button type="button" class="btn btn-primary"
-                onclick="document.getElementById('refundBox<?= (int)$o['id'] ?>').style.display='block'">
-            💰 درخواست بازگشت وجه (<?= number_format(abs($remaining)) ?> تومان)
-        </button>
+                    <?php elseif ($isCreditor): ?>
+                        <span class="btn btn-outline" style="cursor:default;">
+                            ✓ بستانکار — نیازی به پرداخت نیست
+                        </span>
+                    <?php endif; ?>
 
-        <div id="refundBox<?= (int)$o['id'] ?>" style="display:none;margin-top:10px;
-             background:#fff;border:1px solid var(--line,#E6E2D8);border-radius:12px;padding:14px;">
-            <form method="post" action="/refund-request">
-                <input type="hidden" name="csrf_token" value="<?= $h(csrf_token()) ?>">
-                <input type="hidden" name="invoice_number" value="<?= $h($o['invoice_number']) ?>">
-
-                <div class="form-field">
-                    <label>شماره شبا <i>*</i></label>
-                    <input type="text" name="sheba" dir="ltr" maxlength="26"
-                           placeholder="IRxxxxxxxxxxxxxxxxxxxxxx" required>
-                    <span class="field-hint">شبا باید به نام خودتان باشد</span>
+                    <?php if ($o['invoice_number']): ?>
+                        <a href="/invoice-print?inv=<?= $h($o['invoice_number']) ?>" target="_blank" class="btn btn-outline">🧾 فاکتور</a>
+                    <?php endif; ?>
                 </div>
 
-                <div class="form-field">
-                    <label>نام صاحب حساب <i>*</i></label>
-                    <input type="text" name="account_holder" required>
-                </div>
+            </article>
+        <?php endforeach; ?>
 
-                <button type="submit" class="btn btn-primary">ثبت درخواست بازگشت ←</button>
-                <p class="field-hint">وجه بستانکاری ظرف ۲۴ ساعت کاری به این شبا واریز می‌شود</p>
-            </form>
-        </div>
-    <?php endif; ?>
+    </div>
+<?php else: ?>
+    <div class="empty-state">
+        <div class="empty-icon">📦</div>
+        <h2>هنوز سفارشی ثبت نکرده‌اید</h2>
+        <a href="/products" class="btn btn-primary">شروع خرید</a>
+    </div>
 <?php endif; ?>
-
 
 <?php
 $content = ob_get_clean();

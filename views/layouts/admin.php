@@ -182,6 +182,13 @@ $menuGroups = [
             ],
         ],
     ],
+    [
+        'label' => 'تنظیمات فروش',
+        'items' => [
+            ['key' => 'shipping-settings', 'label' => 'ارسال و زمان‌بندی', 'url' => '/admin/shipping-settings', 'icon' => 'inventory'],
+            ['key' => 'price-update',      'label' => 'تغییر گروهی قیمت',  'url' => '/admin/price-update',      'icon' => 'products'],
+        ],
+    ],
 
     [
         'label' => 'فروش',
@@ -255,9 +262,11 @@ $menuGroups = [
     [
         'label' => 'گزارشات',
         'items' => [
-            ['key' => 'reports', 'label' => 'دفتر مالی', 'url' => '/admin/report-ledger', 'icon' => 'invoice'],
-            ['key' => 'reports-discount', 'label' => 'گزارش تخفیف‌ها', 'url' => '/admin/report-discounts', 'icon' => 'invoice'],
-            ['key' => 'reports-shipping', 'label' => 'گزارش ارسال', 'url' => '/admin/report-shipping', 'icon' => 'invoice'],
+            ['key' => 'reports',          'label' => 'دفتر مالی',        'url' => '/admin/report-ledger',    'icon' => 'invoice'],
+            ['key' => 'reports-inv',      'label' => 'موجودی و فروش',    'url' => '/admin/report-inventory', 'icon' => 'inventory'],
+            ['key' => 'reports-discount', 'label' => 'گزارش تخفیف‌ها',   'url' => '/admin/report-discounts', 'icon' => 'invoice'],
+            ['key' => 'reports-ship',     'label' => 'گزارش ارسال',      'url' => '/admin/report-shipping',  'icon' => 'invoice'],
+            ['key' => 'price-update',     'label' => 'تغییر گروهی قیمت', 'url' => '/admin/price-update',     'icon' => 'products'],
         ],
     ],
 

@@ -771,7 +771,7 @@ ob_start();
 
 <!-- ═══ ۶. سبدهای پیشنهادی ═══ -->
 
-<section class="r-section">
+<!-- <section class="r-section">
 
     <div class="r-sec-head">
 
@@ -893,13 +893,13 @@ ob_start();
 
     </div>
 
-</section>
+</section> -->
 
 
 
 <!-- ═══ ۷. قیمت پلکانی ═══ -->
 
-<section class="r-section">
+<!-- <section class="r-section">
 
     <div class="r6-promo">
 
@@ -932,13 +932,13 @@ ob_start();
 
     </div>
 
-</section>
+</section> -->
 
 
 
 <!-- ═══ ۸. برند استوری ═══ -->
 
-<section class="r-section">
+<!-- <section class="r-section">
 
     <div class="r6-story">
 
@@ -978,7 +978,7 @@ ob_start();
 
     </div>
 
-</section>
+</section> -->
 
 
 
