@@ -9163,18 +9163,70 @@ a {
   }
 }
 
-/* ═══ Auth Modal v2 — حقیقی/حقوقی + فراموشی ═══ */
-.auth-view {
-  display: none;
-}
-.auth-view.active {
-  display: block;
+/* ═══════════════════════════════════════════════════════════
+   AUTH MODAL — نسخه یکپارچه نهایی (تنها منبع استایل مودال)
+   ═══════════════════════════════════════════════════════════ */
+
+/* ─── چیدمان کلی مودال ─── */
+.auth-modal {
+  display: flex !important;
+  flex-direction: column !important;
+  overflow: hidden !important;
+  max-height: calc(100dvh - 36px) !important;
 }
 
+.auth-modal-close {
+  position: absolute !important;
+  top: 12px !important;
+  left: 12px !important;
+  z-index: 10 !important;
+}
+
+/* ─── نماها: فقط یک اسکرول، در این لایه ─── */
+.auth-view {
+  display: none;
+  flex: 1 1 auto !important;
+  overflow-y: auto !important;
+  overflow-x: hidden !important;
+  min-height: 0 !important;
+  scrollbar-width: thin;
+  scrollbar-color: var(--r6-line, #e6e2d8) transparent;
+}
+.auth-view.active {
+  display: block !important;
+}
+.auth-view::-webkit-scrollbar {
+  width: 5px;
+}
+.auth-view::-webkit-scrollbar-thumb {
+  background: var(--r6-line, #e6e2d8);
+  border-radius: 4px;
+}
+
+/* pane داخل نما: بدون اسکرول مستقل */
+.auth-view .auth-pane {
+  display: block !important;
+  overflow: visible !important;
+  max-height: none !important;
+  padding: 18px 22px 22px !important;
+}
+
+/* ─── تب‌ها ─── */
+.auth-tabs {
+  flex-shrink: 0 !important;
+}
+.auth-tab {
+  cursor: pointer;
+}
+.auth-tab.active {
+  color: var(--r6-dark, #1f4a5e);
+}
+
+/* ─── فراموشی رمز ─── */
 .auth-forgot-link {
   display: block;
   width: fit-content;
-  margin: -4px 0 12px;
+  margin: -2px 0 12px;
   border: 0;
   background: none;
   cursor: pointer;
@@ -9233,40 +9285,10 @@ a {
   color: var(--r6-mut);
 }
 
-/* نمایش فیلدهای حقیقی/حقوقی */
+/* ─── حقیقی / حقوقی ─── */
 .utype-legal {
   display: none;
 }
-.register-mode.utype-legal-on .utype-legal {
-  display: block;
-}
-.register-mode.utype-legal-on .utype-real {
-  display: none;
-}
-
-/* مشتری/ادمین */
-.form-field label i {
-  color: #b91c1c;
-  font-style: normal;
-}
-
-/* ═══ فیکس لایه‌های مودال auth ═══ */
-.auth-view {
-  display: none;
-}
-.auth-view.active {
-  display: block !important;
-}
-
-.auth-view .auth-pane {
-  display: block !important;
-}
-
-/* فیلدهای حقیقی/حقوقی */
-.utype-legal {
-  display: none;
-}
-.utype-legal.show,
 #pane-register.utype-legal-on .utype-legal {
   display: block !important;
 }
@@ -9274,120 +9296,310 @@ a {
   display: none !important;
 }
 
-/* تب فراموشی مخفی در نماها */
-#view-forgot {
-  display: none;
+/* ─── اجباری‌ها ─── */
+.form-field label i {
+  color: #b91c1c;
+  font-style: normal;
 }
-#view-forgot.active {
-  display: block !important;
-}
-/* ═══ مودال Auth — موبایل: تمام‌صفحه با دکمه ثابت ═══ */
+
+/* ─── موبایل: تمام‌صفحه، دکمه ثابت ─── */
 @media (max-width: 760px) {
-  /* مودال = تمام صفحه موبایل */
   .auth-modal-overlay {
     padding: 0 !important;
     align-items: stretch !important;
   }
-
   .auth-modal {
     width: 100% !important;
     height: 100dvh !important;
     max-height: 100dvh !important;
     border-radius: 0 !important;
-    display: flex !important;
-    flex-direction: column !important;
-    overflow: hidden !important;
+    padding-bottom: env(safe-area-inset-bottom) !important;
   }
-
-  /* ناحیه اسکرول فقط فرم — دکمه‌ها پایین ثابت */
-  .auth-view {
-    flex: 1 !important;
-    overflow-y: auto !important;
-    display: none !important;
-  }
-  .auth-view.active {
-    display: block !important;
-  }
-
   .auth-view .auth-pane {
-    display: block !important;
-    padding: 16px 18px 20px !important;
-    min-height: 0 !important;
+    padding: 14px 16px 18px !important;
+  }
+  .auth-view .form-field {
+    margin-bottom: 10px !important;
+  }
+  .auth-view .form-field input {
+    height: 42px !important;
+    padding: 0 10px !important;
+  }
+  .auth-view .auth-pane-title {
+    margin-bottom: 10px !important;
+    font-size: 17px !important;
+  }
+  .auth-view .auth-pane-note {
+    margin-bottom: 10px !important;
   }
 
-  /* دکمه ثبت/ورود — ثابت پایین، همیشه در دید */
+  /* دکمه ثبت/ورود — sticky پایین */
   .auth-view .co-submit {
     position: sticky !important;
     bottom: 12px !important;
-    width: calc(100% - 36px) !important;
-    margin: 10px 18px 0 !important;
+    width: calc(100% - 4px) !important;
     min-height: 50px !important;
     font-size: 0.95rem !important;
     box-shadow: 0 -6px 20px rgba(31, 74, 94, 0.15);
     z-index: 5;
   }
 
-  /* تب‌ها بالا ثابت */
-  .auth-tabs {
-    flex-shrink: 0 !important;
-    margin: 12px 16px 0 !important;
-  }
-
-  /* دکمه بستن همیشه در دید */
   .auth-modal-close {
     position: fixed !important;
     top: calc(10px + env(safe-area-inset-top)) !important;
     left: 12px !important;
-    z-index: 10 !important;
-  }
-
-  /* فرم ثبت‌نام: فاصله‌ها فشرده‌تر تا دکمه بالاتر بیاید */
-  #pane-register .form-field {
-    margin-bottom: 10px !important;
-  }
-  #pane-register .form-field input {
-    height: 42px !important;
-    padding: 0 10px !important;
-  }
-  #pane-register .auth-pane-title {
-    margin-bottom: 10px !important;
-    font-size: 17px !important;
-  }
-  #pane-register .auth-pane-note {
-    margin-bottom: 10px !important;
-  }
-
-  /* radio جنسیت فشرده */
-  #pane-register [style*="display:flex;gap:14px"] {
-    gap: 10px !important;
-  }
-
-  /* فاصله برای safe-area پایین آیفون */
-  .auth-modal {
-    padding-bottom: env(safe-area-inset-bottom) !important;
   }
 }
 
-/* دسکتاپ هم دکمه sticky در فرم بلند ثبت‌نام */
+/* ─── دسکتاپ: دکمه sticky در فرم بلند ─── */
 @media (min-width: 761px) {
-  .auth-modal {
-    display: flex !important;
-    flex-direction: column !important;
-    max-height: calc(100vh - 40px) !important;
-  }
-  .auth-view {
-    flex: 1 !important;
-    overflow-y: auto !important;
-    display: none !important;
-  }
-  .auth-view.active {
-    display: block !important;
-  }
-  .auth-tabs {
-    flex-shrink: 0;
-  }
   .auth-view .co-submit {
     position: sticky;
     bottom: 8px;
+  }
+}
+/* ═══════════════════════════════════════════════════════════
+   AUTH MODAL + HEADER ACCOUNT — منتقل‌شده از main.php
+   ═══════════════════════════════════════════════════════════ */
+
+.auth-modal-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 9999;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 18px;
+  background: rgba(18, 32, 38, 0.56);
+  opacity: 0;
+  visibility: hidden;
+  pointer-events: none;
+  transition:
+    opacity 0.22s ease,
+    visibility 0.22s ease;
+}
+.auth-modal-overlay.show {
+  opacity: 1;
+  visibility: visible;
+  pointer-events: auto;
+}
+
+.auth-modal {
+  position: relative;
+  width: min(430px, 100%);
+  max-height: calc(100svh - 36px);
+  overflow: hidden;
+  border: 1px solid #e6e0d8;
+  border-radius: 22px;
+  background: #fff;
+  box-shadow: 0 25px 80px rgba(18, 35, 42, 0.18);
+}
+
+.auth-modal-close {
+  position: absolute;
+  top: 12px;
+  left: 12px;
+  z-index: 5;
+  width: 32px;
+  height: 32px;
+  display: grid;
+  place-items: center;
+  border: 1px solid #e4e8e9;
+  border-radius: 10px;
+  background: #fff;
+  color: #637179;
+  font-family: inherit;
+  font-size: 22px;
+  line-height: 1;
+  cursor: pointer;
+}
+
+.auth-tabs {
+  position: relative;
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  margin: 20px 20px 0;
+  padding: 4px;
+  border-radius: 12px;
+  background: #f2f5f5;
+}
+.auth-tab {
+  position: relative;
+  z-index: 2;
+  height: 40px;
+  border: 0;
+  border-radius: 9px;
+  background: transparent;
+  color: #809097;
+  font-family: inherit;
+  font-size: 12px;
+  font-weight: 800;
+  cursor: pointer;
+}
+.auth-tab.active {
+  color: #24434e;
+}
+.auth-tab-slider {
+  position: absolute;
+  top: 4px;
+  right: 4px;
+  width: calc(50% - 4px);
+  height: 40px;
+  border-radius: 9px;
+  background: #fff;
+  box-shadow: 0 2px 10px rgba(22, 42, 49, 0.07);
+  transition: transform 0.22s ease;
+}
+.auth-tabs.register-mode .auth-tab-slider {
+  transform: translateX(-100%);
+}
+
+.auth-modal .auth-pane {
+  display: none;
+  padding: 20px 24px 24px;
+
+ 
+}
+.auth-modal .auth-pane.active {
+  display: block;
+}
+
+.auth-pane-top {
+  margin-bottom: 16px;
+  padding-left: 30px;
+}
+.auth-pane-kicker {
+  display: block;
+  margin-bottom: 5px;
+  color: #87959a;
+  font-size: 9px;
+  font-weight: 800;
+}
+.auth-pane-title {
+  margin: 0 0 6px;
+  color: #263d45;
+  font-size: 21px;
+  font-weight: 900;
+}
+.auth-pane-note {
+  margin: 0;
+  color: #8a969b;
+  font-size: 10px;
+  line-height: 1.8;
+}
+
+.auth-modal .form-field {
+  margin-bottom: 12px;
+}
+.auth-modal .form-field label {
+  display: block;
+  margin-bottom: 6px;
+  color: #3a4d54;
+  font-size: 11px;
+  font-weight: 800;
+}
+.auth-modal .form-field input {
+  width: 100%;
+  height: 44px;
+  padding: 0 12px;
+  box-sizing: border-box;
+  border: 1px solid #dce3e6;
+  border-radius: 11px;
+  background: #fbfcfc;
+  color: #243840;
+  font-family: inherit;
+  font-size: 13px;
+  outline: none;
+  transition: 0.18s ease;
+}
+.auth-modal .form-field input:focus {
+  background: #fff;
+  border-color: #6d9aa6;
+  box-shadow: 0 0 0 4px rgba(109, 154, 166, 0.1);
+}
+.auth-modal .r-btn {
+  width: 100%;
+  min-height: 44px;
+}
+.auth-modal .form-error {
+  display: none;
+  margin-bottom: 12px;
+  padding: 9px 11px;
+  border: 1px solid #edd0cb;
+  border-radius: 10px;
+  background: #fff6f4;
+  color: #b04c43;
+  font-size: 10px;
+  line-height: 1.8;
+}
+
+.auth-trigger {
+  border: 0;
+  cursor: pointer;
+  font-family: inherit;
+}
+
+.header-account {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+.header-account-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 38px;
+  padding: 0 13px;
+  border: 1px solid #dce4e6;
+  border-radius: 10px;
+  background: #fff;
+  color: #466b76;
+  text-decoration: none;
+  font-size: 10px;
+  font-weight: 800;
+}
+.header-account-logout {
+  color: #9c6963;
+  text-decoration: none;
+  font-size: 10px;
+  font-weight: 800;
+}
+.header-account-name {
+  color: #445860;
+  font-size: 10px;
+  font-weight: 800;
+  max-width: 120px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.header-user-state {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  color: #728289;
+  font-size: 10px;
+  font-weight: 700;
+}
+.header-user-state.admin {
+  color: #496d78;
+}
+.header-user-dot {
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  background: #5e9a87;
+}
+
+@media (max-width: 760px) {
+  .header-account-name,
+  .header-account-logout,
+  .header-account-btn {
+    display: none;
+  }
+  .header-account .auth-trigger {
+    min-height: 36px;
+    padding: 0 11px;
+    font-size: 10px;
   }
 }
