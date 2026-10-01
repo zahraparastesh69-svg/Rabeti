@@ -645,10 +645,6 @@ document
 
       /* فاز فعلی: کد در پاسخ API هست برای تست —
        بعد از اتصال SMS/Email واقعی این بلاک حذف می‌شود */
-      if (data.code) {
-        console.log("🔑 کد بازیابی (تست):", data.code);
-        showToast("🔑 کد تست: " + data.code);
-      }
 
       showForgotStep(3);
       btn.disabled = false;

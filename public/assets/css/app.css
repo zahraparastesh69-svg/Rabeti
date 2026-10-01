@@ -1965,9 +1965,6 @@ img {
   text-align: center;
   margin-bottom: 30px;
 }
-.why-grid {
-  grid-template-columns: repeat(3, 1fr);
-}
 .why-card {
   transition: 0.22s;
 }

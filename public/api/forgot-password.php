@@ -6,6 +6,7 @@ declare(strict_types=1);
 require_once __DIR__ . '/../../config/bootstrap.php';
 require_once ROOT_PATH . '/config/database.php';
 require_once ROOT_PATH . '/config/auth.php';
+require_once ROOT_PATH . '/app/services/NotifyService.php';
 
 header('Content-Type: application/json; charset=utf-8');
 
@@ -24,10 +25,10 @@ if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
 
 $step = trim((string)($_POST['step'] ?? ''));
 
-/* ═══ مرحله ۱: درخواست کد (ارسال به موبایل یا ایمیل) ═══ */
+/* ═══ مرحله ۱: ارسال کد ═══ */
 if ($step === 'request') {
 
-    $channel = trim((string)($_POST['channel'] ?? ''));   // sms | email
+    $channel = trim((string)($_POST['channel'] ?? ''));
     $target  = trim((string)($_POST['target'] ?? ''));
 
     if (!in_array($channel, ['sms', 'email'], true)) {
@@ -63,59 +64,61 @@ if ($step === 'request') {
 
     $user = $stmt->fetch(PDO::FETCH_ASSOC);
 
-    /*
-     * امنیت: حتی اگر کاربر نبود، همان پیام موفقیت می‌آید
-     * (جلوگیری از enumeration)
-     */
+    /* امنیت: حتی اگر کاربر نبود، پیام موفق برمی‌گردد */
     if (!$user) {
         jsonOut([
             'ok'  => true,
-            'msg' => 'اگر این ' . ($channel === 'sms' ? 'شماره' : 'ایمیل') . ' در سیستم ثبت باشد، رمز ارسال می‌شود.',
+            'msg' => 'اگر این ' . ($channel === 'sms' ? 'شماره' : 'ایمیل') . ' در سیستم ثبت باشد، کد ارسال می‌شود.',
         ]);
     }
 
-    /* ساخت کد و ارسال */
+    /* ساخت کد */
     $code = create_password_reset($db, (int)$user['id'], $channel, $target);
 
-    /*
-     * ⭐ ارسال واقعی:
-     * SMS → SmsService (کاوه‌نگار/ملی‌پیامک)
-     * Email → mail() یا SMTP
-     *
-     * فعلاً در notifications ثبت می‌شود تا فاز اتصال سرویس:
-     */
-    $db->prepare("INSERT INTO notifications (user_id, type, title, body, link)
-                  VALUES (?, 'password_reset', 'بازیابی رمز عبور', ?, NULL)")
-        ->execute([
-            $user['id'],
-            'کد بازیابی رمز شما: ' . $code . ' — اعتبار ۳۰ دقیقه. ارسال از طریق: ' .
-                ($channel === 'sms' ? 'پیامک' : 'ایمیل') . ' به ' . $target
-        ]);
-
-    /*
-     * TODO فاز اتصال سرویس:
-     * if ($channel === 'sms') {
-     *     SmsService::send($target, "کد بازیابی رمز رابطی: $code");
-     * } else {
-     *     MailService::send($target, 'بازیابی رمز رابطی', "کد شما: $code");
-     * }
-     */
+    /* ═══ ارسال واقعی با NotifyService (ASA پیامک) ═══ */
+    try {
+        NotifyService::send(
+            (int)$user['id'],
+            $channel === 'sms' ? $target : null,
+            $channel === 'email' ? $target : null,
+            'بازیابی رمز رابطی',
+            'کد بازیابی رمز رابطی: ' . $code . ' — اعتبار ۳۰ دقیقه'
+        );
+    } catch (Throwable $e) {
+        error_log('RESET NOTIFY FAILED: ' . $e->getMessage());
+        /* ارسال اعلان شکست بخورد هم جریان ادامه دارد — کد در DB هست */
+    }
 
     jsonOut([
-        'ok'   => true,
-        'msg'  => 'کد بازیابی ارسال شد. (در فاز فعلی در پنل ادمین — بخش اعلان‌ها قابل مشاهده است)',
-        'code' => $code,   // 🔧 فاز فعلی: کد برای تست برگشت داده می‌شود؛ بعد از اتصال SMS حذف شود!
+        'ok'  => true,
+        'msg' => 'اگر این ' . ($channel === 'sms' ? 'شماره' : 'ایمیل') . ' در سیستم ثبت باشد، کد ارسال می‌شود.',
     ]);
 }
 
-/* ═══ مرحله ۲: تأیید کد و تغییر رمز ═══ */
+/* ═══ مرحله ۲: تأیید کد و رمز جدید ═══ */
 if ($step === 'reset') {
 
-    $channel    = trim((string)($_POST['channel'] ?? ''));
-    $target     = trim((string)($_POST['target'] ?? ''));
-    $code       = trim((string)($_POST['code'] ?? ''));
-    $newPass    = (string)($_POST['new_password'] ?? '');
-    $newPass2   = (string)($_POST['new_password2'] ?? '');
+    $channel = trim((string)($_POST['channel'] ?? ''));
+    $target  = trim((string)($_POST['target'] ?? ''));
+    $code    = trim((string)($_POST['code'] ?? ''));
+
+    if ($channel === 'sms') {
+        $target = strtr($target, [
+            '۰' => '0',
+            '۱' => '1',
+            '۲' => '2',
+            '۳' => '3',
+            '۴' => '4',
+            '۵' => '5',
+            '۶' => '6',
+            '۷' => '7',
+            '۸' => '8',
+            '۹' => '9',
+        ]);
+    }
+
+    $newPass  = (string)($_POST['new_password'] ?? '');
+    $newPass2 = (string)($_POST['new_password2'] ?? '');
 
     if (strlen($newPass) < 8) {
         jsonOut(['ok' => false, 'error' => 'رمز جدید باید حداقل ۸ کاراکتر باشد.'], 422);
@@ -148,20 +151,17 @@ if ($step === 'reset') {
         jsonOut(['ok' => false, 'error' => 'کد نامعتبر یا منقضی شده است.'], 422);
     }
 
-    /* تغییر رمز */
     $db->prepare("UPDATE users SET password_hash = ? WHERE id = ?")
         ->execute([password_hash($newPass, PASSWORD_DEFAULT), $userId]);
 
-    /* توکن استفاده شد */
     $db->prepare("UPDATE password_resets SET used_at = NOW() WHERE id = ?")
         ->execute([(int)$reset['id']]);
 
-    /* ابطال سشن‌های دیگر (امنیتی) */
     $db->prepare("INSERT INTO audit_logs (user_id, action, entity, entity_id, ip)
                   VALUES (?, 'password.reset', 'user', ?, ?)")
         ->execute([$userId, $userId, $_SERVER['REMOTE_ADDR'] ?? null]);
 
-    jsonOut(['ok' => true, 'msg' => 'رمز عبور با موفقیت تغییر کرد. حالا وارد شوید.']);
+    jsonOut(['ok' => true, 'msg' => 'رمز عبور با موفقیت تغییر کرد.']);
 }
 
 jsonOut(['ok' => false, 'error' => 'درخواست نامعتبر'], 400);
