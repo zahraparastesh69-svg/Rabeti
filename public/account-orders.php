@@ -42,12 +42,14 @@ $userId = (int)($_SESSION['admin_id'] ?? $_SESSION['customer_id'] ?? 0);
 $db = db();
 
 $statusLabels = [
-    'pending_review' => 'در انتظار بررسی',
-    'processing' => 'در حال پردازش',
-    'packed' => 'بسته‌بندی شد',
-    'shipped' => 'ارسال شد',
-    'delivered' => 'تحویل شد',
-    'cancelled' => 'لغو شده',
+    'pending_review' => 'در انتظار تائید واحد مالی',
+    'processing'     => 'ارسال درخواست به انبار',
+    'packed'         =>  'بسته بندی و آماده تحویل',
+    'shipped-pik'    => 'تحویل پیک جهت ارسال',
+    'shipped-post'   => 'تحویل پست جهت ارسال',
+    'shipped'        => 'ارسال شد',
+    'delivered'      => 'تحویل شد',
+    'cancelled'      => 'لغو شده',
 ];
 
 $stmt = $db->prepare("
@@ -127,6 +129,8 @@ ob_start();
                                                 'processing' => 'st-read',
                                                 'packed' => 'st-quoted',
                                                 'shipped' => 'st-quoted',
+                                                'shipped-pik'  => 'st-quoted',
+                                                'shipped-post'  => 'st-quoted',
                                                 'delivered' => 'st-converted',
                                                 'cancelled' => 'st-rejected',
                                             ][$o['status']] ?>"><?= $statusLabels[$o['status']] ?></span>

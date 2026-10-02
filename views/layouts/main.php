@@ -45,7 +45,7 @@ if (is_logged_in()) {
 
     <link
         rel="stylesheet"
-        href="/assets/css/app.css?v=35">
+        href="/assets/css/app.css?v=39">
 
 </head>
 

@@ -6,7 +6,8 @@ declare(strict_types=1);
 require_once __DIR__ . '/../../config/bootstrap.php';
 require_once ROOT_PATH . '/config/database.php';
 require_once ROOT_PATH . '/config/auth.php';
-require_once ROOT_PATH . '/app/services/NotifyService.php';
+require_once ROOT_PATH . '/config/settings.php';
+require_once ROOT_PATH . '/app/services/SmsService.php';
 
 header('Content-Type: application/json; charset=utf-8');
 
@@ -77,18 +78,27 @@ if ($step === 'request') {
 
     /* ═══ ارسال واقعی با NotifyService (ASA پیامک) ═══ */
     try {
-        NotifyService::send(
-            (int)$user['id'],
-            $channel === 'sms' ? $target : null,
-            $channel === 'email' ? $target : null,
-            'بازیابی رمز رابطی',
-            'کد بازیابی رمز رابطی: ' . $code . ' — اعتبار ۳۰ دقیقه'
-        );
+        if ($channel === 'sms') {
+            $patternId = Setting::getInt('sms_pattern_password_reset', 0);
+
+            if ($patternId <= 0) {
+                throw new RuntimeException('Pattern بازیابی رمز تنظیم نشده است.');
+            }
+
+            SmsService::sendPattern(
+                $target,
+                $patternId,
+                [
+                    'CODE' => $code
+                ],
+                (int)$user['id'],
+                null,
+                'password_reset'
+            );
+        }
     } catch (Throwable $e) {
         error_log('RESET NOTIFY FAILED: ' . $e->getMessage());
-        /* ارسال اعلان شکست بخورد هم جریان ادامه دارد — کد در DB هست */
     }
-
     jsonOut([
         'ok'  => true,
         'msg' => 'اگر این ' . ($channel === 'sms' ? 'شماره' : 'ایمیل') . ' در سیستم ثبت باشد، کد ارسال می‌شود.',

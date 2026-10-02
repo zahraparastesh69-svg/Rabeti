@@ -90,6 +90,8 @@ final class NotifyService
         $response = curl_exec($ch);
         $httpCode = (int)curl_getinfo($ch, CURLINFO_HTTP_CODE);
         curl_close($ch);
+        /* دیباگ موقت */
+        error_log('PAYAMAK SMS: mobile=' . $mobile . ' | response=' . substr((string)$response, 0, 300));
 
         if ($httpCode < 200 || $httpCode >= 300) {
             throw new RuntimeException("Payamak HTTP $httpCode: $response");
