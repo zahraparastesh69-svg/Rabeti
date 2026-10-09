@@ -148,14 +148,15 @@ function rate_limit_exceeded(string $bucket, string $key, int $max, int $windowS
         $stmt->execute([$bucket, hash('sha256', $key), $windowSeconds]);
 
         return (int)$stmt->fetchColumn() >= $max;
- } catch (Throwable $e) {
-    error_log('RATE_LIMIT CHECK FAILED: ' . $e->getMessage());
-    
-    /* فقط برای bucket های حساس fail-closed */
-    if (str_starts_with($bucket, 'login_') || str_starts_with($bucket, 'reset_')) {
-        return true;
+    } catch (Throwable $e) {
+        error_log('RATE_LIMIT CHECK FAILED: ' . $e->getMessage());
+
+        /* فقط برای bucket های حساس fail-closed */
+        if (str_starts_with($bucket, 'login_') || str_starts_with($bucket, 'reset_')) {
+            return true;
+        }
+        return false;
     }
-    return false;
 }
 
 function rate_limit_hit(string $bucket, string $key): void
