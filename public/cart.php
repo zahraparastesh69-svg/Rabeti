@@ -156,6 +156,8 @@ function validateCartQty(
  * ============================================================ */
 
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
+    verify_csrf();
+
 
     $do = $_POST['do'] ?? '';
     $itemId = (int)($_POST['item_id'] ?? 0);
@@ -384,9 +386,6 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             strtolower($_SERVER['HTTP_X_REQUESTED_WITH']) === 'xmlhttprequest'
         ) {
 
-            /*
-             * پله‌های قیمت جدید
-             */
             $tiers = getProductPriceTiers(
                 $db,
                 (int)$cartItem['product_id']
@@ -397,14 +396,25 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 $qty
             );
 
+            /* ⭐ محاسبه‌ی تعداد کل سبد برای Badge */
+            $totalStmt = $db->prepare("
+                SELECT COALESCE(SUM(ci.qty), 0)
+                FROM cart_items ci
+                JOIN carts c ON c.id = ci.cart_id
+                WHERE c.user_id = ? AND c.status = 'active'
+            ");
+            $totalStmt->execute([$userId]);
+            $totalCartCount = (int)$totalStmt->fetchColumn();
+
             header('Content-Type: application/json; charset=utf-8');
 
             echo json_encode([
-                'ok' => true,
-                'qty' => $qty,
-                'unit_price' => $pricing['unit_price'],
-                'discount_percent' => $pricing['discount_percent'],
-                'line_total' => $pricing['unit_price'] !== null
+                'ok'                => true,
+                'qty'               => $qty,
+                'count'             => $totalCartCount,
+                'unit_price'        => $pricing['unit_price'],
+                'discount_percent'  => $pricing['discount_percent'],
+                'line_total'        => $pricing['unit_price'] !== null
                     ? $pricing['unit_price'] * $qty
                     : 0
             ], JSON_UNESCAPED_UNICODE);
@@ -588,6 +598,7 @@ unset($it);
  * ============================================================ */
 
 $pageTitle = 'سبد سفارش | رابطی';
+$pageDescription = 'سبد خرید عمده جوراب — رابطی';
 
 ob_start();
 ?>
@@ -942,6 +953,7 @@ ob_start();
                         method="post"
                         class="cart-remove-form"
                         onsubmit="return confirm('این قلم حذف شود؟');">
+                        <?= csrf_field() ?>
 
                         <input
                             type="hidden"
@@ -1089,334 +1101,248 @@ ob_start();
 
 <?php endif; ?>
 
-
 <script>
     (function() {
+        'use strict';
 
-        /*
-         * این اسکریپت فقط مسئول UX است.
-         *
-         * قیمت از PHP/DB محاسبه می‌شود و JS هیچ قیمتی
-         * را خودش محاسبه نمی‌کند.
-         */
+        /* ═══════════ Helpers ═══════════ */
 
-        let saving = false;
-
-
-        function toEnglishDigits(value) {
-
+        function faToEn(value) {
             return String(value)
                 .replace(/[۰-۹]/g, function(d) {
                     return '۰۱۲۳۴۵۶۷۸۹'.indexOf(d);
                 })
                 .replace(/[٠-٩]/g, function(d) {
                     return '٠١٢٣٤٥٦٧٨٩'.indexOf(d);
-                });
+                })
+                .replace(/[^\d]/g, '');
         }
 
+        function enToFa(value) {
+            return String(value).replace(/\d/g, function(d) {
+                return '۰۱۲۳۴۵۶۷۸۹' [d];
+            });
+        }
+
+        function formatPrice(n) {
+            var num = Math.round(Number(n) || 0);
+            var s = num.toString().replace(/\B(?=(\d{3})+(?!\d))/g, ',');
+            return enToFa(s);
+        }
 
         function readQty(input) {
-
-            const value = toEnglishDigits(
-                input.value
-            );
-
-            const qty = parseInt(value, 10);
-
-            return Number.isFinite(qty) ?
-                qty :
-                0;
+            var v = faToEn(input.value);
+            return parseInt(v, 10) || 0;
         }
 
-
-        function writeQty(input, value) {
-
-            input.value = String(value);
+        function writeQty(input, val) {
+            input.value = enToFa(val);
         }
 
+        /* ═══════════ ذخیره‌ی تعداد (AJAX) ═══════════ */
+
+        var saving = false;
 
         function saveItem(stepper, qty) {
 
-            if (saving) {
-                return;
-            }
+            if (saving) return;
 
-            const itemId = stepper.dataset.item;
+            var itemId = stepper.dataset.item;
+            if (!itemId) return;
 
-            if (!itemId) {
-                return;
-            }
+            var min = parseInt(stepper.dataset.min || '1', 10) || 1;
+            var max = parseInt(stepper.dataset.max || '999999999', 10) || 999999999;
 
-            const min = parseInt(
-                stepper.dataset.min || '1',
-                10
-            ) || 1;
+            qty = Math.max(min, Math.min(max, qty));
 
-            const max = parseInt(
-                stepper.dataset.max || '999999999',
-                10
-            ) || 999999999;
+            var input = stepper.querySelector('.step-input');
+            if (input) writeQty(input, qty);
 
-
-            /*
-             * تعداد را در محدوده نگه می‌داریم.
-             */
-            qty = Math.max(
-                min,
-                Math.min(max, qty)
-            );
-
-
-            const input =
-                stepper.querySelector('.step-input');
-
-            if (input) {
-                writeQty(input, qty);
-            }
-
-
-            const fd = new FormData();
-
+            var fd = new FormData();
             fd.append('do', 'update');
             fd.append('item_id', itemId);
             fd.append('qty', String(qty));
 
-
             saving = true;
-
             stepper.classList.add('is-saving');
-
 
             fetch('/cart', {
                     method: 'POST',
                     body: fd,
                     headers: {
-                        'X-Requested-With': 'XMLHttpRequest'
+                        'X-Requested-With': 'XMLHttpRequest',
+                        'X-CSRF-Token': (document.querySelector('meta[name="csrf-token"]') || {}).content || ''
                     }
                 })
-                .then(async function(response) {
+                .then(function(response) {
+                    return response.json().catch(function() {
+                        return {
+                            ok: false,
+                            error: 'پاسخ نامعتبر از سرور'
+                        };
+                    });
+                })
 
-                    const data = await response
-                        .json()
-                        .catch(function() {
-                            return {
-                                ok: false,
-                                error: 'پاسخ نامعتبر از سرور دریافت شد.'
-                            };
-                        });
-
-
-                    if (!response.ok || !data.ok) {
-
-                        alert(
-                            data.error ||
-                            'تغییر تعداد انجام نشد.'
-                        );
-
-                        location.reload();
-
+                .then(function(data) {
+                    if (!data.ok) {
+                        alert(data.error || 'تغییر تعداد انجام نشد.');
                         return;
                     }
 
+                    /* به‌روزرسانی داینامیک ردیف */
+                    updateCartItem(itemId, data);
 
-                    /*
-                     * بعد از ذخیره موفق، صفحه را دوباره می‌خوانیم.
-                     *
-                     * دلیل:
-                     * تمام قیمت‌ها، تخفیف‌ها،
-                     * پله بعدی و جمع کل از PHP
-                     * و دیتابیس محاسبه می‌شوند.
-                     */
-                    location.reload();
+                    /* ⭐ آپدیت Badge هدر و شناور */
+                    if (window.updateCartBadges && data.count !== undefined) {
+                        window.updateCartBadges(data.count);
+                    }
                 })
-                .catch(function() {
 
-                    alert(
-                        'ارتباط با سرور برقرار نشد. دوباره تلاش کنید.'
-                    );
-
-                    location.reload();
-
+                .catch(function(err) {
+                    console.error('CART_UPDATE_ERROR:', err);
+                    alert('ارتباط با سرور برقرار نشد.');
                 })
                 .finally(function() {
-
                     saving = false;
-
-                    stepper.classList.remove(
-                        'is-saving'
-                    );
-
+                    stepper.classList.remove('is-saving');
                 });
         }
 
+        /* ═══════════ به‌روزرسانی داینامیک ردیف ═══════════ */
 
-        /*
-         * + و -
-         */
-        document.addEventListener(
-            'click',
-            function(event) {
+        function updateCartItem(itemId, data) {
 
-                const button =
-                    event.target.closest(
-                        '.cart-item .step.plus, .cart-item .step.minus'
-                    );
+            var item = document.querySelector('[data-cart-item="' + itemId + '"]');
+            if (!item) return;
 
-                if (!button) {
-                    return;
-                }
+            /* قیمت واحد */
+            var unitEl = item.querySelector('.cart-item-price b');
+            if (unitEl && data.unit_price !== undefined) {
+                unitEl.textContent = formatPrice(data.unit_price) + ' تومان';
+            }
 
-
-                const stepper =
-                    button.closest('.stepper');
-
-                if (!stepper) {
-                    return;
-                }
-
-
-                const input =
-                    stepper.querySelector(
-                        '.step-input'
-                    );
-
-                if (!input) {
-                    return;
-                }
-
-
-                const min =
-                    parseInt(
-                        stepper.dataset.min || '1',
-                        10
-                    ) || 1;
-
-
-                const max =
-                    parseInt(
-                        stepper.dataset.max || '999999999',
-                        10
-                    ) || 999999999;
-
-
-                let qty =
-                    readQty(input);
-
-
-                if (qty < min) {
-                    qty = min;
-                }
-
-
-                if (
-                    button.classList.contains('plus')
-                ) {
-
-                    if (qty < max) {
-                        qty++;
-                    }
-
+            /* درصد تخفیف */
+            var discEl = item.querySelector('.cart-item-price small');
+            if (discEl) {
+                var dp = Number(data.discount_percent) || 0;
+                if (dp > 0) {
+                    discEl.textContent = enToFa(dp.toFixed(2)) + '٪ تخفیف پلکانی اعمال شد';
                 } else {
-
-                    if (qty > min) {
-                        qty--;
-                    }
+                    discEl.textContent = 'قیمت همکاری';
                 }
-
-
-                writeQty(
-                    input,
-                    qty
-                );
-
-
-                saveItem(
-                    stepper,
-                    qty
-                );
             }
-        );
 
-
-        /*
-         * تغییر دستی عدد
-         */
-        document.addEventListener(
-            'change',
-            function(event) {
-
-                const input =
-                    event.target.closest(
-                        '.cart-item .step-input'
-                    );
-
-                if (!input) {
-                    return;
-                }
-
-
-                const stepper =
-                    input.closest('.stepper');
-
-                if (!stepper) {
-                    return;
-                }
-
-
-                let qty =
-                    readQty(input);
-
-
-                saveItem(
-                    stepper,
-                    qty
-                );
+            /* جمع ردیف */
+            var totalEl = item.querySelector('.cart-line-total b');
+            if (totalEl && data.line_total !== undefined) {
+                totalEl.textContent = formatPrice(data.line_total) + ' تومان';
             }
-        );
 
+            /* خلاصه سبد */
+            recalcCartSummary();
+        }
 
-        /*
-         * اگر کاربر داخل input عدد وارد کرد و
-         * سپس Enter زد.
-         */
-        document.addEventListener(
-            'keydown',
-            function(event) {
+        /* ═══════════ بازمحاسبه خلاصه ═══════════ */
 
-                if (
-                    event.key !== 'Enter'
-                ) {
-                    return;
+        function recalcCartSummary() {
+
+            var items = document.querySelectorAll('[data-cart-item]');
+            var totalQty = 0;
+            var totalFinal = 0;
+
+            items.forEach(function(item) {
+                var input = item.querySelector('.step-input');
+                var qty = parseInt(faToEn(input ? input.value : '0'), 10) || 0;
+
+                var lineTotalText = (item.querySelector('.cart-line-total b') || {}).textContent || '0';
+                var lineTotal = parseInt(faToEn(lineTotalText), 10) || 0;
+
+                totalQty += qty;
+                totalFinal += lineTotal;
+            });
+
+            var rows = document.querySelectorAll('.cart-summary-row');
+
+            rows.forEach(function(row) {
+                var spanEl = row.querySelector('span');
+                var b = row.querySelector('b');
+                if (!b || !spanEl) return;
+
+                var label = spanEl.textContent.trim();
+
+                if (label.indexOf('تعداد کل') !== -1) {
+                    b.textContent = enToFa(totalQty) + ' جفت';
                 }
 
-
-                const input =
-                    event.target.closest(
-                        '.cart-item .step-input'
-                    );
-
-                if (!input) {
-                    return;
+                if (label.indexOf('مبلغ نهایی') !== -1) {
+                    b.textContent = formatPrice(totalFinal) + ' تومان';
                 }
+            });
+        }
 
+        /* ═══════════ رهگیری رویدادها ═══════════ */
 
-                event.preventDefault();
+        document.addEventListener('click', function(event) {
 
+            var t = event.target;
+            if (!(t instanceof Element)) return;
 
-                const stepper =
-                    input.closest('.stepper');
+            var button = t.closest('.cart-item .step.plus, .cart-item .step.minus');
+            if (!button) return;
 
-                if (!stepper) {
-                    return;
-                }
+            var stepper = button.closest('.stepper');
+            if (!stepper) return;
 
+            var input = stepper.querySelector('.step-input');
+            if (!input) return;
 
-                saveItem(
-                    stepper,
-                    readQty(input)
-                );
+            var min = parseInt(stepper.dataset.min || '1', 10) || 1;
+            var max = parseInt(stepper.dataset.max || '999999999', 10) || 999999999;
+
+            var qty = readQty(input);
+            if (qty < min) qty = min;
+
+            if (button.classList.contains('plus')) {
+                if (qty < max) qty++;
+            } else {
+                if (qty > min) qty--;
             }
-        );
+
+            writeQty(input, qty);
+            saveItem(stepper, qty);
+        });
+
+        document.addEventListener('change', function(event) {
+
+            var t = event.target;
+            if (!(t instanceof Element)) return;
+
+            var input = t.closest('.cart-item .step-input');
+            if (!input) return;
+
+            var stepper = input.closest('.stepper');
+            if (!stepper) return;
+
+            saveItem(stepper, readQty(input));
+        });
+
+        document.addEventListener('keydown', function(event) {
+
+            if (event.key !== 'Enter') return;
+
+            var t = event.target;
+            if (!(t instanceof Element)) return;
+
+            var input = t.closest('.cart-item .step-input');
+            if (!input) return;
+
+            event.preventDefault();
+
+            var stepper = input.closest('.stepper');
+            if (!stepper) return;
+
+            saveItem(stepper, readQty(input));
+        });
 
     })();
 </script>

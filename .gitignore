@@ -1,0 +1,12 @@
+﻿.env
+.env.local
+node_modules/
+vendor/
+public/uploads/*
+!public/uploads/.gitkeep
+config/database.php
+*.log
+*.bak
+*.backup-*
+.idea/
+.vscode/

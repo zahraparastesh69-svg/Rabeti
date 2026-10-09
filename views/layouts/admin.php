@@ -279,6 +279,12 @@ $menuGroups = [
                 'url'   => '/admin/banners',
                 'icon'  => 'banner',
             ],
+             [
+                'key'   => 'instagram',
+                'label' => 'گالری اینستاگرام',
+                'url'   => '/admin/instagram',
+                'icon'  => 'banner',
+            ],
         ],
     ],
 ];

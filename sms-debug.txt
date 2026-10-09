@@ -1,6 +1,0 @@
-2026-10-02 03:44:01 | orderId=28 | old=shipped-pik | new=packed | shouldSend=YES
-2026-10-02 03:44:01 | CALLING orderShipping(28)
-2026-10-02 03:44:09 | orderId=28 | old=packed | new=shipped-pik | shouldSend=YES
-2026-10-02 03:44:09 | CALLING orderShipping(28)
-2026-10-02 03:44:41 | orderId=28 | old=shipped-pik | new=shipped | shouldSend=NO
-2026-10-02 03:44:53 | orderId=28 | old=shipped | new=delivered | shouldSend=NO

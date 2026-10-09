@@ -1,6 +1,6 @@
 <?php
 require_once ROOT_PATH . '/config/database.php';
-require_once ROOT_PATH . '/config/Settings.php';
+require_once ROOT_PATH . '/config/settings.php';
 
 final class AddressService
 {

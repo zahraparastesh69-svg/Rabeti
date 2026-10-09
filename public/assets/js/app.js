@@ -1,11 +1,42 @@
 /* ═══════════════════════════════════════════════════════════
-   RABETI — app.js (نسخه نهایی v3)
-   فهرست: ۱-کشو ۲-هدر ۳-توست ۴-ناوبری ۵-اعداد ۶-Stepper
-   ۷-سبد ۸-آکاردئون ۹-مودال Auth ۱۰-ورود ۱۱-ثبت‌نام حقیقی/حقوقی
-   ۱۲-فراموشی رمز
+   RABETI — app.js (نسخه نهایی v4)
    ═══════════════════════════════════════════════════════════ */
 
-// ══════════ ۱. کشوی منو ══════════
+/* ══════════ ۰. Helper — محافظت از e.target ══════════ */
+function safeTarget(e) {
+  return e.target instanceof Element ? e.target : null;
+}
+
+/* ══════════ CSRF — توکن از <meta name="csrf-token"> ══════════ */
+function csrfHeaders(extra = {}) {
+  const token = document.querySelector('meta[name="csrf-token"]')?.content;
+  return token ? { ...extra, "X-CSRF-Token": token } : extra;
+}
+
+/* ══════════ آپدیت همه‌ی Badgeهای سبد ══════════ */
+window.updateCartBadges = function (count) {
+  if (count === undefined || count === null) return;
+
+  var fa = function (n) {
+    return String(n).replace(/\d/g, function (d) {
+      return "۰۱۲۳۴۵۶۷۸۹"[d];
+    });
+  };
+
+  ["cartBadge", "cartBadgeFloat"].forEach(function (id) {
+    var el = document.getElementById(id);
+    if (!el) return;
+
+    el.textContent = fa(count);
+    el.style.removeProperty("display");
+
+    if (Number(count) > 0) {
+      el.classList.add("has-count");
+    }
+  });
+};
+
+/* ══════════ ۱. کشوی منو ══════════ */
 const drawer = document.getElementById("drawer");
 const overlay = document.getElementById("overlay");
 const menuBtn = document.getElementById("menuBtn");
@@ -34,11 +65,11 @@ document
 document.addEventListener("keydown", (e) => {
   if (e.key === "Escape") {
     closeDrawer();
-    closeAuthModal();
+    if (typeof closeAuthModal === "function") closeAuthModal();
   }
 });
 
-// ══════════ ۲. هدر اسکرول + بازگشت بالا ══════════
+/* ══════════ ۲. هدر اسکرول + بازگشت بالا ══════════ */
 const siteHeader = document.getElementById("siteHeader");
 const backToTopEl = document.getElementById("backToTop");
 
@@ -55,7 +86,7 @@ backToTopEl?.addEventListener("click", () =>
   window.scrollTo({ top: 0, behavior: "smooth" }),
 );
 
-// ══════════ ۳. توست ══════════
+/* ══════════ ۳. توست ══════════ */
 let toastTimer;
 
 window.showToast = function (message, duration = 2800) {
@@ -67,7 +98,7 @@ window.showToast = function (message, duration = 2800) {
   toastTimer = setTimeout(() => t.classList.remove("show"), duration);
 };
 
-// ══════════ ۴. نوار پایین — هایلایت جاری ══════════
+/* ══════════ ۴. نوار پایین — هایلایت جاری ══════════ */
 document.querySelectorAll(".bottom-nav .bn-item").forEach((item) => {
   const href = item.getAttribute("href");
   const path = window.location.pathname;
@@ -77,13 +108,14 @@ document.querySelectorAll(".bottom-nav .bn-item").forEach((item) => {
   }
 });
 
-// ══════════ ۵. اعداد فارسی ══════════
+/* ══════════ ۵. اعداد فارسی ══════════ */
 const faToEn = (v) =>
   String(v).replace(/[۰-۹]/g, (d) => "۰۱۲۳۴۵۶۷۸۹".indexOf(d));
 
 const enToFa = (n) => String(n).replace(/\d/g, (d) => "۰۱۲۳۴۵۶۷۸۹"[d]);
 
-// ══════════ ۶. Stepper — دکمه + ورود دستی ══════════
+/* ══════════ ۶. Stepper — عمومی (به‌جز سبد و صفحه محصول) ══════════ */
+
 function stepperRead(numEl) {
   const raw = numEl.tagName === "INPUT" ? numEl.value : numEl.textContent;
   return parseInt(faToEn(raw), 10) || 1;
@@ -95,9 +127,17 @@ function stepperWrite(numEl, val) {
 }
 
 document.addEventListener("click", (e) => {
-  const btn = e.target.closest(".step, .r6-step");
+  const t = safeTarget(e);
+  if (!t) return;
+
+  const btn = t.closest(".step, .r6-step");
   if (!btn) return;
-  if (btn.closest(".cart-item")) return; // سبد هندلر اختصاصی دارد
+
+  /* سبد خرید — هندلر اختصاصی */
+  if (btn.closest(".cart-item")) return;
+
+  /* صفحه محصول — هندلر اختصاصی */
+  if (btn.closest(".pd-stepper, .pd-order-block")) return;
 
   const st = btn.closest(".stepper, .r6-stepper");
   const num = st?.querySelector(".step-num, .r6-num");
@@ -113,8 +153,12 @@ document.addEventListener("click", (e) => {
 });
 
 document.addEventListener("input", (e) => {
-  const inp = e.target.closest(".step-input");
+  const t = safeTarget(e);
+  if (!t) return;
+
+  const inp = t.closest(".step-input");
   if (!inp) return;
+
   const v = faToEn(inp.value).replace(/[^\d]/g, "");
   inp.value = v ? enToFa(parseInt(v, 10)) : "";
 });
@@ -122,7 +166,10 @@ document.addEventListener("input", (e) => {
 document.addEventListener(
   "blur",
   (e) => {
-    const inp = e.target.closest(".step-input");
+    const t = safeTarget(e);
+    if (!t) return;
+
+    const inp = t.closest(".step-input");
     if (!inp) return;
 
     const st = inp.closest(".stepper, .r6-stepper");
@@ -135,11 +182,16 @@ document.addEventListener(
   true,
 );
 
-// ══════════ ۷. افزودن سریع — کارت‌های هر صفحه ══════════
+/* ══════════ ۷. افزودن سریع — کارت‌های هر صفحه ══════════ */
 document.addEventListener("click", async (e) => {
-  const btn = e.target.closest(".r6-add, .quick-add");
+  const t = safeTarget(e);
+  if (!t) return;
+
+  const btn = t.closest(".r6-add, .quick-add");
   if (!btn) return;
-  if (btn.classList.contains("pd-order-btn")) return; // صفحه محصول هندلر جدا دارد
+
+  /* صفحه محصول هندلر جداگانه دارد */
+  if (btn.classList.contains("pd-order-btn")) return;
 
   const card = btn.closest("[data-product-id]");
   if (!card) return;
@@ -155,7 +207,11 @@ document.addEventListener("click", async (e) => {
     fd.append("product_id", pid);
     fd.append("qty", qty);
 
-    const res = await fetch("/api/cart", { method: "POST", body: fd });
+    const res = await fetch("/api/cart", {
+      method: "POST",
+      body: fd,
+      headers: csrfHeaders(),
+    });
     const data = await res.json();
 
     if (res.status === 401) {
@@ -170,87 +226,23 @@ document.addEventListener("click", async (e) => {
       return;
     }
 
-    showToast(data.msg);
+    showToast(data.msg || "✓ به سبد اضافه شد");
 
-    const b = document.getElementById("cartBadge");
-    if (b) {
-      b.textContent = enToFa(data.count);
-      b.style.removeProperty("display");
+    window.updateCartBadges(data.count);
+    const bf = document.getElementById("cartBadgeFloat");
+    if (bf) {
+      bf.textContent = enToFa(data.count);
+      bf.style.removeProperty("display");
     }
   } catch (err) {
     console.error("CART_ERROR:", err);
-    showToast("خطای ارتباط با سرور — جزئیات در کنسول");
+    showToast("خطای ارتباط با سرور");
   } finally {
     btn.disabled = false;
   }
 });
 
-// ══════════ افزودن به سبد — صفحه محصول ══════════
-document
-  .querySelector(".pd-order-btn[data-product-id]")
-  ?.addEventListener("click", async function () {
-    const btn = this;
-    const pid = btn.dataset.productId;
-
-    const stepper = document.querySelector(
-      ".r6-stepper .r6-num, .stepper .r6-num, .stepper .step-num",
-    );
-    const qty = stepper ? stepperRead(stepper) : 1;
-
-    btn.disabled = true;
-
-    try {
-      const fd = new FormData();
-      fd.append("product_id", pid);
-      fd.append("qty", qty);
-
-      const res = await fetch("/api/cart", { method: "POST", body: fd });
-      const data = await res.json();
-
-      if (res.status === 401) {
-        showToast("🔒 برای خرید ابتدا وارد شوید");
-        document.getElementById("authModalOverlay")?.classList.add("show");
-        document.body.style.overflow = "hidden";
-        return;
-      }
-
-      if (!data.ok) {
-        showToast("⚠️ " + (data.error || "افزودن ناموفق"));
-        return;
-      }
-
-      showToast(data.msg);
-
-      const b = document.getElementById("cartBadge");
-      if (b) {
-        b.textContent = enToFa(data.count);
-        b.style.removeProperty("display");
-      }
-    } catch (err) {
-      console.error("CART_ERROR:", err);
-      showToast("خطای ارتباط با سرور");
-    } finally {
-      btn.disabled = false;
-    }
-  });
-
-// ══════════ سبد: تغییر تعداد → ذخیره خودکار ══════════
-document.addEventListener("change", (e) => {
-  const inp = e.target.closest(".step-input");
-  if (!inp) return;
-
-  const st = inp.closest(".stepper");
-  if (!st?.dataset.item) return; // فقط سبد
-
-  const fd = new FormData();
-  fd.append("do", "update");
-  fd.append("item_id", st.dataset.item);
-  fd.append("qty", parseInt(faToEn(inp.value), 10) || 1);
-
-  fetch("/cart", { method: "POST", body: fd }).then(() => location.reload());
-});
-
-// ══════════ آکاردئون دسته‌ها ══════════
+/* ══════════ ۸. آکاردئون دسته‌ها ══════════ */
 document.querySelectorAll('.cat-card[role="button"]').forEach((card) => {
   card.addEventListener("click", () => {
     const wasOpen = card.classList.contains("active");
@@ -261,13 +253,12 @@ document.querySelectorAll('.cat-card[role="button"]').forEach((card) => {
   });
 });
 
-// ══════════ ۹. Modal ورود / ثبت‌نام / فراموشی ══════════
+/* ══════════ ۹. Modal ورود / ثبت‌نام / فراموشی ══════════ */
 const authOverlay = document.getElementById("authModalOverlay");
 const authClose = document.getElementById("authModalClose");
 const paneLogin = document.getElementById("pane-login");
 const paneRegister = document.getElementById("pane-register");
 
-/* تب‌های ورود/ثبت‌نام و حقیقی/حقوقی — جدا */
 const authTabs = document.querySelectorAll(".auth-tab[data-tab]");
 const utypeTabs = document.querySelectorAll(".auth-tab[data-utype]");
 
@@ -289,7 +280,6 @@ function closeAuthModal() {
 function switchAuthTab(tab) {
   const isRegister = tab === "register";
 
-  /* سوییچ نماها */
   document
     .getElementById("view-login")
     ?.classList.toggle("active", !isRegister);
@@ -298,13 +288,14 @@ function switchAuthTab(tab) {
     ?.classList.toggle("active", isRegister);
   document.getElementById("view-forgot")?.classList.remove("active");
 
-  /* تب‌ها بعد از فراموشی دوباره نمایان */
   const tabsBox = document.getElementById("authTabsBox");
   if (tabsBox) tabsBox.style.display = "";
 
   authTabs.forEach((b) => b.classList.toggle("active", b.dataset.tab === tab));
 
-  authTabsBox?.classList.toggle("register-mode", isRegister);
+  if (tabsBox) {
+    tabsBox.classList.toggle("register-mode", isRegister);
+  }
 
   paneLogin?.classList.toggle("active", tab === "login");
   paneRegister?.classList.toggle("active", tab === "register");
@@ -330,7 +321,7 @@ authOverlay?.addEventListener("click", (e) => {
   if (e.target === authOverlay) closeAuthModal();
 });
 
-// ══════════ خطای فرم ══════════
+/* ══════════ خطای فرم ══════════ */
 function showFormError(el, msg) {
   if (el) {
     el.textContent = msg;
@@ -345,7 +336,7 @@ function hideFormError(el) {
   }
 }
 
-// ══════════ ۱۰. ورود ══════════
+/* ══════════ ۱۰. ورود ══════════ */
 paneLogin?.addEventListener("submit", async (e) => {
   e.preventDefault();
 
@@ -366,7 +357,7 @@ paneLogin?.addEventListener("submit", async (e) => {
     const res = await fetch("/api/login.php", {
       method: "POST",
       body: fd,
-      headers: { Accept: "application/json" },
+      headers: csrfHeaders({ Accept: "application/json" }),
     });
 
     const raw = await res.text();
@@ -399,7 +390,7 @@ paneLogin?.addEventListener("submit", async (e) => {
   }
 });
 
-// ══════════ ۱۱. ثبت‌نام — حقیقی / حقوقی ══════════
+/* ══════════ ۱۱. ثبت‌نام — حقیقی / حقوقی ══════════ */
 let currentUserType = "real";
 
 function switchUserType(type) {
@@ -409,7 +400,6 @@ function switchUserType(type) {
   const pane = document.getElementById("pane-register");
   if (!pane) return;
 
-  /* نمایش/مخفی فیلدهای حقوقی */
   pane.classList.toggle("utype-legal-on", isLegal);
 
   const legalBox = pane.querySelector(".utype-legal");
@@ -429,8 +419,6 @@ utypeTabs.forEach((b) =>
   b.addEventListener("click", () => switchUserType(b.dataset.utype)),
 );
 
-/* ⭐ ثبت‌نام — دکمه در فرم جدا (registerSubmitForm)
-   داده‌ها از فرم اصلی pane-register خوانده می‌شوند */
 document
   .getElementById("registerSubmitForm")
   ?.addEventListener("submit", async (e) => {
@@ -470,8 +458,8 @@ document
       showFormError(err, "شماره موبایل صحیح نیست.");
       return;
     }
-    if (password.length < 8) {
-      showFormError(err, "رمز عبور باید حداقل ۸ کاراکتر باشد.");
+    if (password.length < 6) {
+      showFormError(err, "رمز عبور باید حداقل 6 کاراکتر باشد.");
       return;
     }
     if (password !== password2) {
@@ -512,7 +500,7 @@ document
       const res = await fetch("/api/register.php", {
         method: "POST",
         body: fd,
-        headers: { Accept: "application/json" },
+        headers: csrfHeaders({ Accept: "application/json" }),
       });
 
       const raw = await res.text();
@@ -541,7 +529,7 @@ document
     }
   });
 
-// ══════════ ۱۲. فراموشی رمز — سه مرحله ══════════
+/* ══════════ ۱۲. فراموشی رمز ══════════ */
 let forgotChannel = "sms";
 let forgotTargetValue = "";
 
@@ -554,31 +542,29 @@ function showForgotStep(n) {
   );
 }
 
-/* رفتن به نمای فراموشی از لینک ورود */
 document.getElementById("forgotLink")?.addEventListener("click", () => {
   document.getElementById("view-login")?.classList.remove("active");
   document.getElementById("view-register")?.classList.remove("active");
   document.getElementById("view-forgot")?.classList.add("active");
 
-  /* تب‌ها در نمای فراموشی مخفی */
   const tabsBox = document.getElementById("authTabsBox");
   if (tabsBox) tabsBox.style.display = "none";
 
-  showForgotStep(1);
+  forgotChannel = "sms";
+
+  const label = document.getElementById("forgotInputLabel");
+  if (label) label.textContent = "شماره موبایل";
+
+  const targetInput = document.getElementById("forgotTarget");
+  if (targetInput) {
+    targetInput.value = "";
+    targetInput.placeholder = "09121234567";
+  }
+
+  showForgotStep(2);
+
   authOverlay?.classList.add("show");
   document.body.style.overflow = "hidden";
-});
-
-document.querySelectorAll(".forgot-channel").forEach((b) => {
-  b.addEventListener("click", () => {
-    forgotChannel = b.dataset.channel;
-    const label = document.getElementById("forgotInputLabel");
-    if (label) {
-      label.textContent =
-        forgotChannel === "sms" ? "شماره موبایل" : "آدرس ایمیل";
-    }
-    showForgotStep(2);
-  });
 });
 
 document
@@ -595,13 +581,11 @@ document.getElementById("forgotDoneBtn")?.addEventListener("click", () => {
     document.getElementById("view-forgot")?.classList.remove("active");
     document.getElementById("view-login")?.classList.add("active");
 
-    /* تب‌ها برگردند */
     const tabsBox = document.getElementById("authTabsBox");
     if (tabsBox) tabsBox.style.display = "";
   }, 300);
 });
 
-/* ارسال کد */
 document
   .getElementById("forgotSendBtn")
   ?.addEventListener("click", async () => {
@@ -630,6 +614,7 @@ document
       const res = await fetch("/api/forgot-password", {
         method: "POST",
         body: fd,
+        headers: csrfHeaders(),
       });
 
       const data = await res.json();
@@ -643,9 +628,6 @@ document
 
       showToast("✅ " + (data.msg || "کد ارسال شد"));
 
-      /* فاز فعلی: کد در پاسخ API هست برای تست —
-       بعد از اتصال SMS/Email واقعی این بلاک حذف می‌شود */
-
       showForgotStep(3);
       btn.disabled = false;
       btn.textContent = "ارسال کد بازیابی";
@@ -657,7 +639,6 @@ document
     }
   });
 
-/* تأیید کد و رمز جدید */
 document
   .getElementById("forgotResetBtn")
   ?.addEventListener("click", async () => {
@@ -694,6 +675,7 @@ document
       const res = await fetch("/api/forgot-password", {
         method: "POST",
         body: fd,
+        headers: csrfHeaders(),
       });
 
       const data = await res.json();
@@ -713,3 +695,9 @@ document
       btn.textContent = "تغییر رمز عبور";
     }
   });
+
+/* ══════════ ۱۳. Export helper برای استفاده در cart.php ══════════ */
+window.rabetiFaqToEn = faToEn;
+window.rabetiEnToFa = enToFa;
+window.rabetiStepperRead = stepperRead;
+window.rabetiStepperWrite = stepperWrite;

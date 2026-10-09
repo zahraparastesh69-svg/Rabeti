@@ -1,12 +1,26 @@
 <?php
 // auth.php — نسخه نهایی v3
 
+/* HTTPS مستقیم یا پشت پروکسی/CDN (X-Forwarded-Proto) */
+function request_is_https(): bool
+{
+    $https = strtolower((string)($_SERVER['HTTPS'] ?? ''));
+    if ($https !== '' && $https !== 'off') {
+        return true;
+    }
+    if ((int)($_SERVER['SERVER_PORT'] ?? 0) === 443) {
+        return true;
+    }
+    $proto = strtolower(trim(explode(',', (string)($_SERVER['HTTP_X_FORWARDED_PROTO'] ?? ''))[0]));
+    return $proto === 'https';
+}
+
 if (session_status() === PHP_SESSION_NONE) {
     session_set_cookie_params([
         'lifetime' => 0,
         'path'     => '/',
         'domain'   => '',
-        'secure'   => false,       // لوکال http؛ روی HTTPS → true
+        'secure'   => request_is_https(),   // روی HTTPS فقط از طریق HTTPS ارسال شود
         'httponly' => true,
         'samesite' => 'Lax',
     ]);
@@ -55,27 +69,114 @@ function csrf_token(): string
 }
 
 /**
- * اعتبارسنجی توکن CSRF ارسال‌شده.
+ * فیلد مخفی CSRF برای فرم‌های POST.
+ */
+function csrf_field(): string
+{
+    return '<input type="hidden" name="csrf_token" value="'
+        . htmlspecialchars(csrf_token(), ENT_QUOTES, 'UTF-8')
+        . '">';
+}
+
+/**
+ * اعتبارسنجی توکن CSRF ارسال‌شده (فیلد csrf_token یا هدر X-CSRF-Token).
  *
- * در صورت نامعتبر بودن، درخواست متوقف می‌شود.
+ * در صورت نامعتبر بودن، درخواست با کد 403 متوقف می‌شود (Apache کد 419 را به 500 تبدیل می‌کند)؛
+ * برای درخواست‌های API/AJAX پاسخ JSON برمی‌گردد.
  */
 function verify_csrf(?string $token = null): void
 {
     $token = $token
-        ?? ($_POST['csrf_token'] ?? null);
+        ?? ($_POST['csrf_token'] ?? $_SERVER['HTTP_X_CSRF_TOKEN'] ?? null);
 
     $sessionToken = $_SESSION['csrf_token'] ?? null;
 
     if (
-        !is_string($token)
-        || $token === ''
-        || !is_string($sessionToken)
-        || $sessionToken === ''
-        || !hash_equals($sessionToken, $token)
+        is_string($token)
+        && $token !== ''
+        && is_string($sessionToken)
+        && $sessionToken !== ''
+        && hash_equals($sessionToken, $token)
     ) {
-        http_response_code(419);
+        return;
+    }
 
-        exit('درخواست نامعتبر یا منقضی شده است. صفحه را دوباره بارگذاری کنید.');
+    $message = 'درخواست نامعتبر یا منقضی شده است. صفحه را دوباره بارگذاری کنید.';
+
+    $path = (string)parse_url($_SERVER['REQUEST_URI'] ?? '', PHP_URL_PATH);
+
+    $wantsJson = str_starts_with($path, '/api/')
+        || str_contains($_SERVER['HTTP_ACCEPT'] ?? '', 'application/json')
+        || ($_SERVER['HTTP_X_REQUESTED_WITH'] ?? '') === 'XMLHttpRequest';
+
+    http_response_code(403);
+
+    if ($wantsJson) {
+        header('Content-Type: application/json; charset=utf-8');
+        exit(json_encode(['ok' => false, 'error' => $message], JSON_UNESCAPED_UNICODE));
+    }
+
+    header('Content-Type: text/plain; charset=utf-8');
+    exit($message);
+}
+
+
+/* ═══════════════════════════════════════════════════════════════
+   محدودیت تعداد درخواست (Rate limit) — جدول rate_limits
+═══════════════════════════════════════════════════════════════ */
+
+function client_ip(): string
+{
+    return $_SERVER['REMOTE_ADDR'] ?? '0.0.0.0';
+}
+
+/**
+ * آیا تعداد رویدادهای ثبت‌شده برای این کلید در پنجره زمانی به سقف رسیده؟
+ *
+ * اگر جدول هنوز ساخته نشده باشد، درخواست مسدود نمی‌شود (fail-open).
+ */
+function rate_limit_exceeded(string $bucket, string $key, int $max, int $windowSeconds): bool
+{
+    try {
+        $stmt = db()->prepare("
+            SELECT COUNT(*)
+            FROM rate_limits
+            WHERE bucket = ?
+              AND rl_key = ?
+              AND created_at > NOW() - INTERVAL ? SECOND
+        ");
+        $stmt->execute([$bucket, hash('sha256', $key), $windowSeconds]);
+
+        return (int)$stmt->fetchColumn() >= $max;
+    } catch (Throwable $e) {
+        error_log('RATE_LIMIT CHECK FAILED: ' . $e->getMessage());
+        return false;
+    }
+}
+
+function rate_limit_hit(string $bucket, string $key): void
+{
+    try {
+        $pdo = db();
+        $pdo->prepare("INSERT INTO rate_limits (bucket, rl_key) VALUES (?, ?)")
+            ->execute([$bucket, hash('sha256', $key)]);
+
+        /* پاک‌سازی گاه‌به‌گاه رکوردهای قدیمی */
+        if (random_int(1, 100) === 1) {
+            $pdo->exec("DELETE FROM rate_limits WHERE created_at < NOW() - INTERVAL 1 DAY");
+        }
+    } catch (Throwable $e) {
+        error_log('RATE_LIMIT HIT FAILED: ' . $e->getMessage());
+    }
+}
+
+function rate_limit_clear(string $bucket, string $key): void
+{
+    try {
+        db()->prepare("DELETE FROM rate_limits WHERE bucket = ? AND rl_key = ?")
+            ->execute([$bucket, hash('sha256', $key)]);
+    } catch (Throwable $e) {
+        error_log('RATE_LIMIT CLEAR FAILED: ' . $e->getMessage());
     }
 }
 
@@ -116,8 +217,12 @@ function attempt_admin_login(string $mobile, string $password): bool
     $stmt->execute([$mobile]);
     $user = $stmt->fetch();
 
-    $ok = $user
-        && !empty($user['password_hash'])
+    /* موبایل ادمین نیست (مثلاً ورود مشتری از /api/login) → تلاش ناموفق ادمین ثبت نشود */
+    if (!$user) {
+        return false;
+    }
+
+    $ok = !empty($user['password_hash'])
         && password_verify($password, $user['password_hash']);
 
     $pdo->prepare("

@@ -1,6 +1,7 @@
 <?php
 require_once __DIR__ . '/../config/bootstrap.php';
 $pageTitle = 'درباره تولیدی | جوراب رابطی';
+
 ob_start();
 ?>
 
