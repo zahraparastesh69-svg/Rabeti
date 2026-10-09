@@ -1,87 +1,141 @@
-RewriteEngine On
+# =====================================================
+#  RABETI - public/.htaccess
+# =====================================================
 
+ServerSignature Off
 
-RewriteRule ^admin/product-form/?$ admin/product-form.php [L,QSA]
+# -----------------------------------------------------
+#  1. HTTPS Redirect — production only
+# -----------------------------------------------------
+<IfModule mod_rewrite.c>
+    RewriteEngine On
 
-RewriteRule ^admin/products/?$ admin/products.php [L,QSA]
+    RewriteCond %{HTTP_HOST} ^(www\.)?jorabrabeti\.ir$ [NC]
+    RewriteCond %{HTTPS} !=on
+    RewriteCond %{HTTP:X-Forwarded-Proto} !=https
+    RewriteRule ^ https://%{HTTP_HOST}%{REQUEST_URI} [L,R=301]
+</IfModule>
 
-RewriteRule ^product/([a-zA-Z0-9\-]+)/?$ product.php?slug=$1 [L,QSA]
+# -----------------------------------------------------
+#  2. Security Headers
+# -----------------------------------------------------
+<IfModule mod_headers.c>
+    Header always set X-Frame-Options "SAMEORIGIN"
+    Header always set X-Content-Type-Options "nosniff"
+    Header always set Referrer-Policy "strict-origin-when-cross-origin"
+    Header always set Permissions-Policy "geolocation=(), microphone=(), camera=()"
+    
+    # HSTS — production only
+    Header always set Strict-Transport-Security "max-age=31536000; includeSubDomains" env=HTTPS
+    
+    Header unset X-Powered-By
+    Header always set Content-Security-Policy "frame-ancestors 'self'; base-uri 'self'"
+</IfModule>
 
+# -----------------------------------------------------
+#  3. Cache Static Files
+# -----------------------------------------------------
+<IfModule mod_expires.c>
+    ExpiresActive On
+    ExpiresByType image/jpeg  "access plus 1 year"
+    ExpiresByType image/png   "access plus 1 year"
+    ExpiresByType image/gif   "access plus 1 year"
+    ExpiresByType image/webp  "access plus 1 year"
+    ExpiresByType image/svg+xml "access plus 1 year"
+    ExpiresByType image/x-icon "access plus 1 year"
+    ExpiresByType font/woff2  "access plus 1 year"
+    ExpiresByType font/woff   "access plus 1 year"
+    ExpiresByType font/ttf    "access plus 1 year"
+    ExpiresByType text/css    "access plus 1 month"
+    ExpiresByType application/javascript "access plus 1 month"
+    ExpiresByType text/javascript "access plus 1 month"
+</IfModule>
 
-# /products  →  products.php
-RewriteRule ^products/?$ products.php [L,QSA]
+# -----------------------------------------------------
+#  4. Gzip Compression
+# -----------------------------------------------------
+<IfModule mod_deflate.c>
+    AddOutputFilterByType DEFLATE text/html text/plain text/xml
+    AddOutputFilterByType DEFLATE text/css text/javascript
+    AddOutputFilterByType DEFLATE application/javascript application/json
+    AddOutputFilterByType DEFLATE application/xml image/svg+xml
+</IfModule>
 
-# /product/{slug}  →  product.php?slug={slug}
-RewriteRule ^custom-order/?$ custom-order.php [L,QSA]
+# -----------------------------------------------------
+#  5. Protect Sensitive Files
+# -----------------------------------------------------
+<FilesMatch "\.(env|sql|log|md|lock|bak|old|orig|backup)$">
+    Require all denied
+</FilesMatch>
 
+<FilesMatch "^\.">
+    Require all denied
+</FilesMatch>
 
+# -----------------------------------------------------
+#  6. Directory Index
+# -----------------------------------------------------
+DirectoryIndex index.php index.html
 
-RewriteRule ^about/?$ about.php [L,QSA]
+# -----------------------------------------------------
+#  7. Rewrite Rules (بقیه همون قبلی)
+# -----------------------------------------------------
+<IfModule mod_rewrite.c>
+    RewriteEngine On
+    RewriteBase /
 
-RewriteRule ^contact/?$ contact.php [L,QSA]
+    RewriteCond %{REQUEST_FILENAME} -f [OR]
+    RewriteCond %{REQUEST_FILENAME} -d
+    RewriteRule ^ - [L]
 
-# احراز هویت
+    # API
+    RewriteRule ^api/login/?$           api/login.php [L,QSA]
+    RewriteRule ^api/logout/?$          api/logout.php [L,QSA]
+    RewriteRule ^api/register/?$        api/register.php [L,QSA]
+    RewriteRule ^api/cart/?$            api/cart.php [L,QSA]
+    RewriteRule ^api/forgot-password/?$ api/forgot-password.php [L,QSA]
 
-RewriteRule ^register/?$ register.php [L,QSA]
+    # Admin
+    RewriteRule ^admin/login/?$         admin/login.php [L,QSA]
+    RewriteRule ^admin/logout/?$        admin/logout.php [L,QSA]
+    RewriteRule ^admin/product-form/?$  admin/product-form.php [L,QSA]
+    RewriteRule ^admin/products/?$      admin/products.php [L,QSA]
+    RewriteRule ^admin/orders/?$        admin/orders.php [L,QSA]
+    RewriteRule ^admin/order-detail/?$  admin/order-detail.php [L,QSA]
+    RewriteRule ^admin/payments/?$      admin/payments.php [L,QSA]
+    RewriteRule ^admin/report-ledger/?$ admin/report-ledger.php [L,QSA]
+    RewriteRule ^admin/report-discounts/?$ admin/report-discounts.php [L,QSA]
+    RewriteRule ^admin/report-shipping/?$ admin/report-shipping.php [L,QSA]
+    RewriteRule ^admin/report-inventory/?$ admin/report-inventory.php [L,QSA]
+    RewriteRule ^admin/price-update/?$  admin/price-update.php [L,QSA]
+    RewriteRule ^admin/shipping-settings/?$ admin/shipping-settings.php [L,QSA]
+    RewriteRule ^admin/?$               admin/index.php [L,QSA]
+    RewriteRule ^admin/([a-z\-]+)/?$    admin/$1.php [L,QSA]
 
-# پنل مدیریت
-RewriteRule ^admin/?$ admin/index.php [L,QSA]
-RewriteRule ^admin/([a-z\-]+)/?$ admin/$1.php [L,QSA]
+    # Product
+    RewriteRule ^product/([a-zA-Z0-9\-]+)/?$ product.php?slug=$1 [L,QSA]
+    RewriteRule ^products/?$            products.php [L,QSA]
 
-RewriteRule ^admin/login/?$ admin/login.php [L,QSA]
-RewriteRule ^admin/logout/?$ admin/logout.php [L,QSA]
+    # Checkout
+    RewriteRule ^cart/?$                cart.php [L,QSA]
+    RewriteRule ^checkout/?$            checkout.php [L,QSA]
+    RewriteRule ^checkout-address/?$    checkout-address.php [L,QSA]
+    RewriteRule ^checkout-shipping/?$   checkout-shipping.php [L,QSA]
+    RewriteRule ^checkout-review/?$     checkout-review.php [L,QSA]
+    RewriteRule ^order-success/?$       order-success.php [L,QSA]
 
-RewriteRule ^api/login/?$  api/login.php  [L,QSA]
-RewriteRule ^api/logout/?$ api/logout.php [L,QSA]
+    # Payment
+    RewriteRule ^payment/?$             payment.php [L,QSA]
+    RewriteRule ^invoice-print/?$       invoice-print.php [L,QSA]
+    RewriteRule ^invoice-pdf/?$         invoice-pdf.php [L,QSA]
 
-RewriteRule ^api/register/?$ api/register.php [L,QSA]
+    # Account
+    RewriteRule ^account-orders/?$      account-orders.php [L,QSA]
+    RewriteRule ^refund-request/?$      refund-request.php [L,QSA]
 
-RewriteRule ^api/cart/?$ api/cart.php [L,QSA]
-
-RewriteRule ^cart/?$ cart.php [L,QSA]
-
-RewriteRule ^checkout/?$ checkout.php [L,QSA]
-
-RewriteRule ^order-success/?$ order-success.php [L,QSA]
-
-RewriteRule ^admin/orders/?$ admin/orders.php [L,QSA]
-
-RewriteRule ^admin/order-detail/?$ admin/order-detail.php [L,QSA]
-
-RewriteRule ^payment/?$ payment.php [L,QSA]
-
-RewriteRule ^admin/payments/?$ admin/payments.php [L,QSA]
-
-RewriteRule ^invoice-print/?$ invoice-print.php [L,QSA]
-
-
-RewriteRule ^checkout-address/?$ checkout-address.php [L,QSA]
-
-RewriteRule ^checkout-shipping/?$ checkout-shipping.php [L,QSA]
-
-RewriteRule ^checkout-review/?$ checkout-review.php [L,QSA]
-
-RewriteRule ^payment/?$ payment.php [L,QSA]
-
-RewriteRule ^invoice-print/?$ invoice-print.php [L,QSA]
-
-RewriteRule ^invoice-pdf/?$ invoice-pdf.php [L,QSA]
-
-RewriteRule ^account-orders/?$ account-orders.php [L,QSA]
-
-RewriteRule ^refund-request/?$ refund-request.php [L,QSA]
-
-RewriteRule ^admin/report-ledger/?$ admin/report-ledger.php [L,QSA]
-
-RewriteRule ^admin/report-discounts/?$ admin/report-discounts.php [L,QSA]
-
-RewriteRule ^admin/report-shipping/?$ admin/report-shipping.php [L,QSA]
-
-RewriteRule ^admin/report-inventory/?$ admin/report-inventory.php [L,QSA]
-
-RewriteRule ^admin/price-update/?$ admin/price-update.php [L,QSA]
-
-RewriteRule ^admin/shipping-settings/?$ admin/shipping-settings.php [L,QSA]
-
-RewriteRule ^api/forgot-password/?$ api/forgot-password.php [L,QSA]
-
+    # Static Pages
+    RewriteRule ^custom-order/?$        custom-order.php [L,QSA]
+    RewriteRule ^about/?$               about.php [L,QSA]
+    RewriteRule ^contact/?$             contact.php [L,QSA]
+    RewriteRule ^register/?$            register.php [L,QSA]
+</IfModule>
