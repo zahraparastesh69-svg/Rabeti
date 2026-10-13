@@ -10,3 +10,7 @@ config/database.php
 *.backup-*
 .idea/
 .vscode/
+
+public.BEFORE-FIX*/
+public.broken*/
+public.backup*/
