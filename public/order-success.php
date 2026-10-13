@@ -4,37 +4,73 @@ $__bp = [
     __DIR__ . '/../sock-b2b/config/bootstrap.php',
     __DIR__ . '/../config/bootstrap.php',
 ];
-foreach ($__bp as $__b) { if (is_file($__b)) { require_once $__b; break; } }
+foreach ($__bp as $__b) {
+    if (is_file($__b)) {
+        require_once $__b;
+        break;
+    }
+}
 unset($__bp, $__b);
+
 require_once ROOT_PATH . '/config/database.php';
 require_once ROOT_PATH . '/config/auth.php';
 
 $h = static fn($v) => htmlspecialchars((string)$v, ENT_QUOTES, 'UTF-8');
+
 $num = trim($_GET['num'] ?? '');
-$stmt = db()->prepare("SELECT invoice_number FROM invoices WHERE order_id = (SELECT id FROM orders WHERE order_number = ?) LIMIT 1");
+
+$stmt = db()->prepare("
+    SELECT invoice_number 
+    FROM invoices 
+    WHERE order_id = (
+        SELECT id FROM orders WHERE order_number = ? LIMIT 1
+    ) 
+    LIMIT 1
+");
 $stmt->execute([$num]);
 $invNumber = $stmt->fetchColumn() ?: '';
-<?php if ($invNumber): ?>
-<a href="/invoice-print?inv=<?= $h($invNumber) ?>" target="_blank" class="btn btn-outline" style="margin-bottom:10px;display:inline-block;">
-    🧾 مشاهده / چاپ فاکتور
-</a>
-<?php endif; ?>
+
 $pageTitle = 'سفارش ثبت شد | رابطی';
+
 ob_start();
 ?>
 
-<div class="empty-state">
-    <div class="empty-icon">🎉</div>
-    <h2>سفارش شما با موفقیت ثبت شد</h2>
-    <p class="catalog-sub" style="margin-bottom:6px;">شماره سفارش شما:</p>
-    <p style="font-size:1.3rem;font-weight:800;color:var(--brand);direction:ltr;" dir="ltr"><?= $h($num) ?></p>
-    <p class="catalog-sub" style="margin:16px auto 22px;max-width:420px;line-height:2;">
-        موجودی انبار برای شما رزرو شد. کارشناس فروش برای هماهنگی ارسال و پرداخت تماس می‌گیرد.
+<section class="page-head">
+    <h1 class="section-title">✅ سفارش شما ثبت شد</h1>
+    <p class="section-sub">
+        شماره سفارش: <strong><?= $h($num) ?></strong>
     </p>
-    <a href="/invoice-print?inv=<?= $h($invNum ?? '') ?>" target="_blank" class="btn btn-outline" style="margin-bottom:10px;">
-        🧾 مشاهده / چاپ فاکتور
+</section>
+
+<div style="text-align: center; padding: 40px 20px;">
+
+    <?php if ($invNumber): ?>
+        <p style="margin-bottom: 20px; font-size: 15px;">
+            فاکتور شما آماده شده است.
+        </p>
+
+        <a href="/invoice-print?inv=<?= $h($invNumber) ?>"
+            target="_blank"
+            class="btn btn-primary"
+            style="margin-bottom: 10px; display: inline-block;">
+            🧾 مشاهده / چاپ فاکتور
+        </a>
+
+        <br>
+    <?php else: ?>
+        <p style="margin-bottom: 20px; font-size: 15px;">
+            همکاران ما در اسرع وقت با شما تماس خواهند گرفت.
+        </p>
+    <?php endif; ?>
+
+    <a href="/account-orders" class="btn btn-outline" style="margin: 10px;">
+        📋 سفارش‌های من
     </a>
-    <a href="/products" class="btn btn-primary">ادامه خرید</a>
+
+    <a href="/products" class="btn btn-outline" style="margin: 10px;">
+        🛍️ ادامه خرید
+    </a>
+
 </div>
 
 <?php
