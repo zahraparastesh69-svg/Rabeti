@@ -4,7 +4,13 @@ declare(strict_types=1);
 
 /* [FILE] public/admin/payments.php — Financial Center (ادمین) */
 
-require_once __DIR__ . '/../../config/bootstrap.php';
+/* Auto-detect bootstrap (local + host) */
+$__bp = [
+    __DIR__ . '/../../sock-b2b/config/bootstrap.php',
+    __DIR__ . '/../../config/bootstrap.php',
+];
+foreach ($__bp as $__b) { if (is_file($__b)) { require_once $__b; break; } }
+unset($__bp, $__b);
 require_once ROOT_PATH . '/config/database.php';
 require_once ROOT_PATH . '/config/auth.php';
 require_once ROOT_PATH . '/config/settings.php';

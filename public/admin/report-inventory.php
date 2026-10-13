@@ -1,7 +1,13 @@
 <?php
 /* [FILE] public/admin/report-inventory.php — گزارش موجودی و فروش محصولات */
 
-require_once __DIR__ . '/../../config/bootstrap.php';
+/* Auto-detect bootstrap (local + host) */
+$__bp = [
+    __DIR__ . '/../../sock-b2b/config/bootstrap.php',
+    __DIR__ . '/../../config/bootstrap.php',
+];
+foreach ($__bp as $__b) { if (is_file($__b)) { require_once $__b; break; } }
+unset($__bp, $__b);
 require_once ROOT_PATH . '/config/database.php';
 require_once ROOT_PATH . '/config/auth.php';
 require_once __DIR__ . '/financial-helpers.php';

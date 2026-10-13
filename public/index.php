@@ -1,7 +1,14 @@
 <?php
 
-require_once __DIR__ . '/../config/bootstrap.php';
+/* Auto-detect bootstrap (local + host) */
+$__bp = [
+    __DIR__ . '/../sock-b2b/config/bootstrap.php',
+    __DIR__ . '/../config/bootstrap.php',
+];
+foreach ($__bp as $__b) { if (is_file($__b)) { require_once $__b; break; } }
+unset($__bp, $__b);
 require_once ROOT_PATH . '/config/database.php';
+require_once ROOT_PATH . '/config/settings.php';
 
 $h = static fn($v) => htmlspecialchars(
     (string)$v,
@@ -588,7 +595,10 @@ ob_start();
         </div>
 
         <div class="r6-custom-visual">
-            <img src="/Image/1.webp" alt="سفارش اختصاصی رابطی">
+            <?php
+            $customOrderImage = Setting::get('custom_order_image', '/Image/1.webp');
+            ?>
+            <img src="<?= htmlspecialchars($customOrderImage, ENT_QUOTES, 'UTF-8') ?>" alt="سفارش اختصاصی رابطی">
         </div>
 
     </div>

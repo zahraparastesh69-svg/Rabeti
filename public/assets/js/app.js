@@ -354,10 +354,18 @@ paneLogin?.addEventListener("submit", async (e) => {
     fd.append("mobile", mobile);
     fd.append("password", password);
 
+    /* ⭐ CSRF token */
+    const csrfToken =
+      document.querySelector('meta[name="csrf-token"]')?.content || "";
+
     const res = await fetch("/api/login.php", {
       method: "POST",
       body: fd,
-      headers: csrfHeaders({ Accept: "application/json" }),
+      headers: {
+        Accept: "application/json",
+        "X-CSRF-Token":
+          document.querySelector('meta[name="csrf-token"]')?.content || "",
+      },
     });
 
     const raw = await res.text();
@@ -500,7 +508,11 @@ document
       const res = await fetch("/api/register.php", {
         method: "POST",
         body: fd,
-        headers: csrfHeaders({ Accept: "application/json" }),
+        headers: {
+          Accept: "application/json",
+          "X-CSRF-Token":
+            document.querySelector('meta[name="csrf-token"]')?.content || "", // ⭐
+        },
       });
 
       const raw = await res.text();
@@ -614,7 +626,10 @@ document
       const res = await fetch("/api/forgot-password", {
         method: "POST",
         body: fd,
-        headers: csrfHeaders(),
+        headers: {
+          "X-CSRF-Token":
+            document.querySelector('meta[name="csrf-token"]')?.content || "", // ⭐
+        },
       });
 
       const data = await res.json();
@@ -675,7 +690,10 @@ document
       const res = await fetch("/api/forgot-password", {
         method: "POST",
         body: fd,
-        headers: csrfHeaders(),
+        headers: {
+          "X-CSRF-Token":
+            document.querySelector('meta[name="csrf-token"]')?.content || "", // ⭐
+        },
       });
 
       const data = await res.json();
