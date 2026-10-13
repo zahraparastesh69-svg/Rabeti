@@ -14,3 +14,7 @@ config/database.php
 public.BEFORE-FIX*/
 public.broken*/
 public.backup*/
+
+public.BEFORE-FIX*/
+public.broken*/
+public.backup*/
