@@ -21,6 +21,8 @@ if (!is_logged_in()) {
  $userId = $_SESSION['admin_id'] ?? $_SESSION['customer_id'];
  $db = db();
 
+
+
 /* helper: سبد فعال کاربر را بگیر یا بساز */
 /* helper: سبد فعال کاربر — بازیافت سبد تبدیل‌شده یا ساخت جدید */
 function getOrCreateCart(PDO $db, int $userId): int {

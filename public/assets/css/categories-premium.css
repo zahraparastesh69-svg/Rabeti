@@ -1,19 +1,19 @@
-/* ═══════════════════════════════════════════════════════
+﻿/* ═══════════════════════════════════════════════════════
    Categories Premium Section — رابطی
    ═══════════════════════════════════════════════════════ */
 
 :root {
-  --rp-teal: #2a5f78;
-  --rp-teal-700: #1f4a5e;
-  --rp-teal-100: #e6eef3;
-  --rp-orange: #e58a24;
-  --rp-cream: #f7f7f3;
-  --rp-ivory: #ffffff;
-  --rp-ink: #183236;
-  --rp-muted: #65777a;
-  --rp-shadow-sm: 0 4px 14px rgba(42, 95, 120, 0.06);
-  --rp-shadow-md: 0 12px 32px rgba(42, 95, 120, 0.1);
-  --rp-shadow-lg: 0 24px 60px rgba(42, 95, 120, 0.14);
+  --rp-teal: #a35c3c;              /* تراکوتا */
+  --rp-teal-700: #7a3f26;
+  --rp-teal-100: #f9ece3;
+  --rp-orange: #d67d3f;            /* نارنجی گرم */
+  --rp-cream: #f8f3ec;
+  --rp-ivory: #fffcf8;
+  --rp-ink: #4a2c1a;
+  --rp-muted: #856b5a;
+  --rp-shadow-sm: 0 4px 14px rgba(163, 92, 60, 0.08);
+  --rp-shadow-md: 0 12px 32px rgba(163, 92, 60, 0.12);
+  --rp-shadow-lg: 0 24px 60px rgba(163, 92, 60, 0.16);
   --rp-radius-lg: 28px;
   --rp-radius-md: 20px;
   --rp-radius-sm: 14px;
@@ -88,20 +88,20 @@
 }
 
 .rp-parent {
-  position: relative;
-  border-radius: var(--rp-radius-lg);
-  overflow: hidden;
-  cursor: pointer;
-  background: #fff;
-  box-shadow: var(--rp-shadow-sm);
-  transition:
-    transform 0.35s cubic-bezier(0.34, 1.4, 0.64, 1),
-    box-shadow 0.35s ease;
-  min-height: 260px;
-  display: flex;
-  flex-direction: column;
-  justify-content: flex-end;
-  isolation: isolate;
+    position: relative;
+    border-radius: var(--rp-radius-lg);
+    overflow: hidden;
+    cursor: pointer;
+    background: #fff;
+    box-shadow: var(--rp-shadow-sm);
+    transition:
+        transform 0.35s cubic-bezier(0.34, 1.4, 0.64, 1),
+        box-shadow 0.35s ease;
+    aspect-ratio: 1 / 1;
+    display: flex;
+    flex-direction: column;
+    justify-content: flex-end;
+    isolation: isolate;
 }
 
 .rp-parent:hover {
@@ -110,17 +110,19 @@
 }
 
 .rp-parent-img {
-  position: absolute;
-  inset: 0;
-  z-index: 0;
-  overflow: hidden;
+    position: absolute;
+    inset: 0;
+    z-index: 0;
+    overflow: hidden;
 }
 
 .rp-parent-img img {
-  width: 100%;
-  height: 100%;
-  object-fit: cover;
-  transition: transform 0.8s cubic-bezier(0.22, 1, 0.36, 1);
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    object-position: center;
+    display: block;
+    transition: transform 0.4s ease;
 }
 
 .rp-parent:hover .rp-parent-img img {
@@ -130,23 +132,22 @@
 .rp-parent-img .rp-fallback {
   position: absolute;
   inset: 0;
-  background: linear-gradient(135deg, #e6eef3 0%, #d6e3ea 100%);
+  background: linear-gradient(135deg, #f0e6d8 0%, #faf6ee 100%);
 }
 
 .rp-parent-overlay {
-  position: absolute;
-  inset: 0;
-  z-index: 1;
-  background: linear-gradient(
-    to top,
-    rgba(31, 74, 94, 0.88) 0%,
-    rgba(31, 74, 94, 0.55) 35%,
-    rgba(31, 74, 94, 0.05) 70%,
-    transparent 100%
-  );
-  pointer-events: none;
+    position: absolute;
+    inset: 0;
+    z-index: 1;
+    background: linear-gradient(
+        to top,
+        rgba(74, 44, 26, 0.92) 0%,        /* ⭐ قهوه‌ای تیره */
+        rgba(74, 44, 26, 0.55) 35%,
+        rgba(74, 44, 26, 0.05) 70%,
+        transparent 100%
+    );
+    pointer-events: none;
 }
-
 .rp-parent-body {
   position: relative;
   z-index: 2;
@@ -197,7 +198,7 @@
 .rp-parent.is-active {
   box-shadow:
     0 0 0 2.5px var(--rp-teal),
-    0 0 0 6px rgba(42, 95, 120, 0.08),
+    0 0 0 6px rgba(107, 74, 47, 0.08),
     var(--rp-shadow-lg);
   transform: translateY(-4px);
 }
@@ -233,7 +234,7 @@
   border-radius: var(--rp-radius-lg);
   padding: 32px 28px 28px;
   box-shadow: var(--rp-shadow-md);
-  border: 2px solid rgba(42, 95, 120, 0.18);
+  border: 2px solid rgba(107, 74, 47, 0.18);
   animation: rpPanelIn 0.4s ease;
 }
 
@@ -260,7 +261,7 @@
   transition: right 0.45s cubic-bezier(0.34, 1.4, 0.64, 1);
   right: 16.66%;
   left: auto;
-  box-shadow: -2px -2px 0 0 rgba(42, 95, 120, 0.18);
+  box-shadow: -2px -2px 0 0 rgba(107, 74, 47, 0.18);
   border-radius: 4px 0 0 0;
   z-index: 2;
 }
@@ -328,7 +329,7 @@
   padding: 12px 10px 12px;
   background: #fff;
   border-radius: var(--rp-radius-md);
-  border: 1px solid rgba(42, 95, 120, 0.08);
+  border: 1px solid rgba(107, 74, 47, 0.08);
   text-decoration: none;
   color: var(--rp-ink);
   transition:
@@ -344,7 +345,7 @@
 .rp-sub:hover {
   transform: translateY(-4px);
   box-shadow: var(--rp-shadow-md);
-  border-color: rgba(42, 95, 120, 0.2);
+  border-color: rgba(107, 74, 47, 0.2);
 }
 
 .rp-sub-img {
@@ -353,7 +354,7 @@
   border-radius: 50%;
   overflow: hidden;
   margin-bottom: 10px;
-  background: linear-gradient(135deg, #e6eef3 0%, #d6e3ea 100%);
+  background: linear-gradient(135deg, #f0e6d8 0%, #faf6ee 100%);
   transition: transform 0.4s cubic-bezier(0.22, 1, 0.36, 1);
   flex-shrink: 0;
 }
@@ -450,10 +451,10 @@
     margin-bottom: 20px;
   }
 
-  .rp-parent {
-    min-height: 130px;
+.rp-parent {
     border-radius: 16px;
-  }
+    aspect-ratio: 1 / 1;
+}
 
   .rp-parent-body {
     padding: 10px 8px;
@@ -478,9 +479,9 @@
   .rp-parent-overlay {
     background: linear-gradient(
       to top,
-      rgba(31, 74, 94, 0.92) 0%,
-      rgba(31, 74, 94, 0.45) 45%,
-      rgba(31, 74, 94, 0.05) 80%,
+      rgba(74, 44, 26, 0.92) 0%,
+      rgba(74, 44, 26, 0.45) 45%,
+      rgba(74, 44, 26, 0.05) 80%,
       transparent 100%
     );
   }
@@ -497,7 +498,7 @@
     top: -9px;
     width: 16px;
     height: 16px;
-    box-shadow: -1.5px -1.5px 0 0 rgba(42, 95, 120, 0.18);
+    box-shadow: -1.5px -1.5px 0 0 rgba(107, 74, 47, 0.18);
     border-radius: 3px 0 0 0;
   }
 
@@ -528,7 +529,7 @@
     scroll-snap-type: x mandatory;
     -webkit-overflow-scrolling: touch;
     scrollbar-width: thin;
-    scrollbar-color: rgba(42, 95, 120, 0.25) transparent;
+    scrollbar-color: rgba(107, 74, 47, 0.25) transparent;
   }
 
   .rp-subs::-webkit-scrollbar {
@@ -538,7 +539,7 @@
     background: transparent;
   }
   .rp-subs::-webkit-scrollbar-thumb {
-    background: rgba(42, 95, 120, 0.25);
+    background: rgba(107, 74, 47, 0.25);
     border-radius: 10px;
   }
 
@@ -585,10 +586,10 @@
     gap: 6px;
   }
 
-  .rp-parent {
-    min-height: 115px;
+.rp-parent {
     border-radius: 14px;
-  }
+    aspect-ratio: 1 / 1;
+}
 
   .rp-parent-title {
     font-size: 0.82rem;
@@ -628,4 +629,28 @@
   .rp-sub-count {
     font-size: 0.56rem;
   }
+}
+
+/* ═══ OVERRIDE: هماهنگی با سایر سکشن‌ها ═══ */
+.r-cats-premium {
+  background: var(--brand-xlight) !important;
+  box-shadow: none !important;
+  border: none !important;
+}
+
+.r-cats-premium::before,
+.r-cats-premium::after {
+  display: none !important;
+}
+
+/* ═══ OVERRIDE: هماهنگی با سایر سکشن‌ها ═══ */
+.r-cats-premium {
+  background: var(--brand-xlight) !important;
+  box-shadow: none !important;
+  border: none !important;
+}
+
+.r-cats-premium::before,
+.r-cats-premium::after {
+  display: none !important;
 }

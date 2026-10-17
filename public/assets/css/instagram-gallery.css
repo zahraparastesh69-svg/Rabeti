@@ -1,4 +1,4 @@
-/* ═══════════════════════════════════════════════════════
+﻿/* ═══════════════════════════════════════════════════════
    Instagram Gallery — Rabati (Carousel Edition)
    ═══════════════════════════════════════════════════════ */
 
@@ -56,12 +56,12 @@
 .r6-ig-head h2 {
   font-size: clamp(1.35rem, 2.4vw, 1.85rem);
   font-weight: 800;
-  color: #183236;
+  color: #3a2418;
   margin: 0 0 6px;
 }
 
 .r6-ig-head p {
-  color: #65777a;
+  color: #8b7355;
   font-size: 0.9rem;
   margin: 0;
 }
@@ -72,8 +72,8 @@
   gap: 8px;
   padding: 10px 20px;
   background: #fff;
-  color: #00666b;
-  border: 1px solid rgba(0, 102, 107, 0.15);
+  color: #6b4a2f;
+  border: 1px solid rgba(107, 74, 47, 0.15);
   border-radius: 999px;
   font-size: 0.82rem;
   font-weight: 700;
@@ -83,7 +83,7 @@
 }
 
 .r6-ig-head-link:hover {
-  background: #00666b;
+  background: #6b4a2f;
   color: #fff;
   transform: translateY(-2px);
 }
@@ -105,7 +105,7 @@
   overflow-x: auto;
   overflow-y: hidden;
   scroll-snap-type: x mandatory;
-  scroll-behavior: smooth;
+  scroll-behavior: auto;
   scrollbar-width: none;
   -ms-overflow-style: none;
   padding: 4px 0 8px;
@@ -123,7 +123,7 @@
   aspect-ratio: 1;
   border-radius: 18px;
   overflow: hidden;
-  background: linear-gradient(135deg, #e8f5f4, #d6eef0);
+  background: linear-gradient(135deg, #f0e6d8, #d6eef0);
   text-decoration: none;
   display: block;
   cursor: pointer;
@@ -135,7 +135,7 @@
 
 .r6-ig-item:hover {
   transform: translateY(-4px);
-  box-shadow: 0 18px 40px rgba(0, 102, 107, 0.18);
+  box-shadow: 0 18px 40px rgba(107, 74, 47, 0.18);
 }
 
 .r6-ig-item img,
@@ -160,7 +160,7 @@
   height: 34px;
   border-radius: 50%;
   background: rgba(255, 255, 255, 0.95);
-  color: #00666b;
+  color: #6b4a2f;
   display: grid;
   place-items: center;
   z-index: 2;
@@ -177,8 +177,8 @@
   inset: 0;
   background: linear-gradient(
     to top,
-    rgba(0, 79, 83, 0.85) 0%,
-    rgba(0, 79, 83, 0.25) 45%,
+    rgba(74, 44, 26, 0.85) 0%,
+    rgba(74, 44, 26, 0.25) 45%,
     transparent 70%
   );
   display: flex;
@@ -241,9 +241,9 @@
   width: 44px;
   height: 44px;
   border-radius: 50%;
-  border: 1px solid rgba(0, 102, 107, 0.15);
+  border: 1px solid rgba(107, 74, 47, 0.15);
   background: #fff;
-  color: #00666b;
+  color: #6b4a2f;
   display: grid;
   place-items: center;
   cursor: pointer;
@@ -258,9 +258,9 @@
 }
 
 .r6-ig-nav:hover:not(:disabled) {
-  background: #00666b;
+  background: #6b4a2f;
   color: #fff;
-  border-color: #00666b;
+  border-color: #6b4a2f;
   transform: scale(1.06);
 }
 
@@ -282,7 +282,7 @@
   width: 8px;
   height: 8px;
   border-radius: 999px;
-  background: rgba(0, 102, 107, 0.22);
+  background: rgba(107, 74, 47, 0.22);
   border: none;
   padding: 0;
   cursor: pointer;
@@ -290,11 +290,11 @@
 }
 
 .r6-ig-dot:hover {
-  background: rgba(0, 102, 107, 0.45);
+  background: rgba(107, 74, 47, 0.45);
 }
 
 .r6-ig-dot.is-active {
-  background: #00666b;
+  background: #6b4a2f;
   width: 24px;
 }
 
@@ -306,7 +306,7 @@
   display: none;
   position: fixed;
   inset: 0;
-  background: rgba(15, 25, 30, 0.94);
+  background: rgba(46, 24, 16, 0.94);
   z-index: 2147483647;
   flex-direction: column;
   align-items: center;
@@ -454,4 +454,28 @@
   .r6-ig-track {
     scroll-behavior: auto;
   }
+}
+
+/* ═══ OVERRIDE: هماهنگی با سایر سکشن‌ها ═══ */
+.r6-ig {
+  background: var(--brand-xlight) !important;
+  box-shadow: none !important;
+  border: none !important;
+}
+
+.r6-ig::before,
+.r6-ig::after {
+  display: none !important;
+}
+
+/* ═══ OVERRIDE: هماهنگی با سایر سکشن‌ها ═══ */
+.r6-ig {
+  background: var(--brand-xlight) !important;
+  box-shadow: none !important;
+  border: none !important;
+}
+
+.r6-ig::before,
+.r6-ig::after {
+  display: none !important;
 }

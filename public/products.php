@@ -4,7 +4,12 @@ $__bp = [
     __DIR__ . '/../sock-b2b/config/bootstrap.php',
     __DIR__ . '/../config/bootstrap.php',
 ];
-foreach ($__bp as $__b) { if (is_file($__b)) { require_once $__b; break; } }
+foreach ($__bp as $__b) {
+    if (is_file($__b)) {
+        require_once $__b;
+        break;
+    }
+}
 unset($__bp, $__b);
 require_once ROOT_PATH . '/config/database.php';
 
@@ -650,32 +655,6 @@ $chipCats = db()->query("
     <?php endif; ?>
 
 <?php endif; ?>
-
-
-<!-- ═══ ذخیره موقعیت اسکرول قبل از ناوبری ═══ -->
-
-<script>
-    (function() {
-        'use strict';
-
-        document.addEventListener('click', function(e) {
-            var t = e.target;
-            if (!(t instanceof Element)) return;
-
-            var link = t.closest('a[data-scroll-preserve]');
-            if (!link) return;
-
-            try {
-                sessionStorage.setItem(
-                    '__scroll_resume',
-                    String(window.pageYOffset || document.documentElement.scrollTop || 0)
-                );
-            } catch (err) {}
-        }, true);
-    })();
-</script>
-
-
 <?php
 
 $content = ob_get_clean();

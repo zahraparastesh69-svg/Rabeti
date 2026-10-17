@@ -4,7 +4,12 @@ $__bp = [
     __DIR__ . '/../sock-b2b/config/bootstrap.php',
     __DIR__ . '/../config/bootstrap.php',
 ];
-foreach ($__bp as $__b) { if (is_file($__b)) { require_once $__b; break; } }
+foreach ($__bp as $__b) {
+    if (is_file($__b)) {
+        require_once $__b;
+        break;
+    }
+}
 unset($__bp, $__b);
 require_once ROOT_PATH . '/config/database.php';
 require_once ROOT_PATH . '/config/auth.php';
@@ -111,7 +116,7 @@ ob_start();
                     <?= csrf_field() ?>
                     <input type="hidden" name="do" value="pick">
                     <input type="hidden" name="address_id" value="<?= (int)$a['id'] ?>">
-                    <button class="btn btn-primary">همین آدرس ←</button>
+                    <button type="submit" class="btn btn-primary">همین آدرس ←</button>
                 </form>
             </div>
         <?php endforeach; ?>

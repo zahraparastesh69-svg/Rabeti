@@ -1,4 +1,4 @@
-<?php
+﻿<?php
 /* Auto-detect bootstrap (local + host) */
 $__bp = [
     __DIR__ . '/../../sock-b2b/config/bootstrap.php',
@@ -58,7 +58,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
     <link
         rel="stylesheet"
-        href="/assets/css/app.css?v=18">
+        href="/assets/css/app.css?v=101">
 
     <style>
         .admin-login-page {

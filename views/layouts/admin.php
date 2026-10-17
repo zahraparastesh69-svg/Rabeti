@@ -182,6 +182,7 @@ $menuGroups = [
             ],
         ],
     ],
+
     [
         'label' => 'تنظیمات فروش',
         'items' => [
@@ -223,6 +224,12 @@ $menuGroups = [
                 'label' => 'دسته‌بندی‌ها',
                 'url'   => '/admin/categories',
                 'icon'  => 'categories',
+            ],
+            [
+                'key' => 'brand-settings',
+                'label' => 'تنظیمات برند',
+                'url' => '/admin/brand-settings',
+                'icon' => 'banner'
             ],
         ],
     ],
@@ -279,7 +286,7 @@ $menuGroups = [
                 'url'   => '/admin/banners',
                 'icon'  => 'banner',
             ],
-             [
+            [
                 'key'   => 'instagram',
                 'label' => 'گالری اینستاگرام',
                 'url'   => '/admin/instagram',
@@ -296,6 +303,7 @@ $menuGroups = [
 <head>
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
+    <meta name="csrf-token" content="<?= htmlspecialchars(csrf_token(), ENT_QUOTES, 'UTF-8') ?>">
 
     <title>
         <?= htmlspecialchars($adminPageTitle, ENT_QUOTES, 'UTF-8') ?>

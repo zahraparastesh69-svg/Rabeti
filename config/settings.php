@@ -81,4 +81,48 @@ final class Setting
             ? (int)$value
             : $default;
     }
+    /**
+     * ذخیره مقدار (INSERT یا UPDATE)
+     */
+    public static function set(
+        string $key,
+        string $value
+    ): void {
+
+        $stmt = db()->prepare("
+            INSERT INTO settings (`key`, `value`)
+            VALUES (?, ?)
+            ON DUPLICATE KEY UPDATE
+                `value` = VALUES(`value`),
+                `updated_at` = NOW()
+        ");
+
+        $stmt->execute([$key, $value]);
+
+        /* بروزرسانی cache */
+        if (self::$cache !== null) {
+            self::$cache[$key] = $value;
+        }
+    }
+
+    /**
+     * دریافت مقدار boolean
+     */
+    public static function getBool(
+        string $key,
+        bool $default = false
+    ): bool {
+
+        $value = self::get($key, '');
+
+        if ($value === '') {
+            return $default;
+        }
+
+        return in_array(
+            strtolower($value),
+            ['1', 'true', 'yes', 'on'],
+            true
+        );
+    }
 }

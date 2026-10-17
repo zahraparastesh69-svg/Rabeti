@@ -1,18 +1,18 @@
-/* ═══════════════════════════════════════════════════════
+﻿/* ═══════════════════════════════════════════════════════
    Rabati Home — Unified Theme v3
    فیروزه‌ای → هدر، هیرو، سفارش اختصاصی، CTA، فوتر
    آبی فولادی → دسته‌بندی
    ═══════════════════════════════════════════════════════ */
 
 :root {
-  --rb-teal: #00666b;
-  --rb-teal-d: #004f53;
-  --rb-teal-l: #e8f5f4;
-  --rb-teal-xl: #f3faf9;
+  --rb-teal: #6b4a2f;
+  --rb-teal-d: #4a2c1a;
+  --rb-teal-l: #f0e6d8;
+  --rb-teal-xl: #faf6ee;
 
-  --rb-steel: #2a5f78;
-  --rb-steel-d: #1f4a5e;
-  --rb-steel-l: #e6eef3;
+  --rb-steel: #6b4a2f;
+  --rb-steel-d: #4a2c1a;
+  --rb-steel-l: #f0e6d8;
 
   --rb-orange: #e58a24;
   --rb-orange-d: #c96f12;
@@ -20,13 +20,13 @@
 
   --rb-cream: #f7f7f3;
   --rb-white: #ffffff;
-  --rb-ink: #183236;
-  --rb-mut: #65777a;
-  --rb-line: rgba(24, 50, 54, 0.1);
+  --rb-ink: #3a2418;
+  --rb-mut: #8b7355;
+  --rb-line: rgba(107, 74, 47, 0.1);
 
-  --rb-shadow-sm: 0 4px 16px rgba(24, 50, 54, 0.07);
-  --rb-shadow-md: 0 12px 32px rgba(24, 50, 54, 0.11);
-  --rb-shadow-lg: 0 22px 55px rgba(24, 50, 54, 0.15);
+  --rb-shadow-sm: 0 4px 16px rgba(107, 74, 47, 0.07);
+  --rb-shadow-md: 0 12px 32px rgba(107, 74, 47, 0.11);
+  --rb-shadow-lg: 0 22px 55px rgba(107, 74, 47, 0.15);
 
   --rb-ease: cubic-bezier(0.22, 0.61, 0.36, 1);
 }
@@ -259,7 +259,7 @@
 .r6-why-cell:hover {
   transform: translateY(-6px);
   box-shadow: var(--rb-shadow-md);
-  border-color: rgba(0, 102, 107, 0.18);
+  border-color: rgba(107, 74, 47, 0.18);
 }
 
 .r6-why-cell:hover::before {
@@ -311,7 +311,7 @@
   left: -80px;
   width: 280px;
   height: 280px;
-  background: radial-gradient(circle, rgba(0, 102, 107, 0.1), transparent 70%);
+  background: radial-gradient(circle, rgba(107, 74, 47, 0.1), transparent 70%);
   border-radius: 50%;
   pointer-events: none;
 }
@@ -323,7 +323,7 @@
   right: -60px;
   width: 220px;
   height: 220px;
-  background: radial-gradient(circle, rgba(0, 102, 107, 0.08), transparent 70%);
+  background: radial-gradient(circle, rgba(107, 74, 47, 0.08), transparent 70%);
   border-radius: 50%;
   pointer-events: none;
 }
@@ -370,8 +370,8 @@
   padding: 8px 14px;
   border-radius: 999px;
   font-weight: 600;
-  border: 1px solid rgba(0, 102, 107, 0.15);
-  box-shadow: 0 2px 8px rgba(0, 102, 107, 0.06);
+  border: 1px solid rgba(107, 74, 47, 0.15);
+  box-shadow: 0 2px 8px rgba(107, 74, 47, 0.06);
 }
 
 .r6-custom-features span svg {
@@ -392,7 +392,7 @@
   text-decoration: none;
   font-size: 0.88rem;
   font-weight: 700;
-  box-shadow: 0 12px 28px rgba(0, 102, 107, 0.28);
+  box-shadow: 0 12px 28px rgba(107, 74, 47, 0.28);
   transition:
     background 0.25s ease,
     transform 0.25s ease,
@@ -402,15 +402,15 @@
 .r6-custom-cta:hover {
   background: var(--rb-teal-d);
   transform: translateY(-3px);
-  box-shadow: 0 16px 36px rgba(0, 102, 107, 0.35);
+  box-shadow: 0 16px 36px rgba(107, 74, 47, 0.35);
 }
 
 .r6-custom-visual {
   aspect-ratio: 4 / 3;
   border-radius: 24px;
   background: linear-gradient(135deg, var(--rb-teal-l) 0%, #d6eef0 100%);
-  border: 1px solid rgba(0, 102, 107, 0.15);
-  box-shadow: 0 24px 60px rgba(0, 102, 107, 0.18);
+  border: 1px solid rgba(107, 74, 47, 0.15);
+  box-shadow: 0 24px 60px rgba(107, 74, 47, 0.18);
   overflow: hidden;
 }
 
@@ -433,7 +433,7 @@
     ),
     radial-gradient(
       circle at 80% 70%,
-      rgba(0, 102, 107, 0.35),
+      rgba(107, 74, 47, 0.35),
       transparent 50%
     ),
     var(--rb-teal-d) !important;
@@ -612,7 +612,7 @@
   line-height: 1;
   padding: 0;
   margin: 0;
-  box-shadow: 0 4px 14px rgba(24, 50, 54, 0.14);
+  box-shadow: 0 4px 14px rgba(107, 74, 47, 0.14);
   backdrop-filter: blur(8px);
   -webkit-backdrop-filter: blur(8px);
   z-index: 3;
@@ -641,3 +641,265 @@
     left: 8px;
   }
 }
+
+/* ═══════════════════════════════════════════════════════
+   🎯 UNIFY HOMEPAGE SECTIONS — اضافه شده برای رفع «دو تیکه»
+   ═══════════════════════════════════════════════════════ */
+
+/* ─── همه سکشن‌ها: padding یکسان، بدون سایه، بدون border ─── */
+.r6-hero,
+.r-cats-premium,
+.r6-custom-section,
+.r-section,
+.r6-newwrap,
+.r6-why-section,
+.r6-ig,
+.r6-final {
+  padding: 72px 24px !important;
+  margin: 0 !important;
+  box-shadow: none !important;
+  border-top: none !important;
+  border-bottom: none !important;
+  position: relative;
+  width: 100% !important;
+  box-sizing: border-box !important;
+}
+
+/* ─── پس‌زمینه یکسان برای همه (کرم روشن) ─── */
+.r6-hero,
+.r-cats-premium,
+.r6-custom-section,
+.r6-newwrap,
+.r6-why-section,
+.r6-ig {
+  background: var(--brand-xlight) !important;
+}
+
+/* ─── بخش محصولات: سفید (برای تفکیک طبیعی) ─── */
+.r-section {
+  background: #ffffff !important;
+}
+
+/* ─── CTA نهایی: قهوه‌ای تیره ─── */
+.r6-final {
+  background: var(--brand-dark) !important;
+  padding-top: 80px !important;
+  padding-bottom: 80px !important;
+}
+
+/* ─── حذف همه سایه‌های تزئینی که «دو تیکه» ایجاد می‌کنند ─── */
+.r6-hero::before,
+.r6-hero::after,
+.r-cats-premium::before,
+.r-cats-premium::after,
+.r6-custom-section::before,
+.r6-custom-section::after,
+.r6-newwrap::before,
+.r6-newwrap::after,
+.r6-why-section::before,
+.r6-why-section::after,
+.r6-ig::before,
+.r6-ig::after,
+.r6-final::before,
+.r6-final::after {
+  display: none !important;
+  content: none !important;
+  background: none !important;
+}
+
+/* ─── حذف margin بین سکشن‌ها ─── */
+.r6-hero + .r-cats-premium,
+.r-cats-premium + .r6-custom-section,
+.r6-custom-section + .r-section,
+.r-section + .r6-newwrap,
+.r6-newwrap + .r6-why-section,
+.r6-why-section + .r6-ig,
+.r6-ig + .r6-final {
+  margin-top: 0 !important;
+}
+
+/* ─── Hero: کمی کم‌تر در بالا ─── */
+.r6-hero {
+  padding-top: 56px !important;
+  padding-bottom: 72px !important;
+}
+
+/* ─── Footer: بدون سایه بالایی ─── */
+.r6-footer-box {
+  box-shadow: none !important;
+}
+
+.r6-footer-box::before {
+  display: none !important;
+}
+
+/* ─── موبایل ─── */
+@media (max-width: 768px) {
+  .r6-hero,
+  .r-cats-premium,
+  .r6-custom-section,
+  .r-section,
+  .r6-newwrap,
+  .r6-why-section,
+  .r6-ig,
+  .r6-final {
+    padding: 48px 16px !important;
+  }
+
+  .r6-hero {
+    padding-top: 36px !important;
+    padding-bottom: 52px !important;
+  }
+
+  .r6-final {
+    padding-top: 56px !important;
+    padding-bottom: 56px !important;
+  }
+}
+
+@media (max-width: 400px) {
+  .r6-hero,
+  .r-cats-premium,
+  .r6-custom-section,
+  .r-section,
+  .r6-newwrap,
+  .r6-why-section,
+  .r6-ig,
+  .r6-final {
+    padding-left: 12px !important;
+    padding-right: 12px !important;
+  }
+}
+
+/* ═══ END UNIFY ═══ */
+
+/* ═══════════════════════════════════════════════════════
+   🎯 UNIFY HOMEPAGE SECTIONS — اضافه شده برای رفع «دو تیکه»
+   ═══════════════════════════════════════════════════════ */
+
+/* ─── همه سکشن‌ها: padding یکسان، بدون سایه، بدون border ─── */
+.r6-hero,
+.r-cats-premium,
+.r6-custom-section,
+.r-section,
+.r6-newwrap,
+.r6-why-section,
+.r6-ig,
+.r6-final {
+  padding: 72px 24px !important;
+  margin: 0 !important;
+  box-shadow: none !important;
+  border-top: none !important;
+  border-bottom: none !important;
+  position: relative;
+  width: 100% !important;
+  box-sizing: border-box !important;
+}
+
+/* ─── پس‌زمینه یکسان برای همه (کرم روشن) ─── */
+.r6-hero,
+.r-cats-premium,
+.r6-custom-section,
+.r6-newwrap,
+.r6-why-section,
+.r6-ig {
+  background: var(--brand-xlight) !important;
+}
+
+/* ─── بخش محصولات: سفید (برای تفکیک طبیعی) ─── */
+.r-section {
+  background: #ffffff !important;
+}
+
+/* ─── CTA نهایی: قهوه‌ای تیره ─── */
+.r6-final {
+  background: var(--brand-dark) !important;
+  padding-top: 80px !important;
+  padding-bottom: 80px !important;
+}
+
+/* ─── حذف همه سایه‌های تزئینی که «دو تیکه» ایجاد می‌کنند ─── */
+.r6-hero::before,
+.r6-hero::after,
+.r-cats-premium::before,
+.r-cats-premium::after,
+.r6-custom-section::before,
+.r6-custom-section::after,
+.r6-newwrap::before,
+.r6-newwrap::after,
+.r6-why-section::before,
+.r6-why-section::after,
+.r6-ig::before,
+.r6-ig::after,
+.r6-final::before,
+.r6-final::after {
+  display: none !important;
+  content: none !important;
+  background: none !important;
+}
+
+/* ─── حذف margin بین سکشن‌ها ─── */
+.r6-hero + .r-cats-premium,
+.r-cats-premium + .r6-custom-section,
+.r6-custom-section + .r-section,
+.r-section + .r6-newwrap,
+.r6-newwrap + .r6-why-section,
+.r6-why-section + .r6-ig,
+.r6-ig + .r6-final {
+  margin-top: 0 !important;
+}
+
+/* ─── Hero: کمی کم‌تر در بالا ─── */
+.r6-hero {
+  padding-top: 56px !important;
+  padding-bottom: 72px !important;
+}
+
+/* ─── Footer: بدون سایه بالایی ─── */
+.r6-footer-box {
+  box-shadow: none !important;
+}
+
+.r6-footer-box::before {
+  display: none !important;
+}
+
+/* ─── موبایل ─── */
+@media (max-width: 768px) {
+  .r6-hero,
+  .r-cats-premium,
+  .r6-custom-section,
+  .r-section,
+  .r6-newwrap,
+  .r6-why-section,
+  .r6-ig,
+  .r6-final {
+    padding: 48px 16px !important;
+  }
+
+  .r6-hero {
+    padding-top: 36px !important;
+    padding-bottom: 52px !important;
+  }
+
+  .r6-final {
+    padding-top: 56px !important;
+    padding-bottom: 56px !important;
+  }
+}
+
+@media (max-width: 400px) {
+  .r6-hero,
+  .r-cats-premium,
+  .r6-custom-section,
+  .r-section,
+  .r6-newwrap,
+  .r6-why-section,
+  .r6-ig,
+  .r6-final {
+    padding-left: 12px !important;
+    padding-right: 12px !important;
+  }
+}
+
+/* ═══ END UNIFY ═══ */

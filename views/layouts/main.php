@@ -1,10 +1,17 @@
 <?php
 require_once __DIR__ . '/../../config/database.php';
 require_once __DIR__ . '/../../config/auth.php';
+require_once ROOT_PATH . '/config/settings.php';
 
 $isAdmin    = is_admin_logged_in();
 $isCustomer = is_customer_logged_in();
 $isLoggedIn = $isAdmin || $isCustomer;
+
+/* ⭐ تصاویر برند از settings */
+$siteLogo         = Setting::get('site_logo', '/Image/logo3.jpg');
+$siteFavicon      = Setting::get('site_favicon', '/Image/logo3.jpg');
+$ogDefaultImage   = Setting::get('og_default_image', '/Image/logo3.jpg');
+$siteUrl          = 'https://jorabrabeti.ir';
 
 $userName = $isAdmin
     ? ($_SESSION['admin_name'] ?? 'مدیر')
@@ -12,6 +19,7 @@ $userName = $isAdmin
 ?>
 <?php
 $cartCount = 0;
+
 if (is_logged_in()) {
     try {
         $uid = (int)($_SESSION['admin_id'] ?? $_SESSION['customer_id'] ?? 0);
@@ -34,34 +42,12 @@ if (is_logged_in()) {
 <head>
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
+    <meta name="csrf-token" content="<?= htmlspecialchars(csrf_token(), ENT_QUOTES, 'UTF-8') ?>">
 
     <!-- ═══ SEO ═══ -->
     <title>
         <?= htmlspecialchars($pageTitle ?? 'رابطی | فروش عمده جوراب', ENT_QUOTES, 'UTF-8') ?>
     </title>
-    <script>
-        /* ⭐ جلوگیری از اسکرول خودکار مرورگر */
-        if ('scrollRestoration' in history) {
-            history.scrollRestoration = 'manual';
-        }
-
-        /* اگه اسکرول ذخیره‌شده داریم، قبل از رندر مخفی کن */
-        (function() {
-            try {
-                if (sessionStorage.getItem('__scroll_resume')) {
-                    document.documentElement.classList.add('scroll-resume');
-                }
-            } catch (e) {}
-        })();
-    </script>
-
-    <style>
-        /* پنهان‌سازی صفحه تا اسکرول بازیابی شه — فقط چند میلی‌ثانیه */
-        html.scroll-resume body {
-            visibility: hidden !important;
-        }
-    </style>
-
 
     <meta name="description" content="<?= htmlspecialchars($pageDescription ?? 'فروشگاه تخصصی خرید عمده جوراب رابطی — تولید مستقیم، قیمت همکاری، موجودی واقعی و سفارش سریع', ENT_QUOTES, 'UTF-8') ?>">
     <meta name="author" content="RABETI">
@@ -75,26 +61,23 @@ if (is_logged_in()) {
     <meta property="og:description" content="<?= htmlspecialchars($pageDescription ?? 'فروشگاه تخصصی خرید عمده جوراب رابطی', ENT_QUOTES, 'UTF-8') ?>">
     <meta property="og:locale" content="fa_IR">
     <meta property="og:url" content="https://jorabrabeti.ir<?= htmlspecialchars($_SERVER['REQUEST_URI'] ?? '/', ENT_QUOTES, 'UTF-8') ?>">
-    <meta property="og:image" content="https://jorabrabeti.ir/Image/logo3.jpg">
+
+    <meta property="og:image" content="<?= htmlspecialchars($siteUrl . $ogDefaultImage, ENT_QUOTES, 'UTF-8') ?>">
     <meta property="og:image:width" content="512">
     <meta property="og:image:height" content="512">
-    <meta property="og:image:type" content="image/jpeg">
-    <meta property="og:image:alt" content="رابطی | فروش عمده جوراب">
+    <meta property="og:image:alt" content="<?= htmlspecialchars($pageTitle ?? 'رابطی | فروش عمده جوراب', ENT_QUOTES, 'UTF-8') ?>">
 
-    <!-- ═══ Twitter ═══ -->
-    <meta name="twitter:card" content="summary_large_image">
-    <meta name="twitter:title" content="<?= htmlspecialchars($pageTitle ?? 'رابطی | فروش عمده جوراب', ENT_QUOTES, 'UTF-8') ?>">
-    <meta name="twitter:description" content="<?= htmlspecialchars($pageDescription ?? 'فروشگاه تخصصی خرید عمده جوراب رابطی', ENT_QUOTES, 'UTF-8') ?>">
-    <meta name="twitter:image" content="https://jorabrabeti.ir/Image/logo3.jpg">
-    <meta name="twitter:image:alt" content="رابطی | فروش عمده جوراب">
+    <!-- Twitter -->
+    <meta name="twitter:image" content="<?= htmlspecialchars($siteUrl . $ogDefaultImage, ENT_QUOTES, 'UTF-8') ?>">
+    <meta name="twitter:image:alt" content="<?= htmlspecialchars($pageTitle ?? 'رابطی | فروش عمده جوراب', ENT_QUOTES, 'UTF-8') ?>">
 
     <!-- ═══ Favicon & Icons ═══ -->
-    <link rel="icon" type="image/jpeg" href="/Image/logo3.jpg">
-    <link rel="shortcut icon" type="image/jpeg" href="/Image/logo3.jpg">
-    <link rel="apple-touch-icon" href="/Image/logo3.jpg">
-    <link rel="mask-icon" href="/Image/logo3.jpg" color="#004f53">
+    <link rel="icon" href="<?= htmlspecialchars($siteFavicon, ENT_QUOTES, 'UTF-8') ?>">
+    <link rel="shortcut icon" href="<?= htmlspecialchars($siteFavicon, ENT_QUOTES, 'UTF-8') ?>">
+    <link rel="apple-touch-icon" href="<?= htmlspecialchars($siteFavicon, ENT_QUOTES, 'UTF-8') ?>">
+    <link rel="mask-icon" href="<?= htmlspecialchars($siteFavicon, ENT_QUOTES, 'UTF-8') ?>" color="#004f53">
 
-    <link rel="stylesheet" href="/assets/css/app.css?v=49">
+    <link rel="stylesheet" href="/assets/css/app.css?v=1001">
 </head>
 
 <body class="app-body">
@@ -329,6 +312,9 @@ if (is_logged_in()) {
         <?= $content ?? '' ?>
     </main>
 
+
+    <div class="footer-line"></div>
+
     <!-- ══════════ فوتر ══════════ -->
 
     <footer class="r6-footer">
@@ -419,7 +405,7 @@ if (is_logged_in()) {
 
                 <!-- کپی‌رایت -->
                 <div class="r6-footer-bottom">
-                    <span>&copy;طراحی و سئو <b><i>FIREWEB 🔥  </i></b></span>
+                    <span>&copy;طراحی و سئو <b><i> Thurnder_Web ⚡ </i></b></span>
                 </div>
 
             </div>
@@ -751,63 +737,7 @@ if (is_logged_in()) {
 
     </ul>
 
-    <script src="/assets/js/app.js?v=25"></script>
-    <script>
-        /* ⭐ بازیابی اسکرول — بدون هیچ پرشی */
-        (function() {
-            var y = 0;
-            try {
-                var v = sessionStorage.getItem('__scroll_resume');
-                if (v) {
-                    y = parseInt(v, 10) || 0;
-                    sessionStorage.removeItem('__scroll_resume');
-                }
-            } catch (e) {}
-
-            var root = document.documentElement;
-
-            if (y <= 0) {
-                root.classList.remove('scroll-resume');
-                return;
-            }
-
-            var released = false;
-
-            function tryRestore() {
-                window.scrollTo(0, y);
-            }
-
-            function release() {
-                if (released) return;
-                released = true;
-                tryRestore();
-                root.classList.remove('scroll-resume');
-            }
-
-            /* چند بار در طول رندر تلاش کن تا layout ثابت شه */
-            tryRestore();
-
-            requestAnimationFrame(function() {
-                tryRestore();
-                requestAnimationFrame(function() {
-                    tryRestore();
-                });
-            });
-
-            if (document.readyState === 'loading') {
-                document.addEventListener('DOMContentLoaded', tryRestore);
-            }
-
-            if (document.readyState !== 'complete') {
-                window.addEventListener('load', release);
-            } else {
-                release();
-            }
-
-            /* safety — حداکثر نیم ثانیه صفحه مخفی می‌مونه */
-            setTimeout(release, 500);
-        })();
-    </script>
+    <script src="/assets/js/app.js?v=26"></script>
 
 </body>
 

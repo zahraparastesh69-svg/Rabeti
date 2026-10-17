@@ -13,6 +13,19 @@ function csrfHeaders(extra = {}) {
   return token ? { ...extra, "X-CSRF-Token": token } : extra;
 }
 
+/* ⭐ بازیابی اسکرول فقط بعد از login */
+(function () {
+  try {
+    var y = sessionStorage.getItem("__restore_scroll");
+    if (y) {
+      sessionStorage.removeItem("__restore_scroll");
+      window.addEventListener("load", function () {
+        window.scrollTo(0, parseInt(y, 10) || 0);
+      });
+    }
+  } catch (e) {}
+})();
+
 /* ══════════ آپدیت همه‌ی Badgeهای سبد ══════════ */
 window.updateCartBadges = function (count) {
   if (count === undefined || count === null) return;
@@ -146,7 +159,15 @@ document.addEventListener("click", (e) => {
   const min = parseInt(st.dataset.min || "1", 10) || 1;
   let val = stepperRead(num);
 
-  if (btn.classList.contains("plus")) val++;
+  const max = parseInt(st.dataset.max || "0", 10) || 0;
+
+  if (btn.classList.contains("plus")) {
+    val++;
+    if (max > 0 && val > max) {
+      val = max;
+      if (window.showToast) window.showToast("⚠️ حداکثر موجودی: " + max);
+    }
+  }
   if (btn.classList.contains("minus")) val = Math.max(min, val - 1);
 
   stepperWrite(num, val);
@@ -174,8 +195,15 @@ document.addEventListener(
 
     const st = inp.closest(".stepper, .r6-stepper");
     const min = parseInt(st?.dataset.min || "1", 10) || 1;
+    const max = parseInt(st.dataset.max || "0", 10) || 0;
+
     let v = parseInt(faToEn(inp.value), 10);
     if (!v || v < min) v = min;
+
+    if (max > 0 && v > max) {
+      v = max;
+      if (window.showToast) window.showToast("⚠️ حداکثر موجودی: " + max);
+    }
 
     stepperWrite(inp, v);
   },
@@ -388,7 +416,10 @@ paneLogin?.addEventListener("submit", async (e) => {
       return;
     }
 
-    closeAuthModal();
+    try {
+      sessionStorage.setItem("__restore_scroll", String(window.scrollY));
+    } catch (e) {}
+
     window.location.reload();
   } catch (errObj) {
     console.error("LOGIN_ERROR:", errObj);

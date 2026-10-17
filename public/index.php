@@ -390,7 +390,7 @@ ob_start();
 
 <!-- ═══ ۲. دسته‌بندی پریمیوم ═══ -->
 
-<link rel="stylesheet" href="/assets/css/categories-premium.css">
+<link rel="stylesheet" href="/assets/css/categories-premium.css?v=9">
 <link rel="stylesheet" href="/assets/css/home-theme.css">
 
 <section class="r-cats-premium">
@@ -737,9 +737,10 @@ ob_start();
                     <?php if ($stock > 0): ?>
 
 
-                        <div
-                            class="r6-stepper"
-                            data-min="<?= max(1, (int)$p['base_moq']) ?>">
+<div
+    class="r6-stepper"
+    data-min="<?= max(1, (int)$p['base_moq']) ?>"
+    data-max="<?= (int)($p['qty_available'] ?? 0) ?>">
 
 
                             <button

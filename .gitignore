@@ -26,3 +26,24 @@ public.backup*/
 public.BEFORE-FIX*/
 public.broken*/
 public.backup*/
+
+# Backups
+_backup_*
+public.BEFORE*
+public.broken*
+*.BEFORE-*
+
+# Test files
+test-*.php
+check-*.php
+run-migration-*.php
+*.ps1
+
+# Debug
+sms-debug.txt
+used-classes.txt
+
+# System
+.DS_Store
+Thumbs.db
+desktop.ini

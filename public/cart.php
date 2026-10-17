@@ -4,7 +4,12 @@ $__bp = [
     __DIR__ . '/../sock-b2b/config/bootstrap.php',
     __DIR__ . '/../config/bootstrap.php',
 ];
-foreach ($__bp as $__b) { if (is_file($__b)) { require_once $__b; break; } }
+foreach ($__bp as $__b) {
+    if (is_file($__b)) {
+        require_once $__b;
+        break;
+    }
+}
 unset($__bp, $__b);
 require_once ROOT_PATH . '/config/database.php';
 require_once ROOT_PATH . '/config/auth.php';
@@ -630,8 +635,73 @@ ob_start();
 
 </section>
 
+<?php if (!empty($_SESSION['reorder_report'])):
+    $rr = $_SESSION['reorder_report'];
+    unset($_SESSION['reorder_report']);
+    if (empty($rr['error'])):
+?>
+        <div class="reorder-notice" style="
+        padding: 14px 18px;
+        background: #f0f9f4;
+        border: 1px solid #b7e4c7;
+        border-radius: 12px;
+        margin-bottom: 18px;
+        font-size: 13px;
+        line-height: 1.9;
+    ">
+            <div style="font-weight: 700; color: #2e8b57; margin-bottom: 6px;">
+                ✅ <?= (int)$rr['added'] ?> محصول به سبد اضافه شد
+            </div>
+
+            <?php if (!empty($rr['skipped_off'])): ?>
+                <div style="color: #c53d3d;">⚠️ <?= (int)$rr['skipped_off'] ?> محصول دیگه در دسترس نیست</div>
+            <?php endif; ?>
+
+            <?php if (!empty($rr['skipped_oos'])): ?>
+                <div style="color: #c53d3d;">⚠️ <?= (int)$rr['skipped_oos'] ?> محصول ناموجود بود</div>
+            <?php endif; ?>
+
+            <?php if (!empty($rr['adjusted'])): ?>
+                <div style="color: #a06010;">📊 تعداد <?= (int)$rr['adjusted'] ?> محصول با موجودی/MOQ هماهنگ شد</div>
+            <?php endif; ?>
+        </div>
+<?php endif;
+endif; ?>
+
 
 <?php if ($items): ?>
+    <?php if (!empty($_SESSION['reorder_report'])):
+        $rr = $_SESSION['reorder_report'];
+        unset($_SESSION['reorder_report']);
+        if (empty($rr['error'])):
+    ?>
+            <div class="reorder-notice" style="
+        padding: 14px 18px;
+        background: #f0f9f4;
+        border: 1px solid #b7e4c7;
+        border-radius: 12px;
+        margin-bottom: 18px;
+        font-size: 13px;
+        line-height: 1.9;
+    ">
+                <div style="font-weight: 700; color: #2e8b57; margin-bottom: 6px;">
+                    ✅ <?= (int)$rr['added'] ?> محصول به سبد اضافه شد
+                </div>
+
+                <?php if (!empty($rr['skipped_off'])): ?>
+                    <div style="color: #c53d3d;">⚠️ <?= (int)$rr['skipped_off'] ?> محصول دیگه در دسترس نیست</div>
+                <?php endif; ?>
+
+                <?php if (!empty($rr['skipped_oos'])): ?>
+                    <div style="color: #c53d3d;">⚠️ <?= (int)$rr['skipped_oos'] ?> محصول ناموجود بود</div>
+                <?php endif; ?>
+
+                <?php if (!empty($rr['adjusted'])): ?>
+                    <div style="color: #a06010;">📊 تعداد <?= (int)$rr['adjusted'] ?> محصول با موجودی/MOQ هماهنگ شد</div>
+                <?php endif; ?>
+            </div>
+    <?php endif;
+    endif; ?>
 
     <div class="cart-list">
 

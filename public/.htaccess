@@ -138,4 +138,5 @@ DirectoryIndex index.php index.html
     RewriteRule ^about/?$               about.php [L,QSA]
     RewriteRule ^contact/?$             contact.php [L,QSA]
     RewriteRule ^register/?$            register.php [L,QSA]
+    RewriteRule ^api/reorder/?$         api/reorder.php [L,QSA]
 </IfModule>

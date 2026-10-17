@@ -1,10 +1,15 @@
-<?php
+﻿<?php
 /* Auto-detect bootstrap (local + host) */
 $__bp = [
     __DIR__ . '/../../sock-b2b/config/bootstrap.php',
     __DIR__ . '/../../config/bootstrap.php',
 ];
-foreach ($__bp as $__b) { if (is_file($__b)) { require_once $__b; break; } }
+foreach ($__bp as $__b) {
+    if (is_file($__b)) {
+        require_once $__b;
+        break;
+    }
+}
 unset($__bp, $__b);
 require_once ROOT_PATH . '/config/database.php';
 require_once ROOT_PATH . '/config/auth.php';
@@ -450,7 +455,6 @@ $pageTitle  = ($action === 'edit' ? 'ویرایش محصول' : 'محصول جد
 ob_start();
 ?>
 
-<link rel="stylesheet" href="/assets/css/product-form-images.css">
 
 <div style="margin-bottom:16px;">
     <a href="/admin/products" style="color:var(--teal-700);font-size:.82rem;">← بازگشت</a>
@@ -1075,5 +1079,12 @@ ob_start();
 </script>
 
 <?php
+
 $content = ob_get_clean();
+
+// ═══ CSS اختصاصی این صفحه (در admin.php لود می‌شود) ═══
+$pageCss = [
+    '/assets/css/product-form-images.css',
+];
+
 require ROOT_PATH . '/views/layouts/admin.php';

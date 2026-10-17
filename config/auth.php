@@ -16,11 +16,18 @@ function request_is_https(): bool
 }
 
 if (session_status() === PHP_SESSION_NONE) {
+    /* ⭐ Secure cookie فقط روی HTTPS */
+    $isHttps = (
+        !empty($_SERVER['HTTPS']) && $_SERVER['HTTPS'] !== 'off'
+    ) || (
+        ($_SERVER['HTTP_X_FORWARDED_PROTO'] ?? '') === 'https'
+    );
+
     session_set_cookie_params([
         'lifetime' => 0,
         'path'     => '/',
         'domain'   => '',
-        'secure'   => request_is_https(),   // روی HTTPS فقط از طریق HTTPS ارسال شود
+        'secure'   => $isHttps,
         'httponly' => true,
         'samesite' => 'Lax',
     ]);

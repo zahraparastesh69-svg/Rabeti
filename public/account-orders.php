@@ -6,7 +6,12 @@ $__bp = [
     __DIR__ . '/../sock-b2b/config/bootstrap.php',
     __DIR__ . '/../config/bootstrap.php',
 ];
-foreach ($__bp as $__b) { if (is_file($__b)) { require_once $__b; break; } }
+foreach ($__bp as $__b) {
+    if (is_file($__b)) {
+        require_once $__b;
+        break;
+    }
+}
 unset($__bp, $__b);
 require_once ROOT_PATH . '/config/database.php';
 require_once ROOT_PATH . '/config/auth.php';
@@ -187,7 +192,24 @@ ob_start();
                     <?php endif; ?>
 
                     <?php if ($o['invoice_number']): ?>
-                        <a href="/invoice-print?inv=<?= $h($o['invoice_number']) ?>" target="_blank" class="btn btn-outline">🧾 فاکتور</a>
+                        <a href="/invoice-print?inv=<?= $h($o['invoice_number']) ?>"
+                            target="_blank"
+                            class="btn btn-outline">🧾 فاکتور</a>
+                    <?php endif; ?>
+
+                    <?php if (!in_array($o['status'], ['cancelled', 'pending_review'], true)): ?>
+                        <form method="post"
+                            action="/api/reorder"
+                            style="display:none;"
+                            id="reorderForm_<?= (int)$o['id'] ?>">
+                            <?= csrf_field() ?>
+                            <input type="hidden" name="order_id" value="<?= (int)$o['id'] ?>">
+                        </form>
+                        <a href="javascript:void(0);"
+                            class="btn btn-outline"
+                            onclick="event.preventDefault(); document.getElementById('reorderForm_<?= (int)$o['id'] ?>').submit();">
+                            🔄 تکرار سفارش
+                        </a>
                     <?php endif; ?>
                 </div>
 
