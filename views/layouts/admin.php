@@ -7,33 +7,33 @@ require_admin();
 
 /*
 |--------------------------------------------------------------------------
-| Admin shared counters
+| Admin shared counters — هر خطای دیتابیس به‌جای صفحهٔ سفید، صفر برمی‌گرداند
 |--------------------------------------------------------------------------
 */
 
-$countCustom = (int) db()->query("
-    SELECT COUNT(*)
-    FROM custom_order_requests
-    WHERE status = 'new'
-")->fetchColumn();
+$adminCount = function (string $sql): int {
+    try {
+        return (int) db()->query($sql)->fetchColumn();
+    } catch (Throwable $e) {
+        return 0;
+    }
+};
 
-$countMessages = (int) db()->query("
-    SELECT COUNT(*)
-    FROM contact_messages
-    WHERE status = 'new'
-")->fetchColumn();
+$countCustom = $adminCount("SELECT COUNT(*) FROM custom_order_requests WHERE status = 'new'");
 
-$countPendingCustomers = (int) db()->query("
-    SELECT COUNT(*)
-    FROM companies
-    WHERE status = 'pending'
-")->fetchColumn();
+$countMessages = $adminCount("SELECT COUNT(*) FROM contact_messages WHERE status = 'new'");
 
-$countPendingOrders = (int) db()->query("
+$countPendingCustomers = $adminCount("SELECT COUNT(*) FROM companies WHERE status = 'pending'");
+
+$countPendingOrders = $adminCount("
     SELECT COUNT(*)
     FROM orders
-    WHERE status IN ('pending', 'processing')
-")->fetchColumn();
+    WHERE status IN ('pending_review', 'processing')
+       OR fulfillment_status IN ('pending', 'processing')
+       OR payment_status = 'pending_verification'
+");
+
+unset($adminCount);
 
 $adminPageTitle = $pageTitle ?? 'پنل مدیریت';
 $activeMenu     = $activeMenu ?? '';
@@ -157,6 +157,19 @@ if (!function_exists('admin_icon')) {
                     <path d="M19 14v4a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V7a2 2 0 0 1 2-2h4"></path>
                 </svg>
             ',
+
+            'settings' => '
+                <svg viewBox="0 0 24 24" aria-hidden="true">
+                    <circle cx="12" cy="12" r="3"></circle>
+                    <path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1Z"></path>
+                </svg>
+            ',
+
+            'chevron' => '
+                <svg viewBox="0 0 24 24" aria-hidden="true">
+                    <path d="M6 9l6 6 6-6"></path>
+                </svg>
+            ',
         ];
 
         return $icons[$name] ?? '';
@@ -169,129 +182,114 @@ if (!function_exists('admin_icon')) {
 |--------------------------------------------------------------------------
 */
 
+/*
+|--------------------------------------------------------------------------
+| Menu structure — 8 collapsible sections (single-open accordion)
+|--------------------------------------------------------------------------
+*/
+
 $menuGroups = [
 
+    /* ── لینک ثابت بالای منو ── */
     [
-        'label' => null,
+        'type'  => 'link',
         'items' => [
-            [
-                'key'   => 'dashboard',
-                'label' => 'داشبورد',
-                'url'   => '/admin',
-                'icon'  => 'dashboard',
-            ],
+            ['key' => 'dashboard', 'label' => 'داشبورد', 'url' => '/admin', 'icon' => 'dashboard'],
         ],
     ],
 
+    /* ── ۱. سفارش‌ها و ارسال ── */
     [
-        'label' => 'تنظیمات فروش',
+        'type'  => 'section',
+        'key'   => 'sec-orders',
+        'label' => 'سفارش‌ها و ارسال',
+        'icon'  => 'orders',
         'items' => [
+            ['key' => 'orders',    'label' => 'سفارش‌ها',        'url' => '/admin/orders',       'icon' => 'orders',    'badge' => $countPendingOrders],
+            ['key' => 'shipments', 'label' => 'ارسال و مرجوعی', 'url' => '/admin/shipments',     'icon' => 'inventory'],
+            ['key' => 'custom',    'label' => 'سفارش اختصاصی',  'url' => '/admin/custom-orders', 'icon' => 'custom',     'badge' => $countCustom],
+        ],
+    ],
+
+    /* ── ۲. مالی ── */
+    [
+        'type'  => 'section',
+        'key'   => 'sec-finance',
+        'label' => 'مالی',
+        'icon'  => 'payment',
+        'items' => [
+            ['key' => 'payments',    'label' => 'پرداخت‌ها',         'url' => '/admin/payments',      'icon' => 'payment'],
+            ['key' => 'receivables', 'label' => 'مطالبات و سررسید', 'url' => '/admin/receivables',   'icon' => 'invoice'],
+            ['key' => 'reports',     'label' => 'دفتر مالی',         'url' => '/admin/report-ledger', 'icon' => 'invoice'],
+        ],
+    ],
+
+    /* ── ۳. کاتالوگ و انبار ── */
+    [
+        'type'  => 'section',
+        'key'   => 'sec-catalog',
+        'label' => 'کاتالوگ و انبار',
+        'icon'  => 'products',
+        'items' => [
+            ['key' => 'products',               'label' => 'محصولات',          'url' => '/admin/products',           'icon' => 'products'],
+            ['key' => 'categories',             'label' => 'دسته‌بندی‌ها',     'url' => '/admin/categories',         'icon' => 'categories'],
+            ['key' => 'brand-settings',         'label' => 'تنظیمات برند',     'url' => '/admin/brand-settings',     'icon' => 'banner'],
+            ['key' => 'inventory-movements',     'label' => 'سود موجودی',        'url' => '/admin/inventory-movements', 'icon' => 'inventory'],
+            ['key' => 'inventory-stock-in',      'label' => 'ورود کالا (رسید)', 'url' => '/admin/stock-in',            'icon' => 'inventory'],
+            ['key' => 'inventory-stock-adjust',  'label' => 'اصلاح موجودی',     'url' => '/admin/stock-adjust',       'icon' => 'inventory'],
+            ['key' => 'reports-inv',             'label' => 'موجودی و فروش',    'url' => '/admin/report-inventory',   'icon' => 'inventory'],
+        ],
+    ],
+
+    /* ── ۴. مشتریان و ارتباطات ── */
+    [
+        'type'  => 'section',
+        'key'   => 'sec-customers',
+        'label' => 'مشتریان و ارتباطات',
+        'icon'  => 'customers',
+        'items' => [
+            ['key' => 'customers', 'label' => 'مشتریان', 'url' => '/admin/customers', 'icon' => 'customers', 'badge' => $countPendingCustomers],
+            ['key' => 'messages',  'label' => 'پیام‌ها',  'url' => '/admin/messages',   'icon' => 'message',   'badge' => $countMessages],
+        ],
+    ],
+
+    /* ── ۵. بازاریابی و تبلیغات ── */
+    [
+        'type'  => 'section',
+        'key'   => 'sec-marketing',
+        'label' => 'بازاریابی و تبلیغات',
+        'icon'  => 'banner',
+        'items' => [
+            ['key' => 'banners',   'label' => 'بنرها',            'url' => '/admin/banners',   'icon' => 'banner'],
+            ['key' => 'instagram', 'label' => 'گالری اینستاگرام', 'url' => '/admin/instagram', 'icon' => 'banner'],
+        ],
+    ],
+
+    /* ── ۶. گزارش‌گیری ── */
+    [
+        'type'  => 'section',
+        'key'   => 'sec-reports',
+        'label' => 'گزارش‌گیری',
+        'icon'  => 'invoice',
+        'items' => [
+            ['key' => 'reports-discount', 'label' => 'گزارش تخفیف‌ها', 'url' => '/admin/report-discounts', 'icon' => 'invoice'],
+            ['key' => 'reports-ship',     'label' => 'گزارش ارسال',    'url' => '/admin/report-shipping',   'icon' => 'inventory'],
+        ],
+    ],
+
+    /* ── ۷. تنظیمات سیستم ── */
+    [
+        'type'  => 'section',
+        'key'   => 'sec-system',
+        'label' => 'تنظیمات سیستم',
+        'icon'  => 'settings',
+        'items' => [
+            ['key' => 'system-users',      'label' => 'کاربران ادمین',     'url' => '/admin/users',             'icon' => 'customers'],
             ['key' => 'shipping-settings', 'label' => 'ارسال و زمان‌بندی', 'url' => '/admin/shipping-settings', 'icon' => 'inventory'],
             ['key' => 'price-update',      'label' => 'تغییر گروهی قیمت',  'url' => '/admin/price-update',      'icon' => 'products'],
-        ],
-    ],
-
-    [
-        'label' => 'فروش',
-        'items' => [
-            [
-                'key'   => 'orders',
-                'label' => 'سفارش‌ها',
-                'url'   => '/admin/orders',
-                'icon'  => 'orders',
-                'badge' => $countPendingOrders,
-            ],
-            [
-                'key'   => 'payments',
-                'label' => 'پرداخت‌ها',
-                'url'   => '/admin/payments',
-                'icon'  => 'payment',
-            ],
-        ],
-    ],
-
-    [
-        'label' => 'کاتالوگ',
-        'items' => [
-            [
-                'key'   => 'products',
-                'label' => 'محصولات',
-                'url'   => '/admin/products',
-                'icon'  => 'products',
-            ],
-            [
-                'key'   => 'categories',
-                'label' => 'دسته‌بندی‌ها',
-                'url'   => '/admin/categories',
-                'icon'  => 'categories',
-            ],
-            [
-                'key' => 'brand-settings',
-                'label' => 'تنظیمات برند',
-                'url' => '/admin/brand-settings',
-                'icon' => 'banner'
-            ],
-        ],
-    ],
-
-    [
-        'label' => 'مشتریان',
-        'items' => [
-            [
-                'key'   => 'customers',
-                'label' => 'مشتریان',
-                'url'   => '/admin/customers',
-                'icon'  => 'customers',
-                'badge' => $countPendingCustomers,
-            ],
-        ],
-    ],
-
-    [
-        'label' => 'ارتباطات',
-        'items' => [
-            [
-                'key'   => 'custom',
-                'label' => 'سفارش اختصاصی',
-                'url'   => '/admin/custom-orders',
-                'icon'  => 'custom',
-                'badge' => $countCustom,
-            ],
-            [
-                'key'   => 'messages',
-                'label' => 'پیام‌ها',
-                'url'   => '/admin/messages',
-                'icon'  => 'message',
-                'badge' => $countMessages,
-            ],
-        ],
-    ],
-    [
-        'label' => 'گزارشات',
-        'items' => [
-            ['key' => 'reports',          'label' => 'دفتر مالی',        'url' => '/admin/report-ledger',    'icon' => 'invoice'],
-            ['key' => 'reports-inv',      'label' => 'موجودی و فروش',    'url' => '/admin/report-inventory', 'icon' => 'inventory'],
-            ['key' => 'reports-discount', 'label' => 'گزارش تخفیف‌ها',   'url' => '/admin/report-discounts', 'icon' => 'invoice'],
-            ['key' => 'reports-ship',     'label' => 'گزارش ارسال',      'url' => '/admin/report-shipping',  'icon' => 'invoice'],
-            ['key' => 'price-update',     'label' => 'تغییر گروهی قیمت', 'url' => '/admin/price-update',     'icon' => 'products'],
-        ],
-    ],
-
-    [
-        'label' => 'بازاریابی',
-        'items' => [
-            [
-                'key'   => 'banners',
-                'label' => 'بنرها',
-                'url'   => '/admin/banners',
-                'icon'  => 'banner',
-            ],
-            [
-                'key'   => 'instagram',
-                'label' => 'گالری اینستاگرام',
-                'url'   => '/admin/instagram',
-                'icon'  => 'banner',
-            ],
+            ['key' => 'system-audit',       'label' => 'رویدادها',          'url' => '/admin/audit',             'icon' => 'invoice'],
+            ['key' => 'system-backup',      'label' => 'پشتیبان‌گیری',      'url' => '/admin/backup',            'icon' => 'banner'],
+            ['key' => 'profile',            'label' => 'پروفایل مدیر',     'url' => '/admin/profile',           'icon' => 'customers'],
         ],
     ],
 ];
@@ -317,8 +315,13 @@ $menuGroups = [
         href="https://fonts.googleapis.com/css2?family=Vazirmatn:wght@400;500;600;700;800&display=swap"
         rel="stylesheet">
 
-    <link rel="stylesheet" href="/assets/css/app.css?v=30">
-    <link rel="stylesheet" href="/assets/css/admin.css?v=30">
+    <link rel="stylesheet" href="/assets/css/admin.css?v=1012">
+
+    <?php if (!empty($pageStyles)): ?>
+        <!-- استایل‌های اختصاصی صفحه -->
+        <?= $pageStyles ?>
+    <?php endif; ?>
+
 </head>
 
 <body class="admin-body">
@@ -355,26 +358,23 @@ $menuGroups = [
 
                 <nav class="admin-nav" aria-label="منوی مدیریت">
 
+                    <?php
+                    // مسیر درخواست جاری (بدون query string) برای تشخیص آیتم فعال بر اساس URL
+                    $requestPath = parse_url($_SERVER['REQUEST_URI'] ?? '', PHP_URL_PATH) ?: '';
+                    ?>
+
                     <?php foreach ($menuGroups as $group): ?>
 
-                        <?php if (!empty($group['label'])): ?>
-                            <div class="admin-nav-group-label">
-                                <?= htmlspecialchars($group['label'], ENT_QUOTES, 'UTF-8') ?>
-                            </div>
-                        <?php endif; ?>
+                        <?php if (($group['type'] ?? 'section') === 'link'): ?>
 
-                        <div class="admin-nav-group">
-
-                            <?php foreach ($group['items'] as $item): ?>
-
-                                <?php
-                                $isActive = $activeMenu === $item['key'];
+                            <?php foreach ($group['items'] as $item):
+                                $isActive = ($activeMenu === $item['key']) || ($requestPath === $item['url']);
                                 $badge    = isset($item['badge']) ? (int)$item['badge'] : 0;
-                                ?>
+                            ?>
 
                                 <a
                                     href="<?= htmlspecialchars($item['url'], ENT_QUOTES, 'UTF-8') ?>"
-                                    class="admin-nav-link<?= $isActive ? ' is-active' : '' ?>"
+                                    class="admin-nav-link admin-nav-link--single<?= $isActive ? ' is-active' : '' ?>"
                                     <?= $isActive ? 'aria-current="page"' : '' ?>>
 
                                     <span class="admin-nav-icon">
@@ -394,6 +394,87 @@ $menuGroups = [
                                 </a>
 
                             <?php endforeach; ?>
+
+                        <?php continue;
+                        endif; ?>
+
+                        <?php
+                        // بخش تاشو: آیا آیتم فعالی در این بخش وجود دارد؟
+                        $sectionHasActive = false;
+                        $sectionBadge     = 0;
+                        foreach ($group['items'] as $item) {
+                            if (($activeMenu === $item['key']) || ($requestPath === $item['url'])) {
+                                $sectionHasActive = true;
+                            }
+                            if (isset($item['badge'])) {
+                                $sectionBadge += (int)$item['badge'];
+                            }
+                        }
+                        $sectionId = htmlspecialchars($group['key'], ENT_QUOTES, 'UTF-8');
+                        ?>
+
+                        <div class="admin-nav-section<?= $sectionHasActive ? ' is-open' : '' ?>" data-section>
+
+                            <button
+                                type="button"
+                                class="admin-nav-section-head"
+                                aria-expanded="<?= $sectionHasActive ? 'true' : 'false' ?>"
+                                aria-controls="<?= $sectionId ?>"
+                                data-section-toggle>
+
+                                <span class="admin-nav-icon">
+                                    <?= admin_icon($group['icon']) ?>
+                                </span>
+
+                                <span class="admin-nav-section-title">
+                                    <?= htmlspecialchars($group['label'], ENT_QUOTES, 'UTF-8') ?>
+                                </span>
+
+                                <?php if ($sectionBadge > 0): ?>
+                                    <span class="admin-nav-section-badge">
+                                        <?= $sectionBadge > 99 ? '99+' : $sectionBadge ?>
+                                    </span>
+                                <?php endif; ?>
+
+                                <span class="admin-nav-chevron" aria-hidden="true">
+                                    <?= admin_icon('chevron') ?>
+                                </span>
+
+                            </button>
+
+                            <div class="admin-nav-section-body" id="<?= $sectionId ?>">
+                                <div class="admin-nav-section-inner">
+
+                                    <?php foreach ($group['items'] as $item):
+                                        $isActive = ($activeMenu === $item['key']) || ($requestPath === $item['url']);
+                                        $badge    = isset($item['badge']) ? (int)$item['badge'] : 0;
+                                    ?>
+
+                                        <a
+                                            href="<?= htmlspecialchars($item['url'], ENT_QUOTES, 'UTF-8') ?>"
+                                            class="admin-nav-link<?= $isActive ? ' is-active' : '' ?>"
+                                            <?= $isActive ? 'aria-current="page"' : '' ?>>
+
+                                            <span class="admin-nav-icon">
+                                                <?= admin_icon($item['icon']) ?>
+                                            </span>
+
+                                            <span class="admin-nav-text">
+                                                <?= htmlspecialchars($item['label'], ENT_QUOTES, 'UTF-8') ?>
+                                            </span>
+
+                                            <?php if ($badge > 0): ?>
+                                                <span class="admin-nav-badge">
+                                                    <?= $badge > 99 ? '99+' : $badge ?>
+                                                </span>
+                                            <?php endif; ?>
+
+                                        </a>
+
+                                    <?php endforeach; ?>
+
+                                </div>
+                            </div>
 
                         </div>
 
@@ -522,7 +603,8 @@ $menuGroups = [
     </div>
 
 
-    <script src="/assets/js/admin.js?v=4"></script>
+    <script src="/assets/js/jalali.js?v=1012"></script>
+    <script src="/assets/js/admin.js?v=1012"></script>
 
 </body>
 

@@ -56,6 +56,24 @@ foreach ($rows as $r) $grandTotal += (int)$r['fee'];
 
 $methodLabels = ['peyk' => 'پیک', 'post' => 'پست', 'in_person' => 'حضوری'];
 
+/* ═══ خروجی CSV ═══ */
+if (($_GET['export'] ?? '') === 'csv') {
+    require_once ROOT_PATH . '/app/services/CsvExporter.php';
+    $csv = new CsvExporter('shipping-' . date('Y-m-d'));
+    $csv->header(['تاریخ', 'روش', 'شهر', 'شماره سفارش', 'مشتری', 'هزینه (تومان)']);
+    foreach ($rows as $r) {
+        $csv->row([
+            $r['delivery_date'],
+            $r['method'],
+            $r['ship_city'],
+            $r['order_number'],
+            $r['full_name'],
+            (int)$r['fee'],
+        ]);
+    }
+    $csv->end();
+}
+
 $pageTitle  = 'گزارش هزینه‌های ارسال';
 $activeMenu = 'reports';
 
@@ -70,6 +88,10 @@ ob_start();
 </section>
 
 <?php fin_rangeForm('/admin/report-shipping'); ?>
+
+<div style="text-align:left;margin:8px 0 14px;">
+    <a href="?export=csv&from=<?= $h($from) ?>&to=<?= $h($to) ?>" class="btn btn-orange" style="padding:7px 16px;font-size:.78rem;">⬇ خروجی CSV</a>
+</div>
 
 <!-- ═══ خلاصه به تفکیک روش ═══ -->
 <div class="admin-table-wrap" style="margin-bottom:20px;">

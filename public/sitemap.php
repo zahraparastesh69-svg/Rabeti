@@ -5,17 +5,22 @@ $__bp = [
     __DIR__ . '/../sock-b2b/config/bootstrap.php',
     __DIR__ . '/../config/bootstrap.php',
 ];
-foreach ($__bp as $__b) { if (is_file($__b)) { require_once $__b; break; } }
+foreach ($__bp as $__b) {
+    if (is_file($__b)) {
+        require_once $__b;
+        break;
+    }
+}
 unset($__bp, $__b);
 require_once ROOT_PATH . '/config/database.php';
 
-/* [مسیر، priority، changefreq] */
+/* [مسیر، priority، changefreq, lastmod] */
 $urls = [
-    ['/',             '1.0', 'daily'],
-    ['/products',     '0.9', 'daily'],
-    ['/custom-order', '0.7', 'monthly'],
-    ['/about',        '0.5', 'monthly'],
-    ['/contact',      '0.5', 'monthly'],
+    ['/',             '1.0', 'daily',   null],
+    ['/products',     '0.9', 'daily',   null],
+    ['/custom-order', '0.7', 'monthly', null],
+    ['/about',        '0.5', 'monthly', null],
+    ['/contact',      '0.5', 'monthly', null],
 ];
 
 try {
@@ -27,21 +32,28 @@ try {
     ")->fetchAll(PDO::FETCH_COLUMN);
 
     foreach ($categories as $slug) {
-        $urls[] = ['/products?cat=' . rawurlencode($slug), '0.8', 'weekly'];
+        $urls[] = ['/products?cat=' . rawurlencode($slug), '0.8', 'weekly', null];
     }
 
     $products = db()->query("
-        SELECT p.slug
+        SELECT p.slug, p.updated_at
         FROM products p
         JOIN categories c ON c.id = p.category_id
         WHERE p.is_active = 1
         ORDER BY p.id
-    ")->fetchAll(PDO::FETCH_COLUMN);
+    ")->fetchAll(PDO::FETCH_ASSOC);
 
-    foreach ($products as $slug) {
-        /* فقط slugهایی که RewriteRule مسیر /product/... می‌پذیرد */
-        if (preg_match('/^[a-zA-Z0-9\-]+$/', (string)$slug)) {
-            $urls[] = ['/product/' . $slug, '0.8', 'weekly'];
+    foreach ($products as $p) {
+        $slug = (string)$p['slug'];
+        if (preg_match('/^[a-zA-Z0-9\-]+$/', $slug)) {
+            $lastmod = null;
+            if (!empty($p['updated_at'])) {
+                $ts = strtotime((string)$p['updated_at']);
+                if ($ts !== false) {
+                    $lastmod = date('c', $ts);
+                }
+            }
+            $urls[] = ['/product/' . $slug, '0.8', 'weekly', $lastmod];
         }
     }
 } catch (Throwable $e) {
@@ -54,12 +66,17 @@ header('Cache-Control: public, max-age=3600');
 echo '<?xml version="1.0" encoding="UTF-8"?>', "\n";
 echo '<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">', "\n";
 
-foreach ($urls as [$path, $priority, $changefreq]) {
+foreach ($urls as $u) {
+    [$path, $priority, $changefreq, $lastmod] = $u;
     echo '    <url><loc>',
-        htmlspecialchars(SITE_URL . $path, ENT_XML1 | ENT_QUOTES, 'UTF-8'),
-        '</loc><changefreq>', $changefreq,
-        '</changefreq><priority>', $priority,
-        '</priority></url>', "\n";
+    htmlspecialchars(SITE_URL . $path, ENT_XML1 | ENT_QUOTES, 'UTF-8'),
+    '</loc>';
+    if ($lastmod) {
+        echo '<lastmod>', $lastmod, '</lastmod>';
+    }
+    echo '<changefreq>', $changefreq,
+    '</changefreq><priority>', $priority,
+    '</priority></url>', "\n";
 }
 
 echo '</urlset>', "\n";

@@ -88,7 +88,7 @@ try {
             oi.qty            AS old_qty,
             p.is_active,
             p.base_moq,
-            COALESCE(inv.qty_available, 0) AS available
+            GREATEST(0, COALESCE(inv.qty_physical, 0) - COALESCE(inv.reserved, 0) - COALESCE(inv.unsellable, 0)) AS available
         FROM order_items oi
         INNER JOIN products p ON p.id = oi.product_id
         LEFT JOIN inventory inv ON inv.product_id = oi.product_id

@@ -862,32 +862,25 @@ final class ShippingService
         string $province
     ): string {
 
-        $province = trim(
-            $province
-        );
+        $province = trim($province);
 
         /*
-         * یکسان‌سازی حروف فارسی
-         */
+     * حذف پیشوند «استان» (با فاصله یا بدون فاصله)
+     * مثال: «استان تهران» → «تهران»
+     */
+        $province = preg_replace('/^استان\s+/u', '', $province);
+        $province = preg_replace('/^استان/u', '', $province);
+
+        /*
+     * یکسان‌سازی حروف فارسی
+     */
         $province = str_replace(
-            [
-                'ي',
-                'ى',
-                'ك',
-                'ۀ',
-                'ه‌',
-            ],
-            [
-                'ی',
-                'ی',
-                'ک',
-                'ه',
-                'ه',
-            ],
+            ['ي', 'ى', 'ك', 'ۀ', 'ه‌'],
+            ['ی', 'ی', 'ک', 'ه', 'ه'],
             $province
         );
 
-        return $province;
+        return trim($province);
     }
 
     /**

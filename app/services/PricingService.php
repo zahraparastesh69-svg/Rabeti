@@ -3,140 +3,292 @@
 declare(strict_types=1);
 
 /**
- * Central pricing service
+ * Central Pricing Service — v2 Final- PricingService.php
  *
- * مسئول محاسبه قیمت نهایی محصول بر اساس:
- * - قیمت پایه
- * - تعداد سفارش
- * - تخفیف‌های پلکانی product_prices
+ * ══════════════════════════════════════════════════════════════════
+ * قانون قیمت‌گذاری (اولویت‌بندی، نه انباشت):
+ * ══════════════════════════════════════════════════════════════════
  *
- * قانون:
- * بالاترین min_qty که <= qty باشد، اعمال می‌شود.
+ *   ۱. اگر گروه ∈ {bronze, silver, gold}:
+ *        قیمت واحد = base_price × (۱ - تخفیف گروه)
+ *        (تخفیف پله‌ای نادیده گرفته می‌شود)
+ *
+ *   ۲. اگر گروه ∈ {regular, null}:
+ *        قیمت واحد = base_price × (۱ - تخفیف پله‌ای)
+ *        (تخفیف گروه = ۰)
+ *
+ *   ۳. هیچ‌کدام: قیمت واحد = base_price
+ *
+ * ══════════════════════════════════════════════════════════════════
+ * قاعده گرد کردن (طبق تصمیم کسب‌وکار):
+ * ══════════════════════════════════════════════════════════════════
+ *
+ *   همه قیمت‌های نهایی به مضرب ۱۰۰۰ تومان گرد می‌شوند
+ *   (۳ رقم آخر همیشه صفر).
+ *
+ *   مثال: ۴۴۲,۳۵۰ → ۴۴۲,۰۰۰
+ *         ۴۴۲,۷۵۰ → ۴۴۳,۰۰۰
+ *
+ * ══════════════════════════════════════════════════════════════════
+ * وابستگی دیتابیس:
+ * ══════════════════════════════════════════════════════════════════
+ *
+ *   - products.base_price              (قیمت پایه محصول)
+ *   - customer_groups                  (۴ گروه: regular, bronze, silver, gold)
+ *   - product_tier_discounts           (پله‌های درصدی)
+ *   - product_prices                   (legacy fallback برای base_price)
  */
 final class PricingService
 {
-    /**
-     * دریافت tierهای قیمت عمده محصول.
-     */
-    public static function getWholesaleTiers(
-        PDO $db,
-        int $productId
-    ): array {
-        $stmt = $db->prepare("
-            SELECT
-                min_qty,
-                price
-            FROM product_prices
-            WHERE product_id = ?
-              AND customer_group = 'wholesale'
-            ORDER BY min_qty ASC
+    /** کش گروه‌ها در طول یک درخواست */
+    private static ?array $groupsCache = null;
+
+    /** مضرب گرد کردن قیمت (تومان) */
+    private const ROUND_FACTOR = 1000;
+
+    /** گروه‌هایی که تخفیف سطح می‌گیرند (پله‌ای برایشان اعمال نمی‌شود) */
+    private const TIER_GROUP_CODES = ['bronze', 'silver', 'gold'];
+
+    /* ═══════════════════════════════════════════════════════════════
+       گروه‌ها
+    ═══════════════════════════════════════════════════════════════ */
+
+    public static function getGroups(PDO $db): array
+    {
+        if (self::$groupsCache !== null) {
+            return self::$groupsCache;
+        }
+
+        $stmt = $db->query("
+            SELECT code, name, discount_percent, min_purchase_jin, sort_order
+            FROM customer_groups
+            WHERE is_active = 1
+            ORDER BY sort_order, id
         ");
 
-        $stmt->execute([
-            $productId
-        ]);
+        self::$groupsCache = [];
+        foreach ($stmt->fetchAll(PDO::FETCH_ASSOC) as $row) {
+            self::$groupsCache[$row['code']] = [
+                'code'             => $row['code'],
+                'name'             => $row['name'],
+                'discount_percent' => (float)$row['discount_percent'],
+                'min_purchase_jin' => (int)$row['min_purchase_jin'],
+                'sort_order'       => (int)$row['sort_order'],
+            ];
+        }
 
-        return $stmt->fetchAll(PDO::FETCH_ASSOC);
+        return self::$groupsCache;
     }
 
+    public static function getGroup(PDO $db, ?string $code): ?array
+    {
+        if ($code === null || $code === '') {
+            return null;
+        }
+        return self::getGroups($db)[$code] ?? null;
+    }
+
+    /* ═══════════════════════════════════════════════════════════════
+       قیمت پایه
+    ═══════════════════════════════════════════════════════════════ */
+
+    public static function getBasePrice(PDO $db, int $productId): int
+    {
+        $stmt = $db->prepare("SELECT base_price FROM products WHERE id = ?");
+        $stmt->execute([$productId]);
+        $basePrice = (int)$stmt->fetchColumn();
+
+        if ($basePrice > 0) {
+            return $basePrice;
+        }
+
+        // Fallback legacy: قیمت wholesale min_qty=1
+        $stmt = $db->prepare("
+            SELECT price FROM product_prices
+            WHERE product_id = ? AND customer_group = 'wholesale' AND min_qty = 1
+            LIMIT 1
+        ");
+        $stmt->execute([$productId]);
+        $legacy = (int)($stmt->fetchColumn() ?: 0);
+
+        if ($legacy > 0) {
+            return $legacy;
+        }
+
+        // Fallback دوم: هر گروهی، min_qty=1
+        $stmt = $db->prepare("
+            SELECT price FROM product_prices
+            WHERE product_id = ? AND min_qty = 1 AND price > 0
+            ORDER BY id DESC
+            LIMIT 1
+        ");
+        $stmt->execute([$productId]);
+
+        return (int)($stmt->fetchColumn() ?: 0);
+    }
+
+    /* ═══════════════════════════════════════════════════════════════
+       پله‌ها
+    ═══════════════════════════════════════════════════════════════ */
+
     /**
-     * محاسبه قیمت برای یک تعداد مشخص.
+     * @return array<int, array{min_qty:int, discount_percent:float}>
+     */
+    public static function getTiers(PDO $db, int $productId): array
+    {
+        $stmt = $db->prepare("
+            SELECT min_qty, discount_percent
+            FROM product_tier_discounts
+            WHERE product_id = ? AND is_active = 1
+            ORDER BY min_qty ASC
+        ");
+        $stmt->execute([$productId]);
+
+        $rows = $stmt->fetchAll(PDO::FETCH_ASSOC);
+
+        return array_map(static fn($r) => [
+            'min_qty'          => (int)$r['min_qty'],
+            'discount_percent' => (float)$r['discount_percent'],
+        ], $rows);
+    }
+
+    /* ═══════════════════════════════════════════════════════════════
+       گرد کردن
+    ═══════════════════════════════════════════════════════════════ */
+
+    /**
+     * گرد کردن قیمت به نزدیک‌ترین مضرب ۱۰۰۰ تومان.
+     * مثال: 442,350 → 442,000 | 442,750 → 443,000
+     */
+    public static function roundPrice(int $price): int
+    {
+        if ($price <= 0) {
+            return 0;
+        }
+        return (int)(round($price / self::ROUND_FACTOR) * self::ROUND_FACTOR);
+    }
+
+    /* ═══════════════════════════════════════════════════════════════
+       محاسبه نهایی
+    ═══════════════════════════════════════════════════════════════ */
+
+    /**
+     * محاسبه قیمت نهایی محصول برای یک تعداد و گروه.
      *
-     * خروجی:
-     * [
-     *   base_unit_price,
-     *   unit_price,
-     *   discount_percent,
-     *   discount_per_unit,
-     *   discount_amount,
-     *   qty,
-     *   line_total,
-     *   base_line_total
-     * ]
+     * @return array{
+     *   base_price:int,
+     *   unit_price:int,
+     *   qty:int,
+     *   line_total:int,
+     *   base_line_total:int,
+     *   discount_source:'none'|'group'|'tier',
+     *   discount_percent:float,
+     *   discount_amount:int,
+     *   group:?array,
+     *   tier_applied:?array{min_qty:int, discount_percent:float},
+     *   customer_message:string
+     * }
      */
     public static function calculate(
-        int $basePrice,
-        array $tiers,
-        int $qty
+        PDO $db,
+        int $productId,
+        int $qty,
+        ?string $groupCode = 'regular'
     ): array {
         $qty = max(0, $qty);
-        $basePrice = max(0, $basePrice);
 
-        $unitPrice = $basePrice;
-        $discountPercent = 0.0;
+        $basePrice = self::getBasePrice($db, $productId);
+        $group     = self::getGroup($db, $groupCode);
 
-        /*
-         * بالاترین tier قابل اعمال را پیدا می‌کنیم.
-         */
-        foreach ($tiers as $tier) {
+        $isTierGroup = $group !== null
+            && in_array($group['code'], self::TIER_GROUP_CODES, true);
 
-            $minQty = (int)($tier['min_qty'] ?? 0);
-            $price  = (int)($tier['price'] ?? 0);
+        $unitPrice        = $basePrice;
+        $discountPercent  = 0.0;
+        $source           = 'none';
+        $tierApplied      = null;
+        $customerMessage  = 'قیمت عادی';
 
-            if (
-                $minQty > 0
-                && $minQty <= $qty
-                && $price > 0
-            ) {
-                $unitPrice = $price;
+        /* ─── ۱) تخفیف سطح مشتری ─── */
+        if ($isTierGroup && $group['discount_percent'] > 0) {
+            $discountPercent = (float)$group['discount_percent'];
+            $rawPrice        = (int)round($basePrice * (1 - $discountPercent / 100));
+            $unitPrice       = self::roundPrice($rawPrice);
+            $source          = 'group';
 
-                /*
-                 * درصد تخفیف واقعی نسبت به قیمت پایه.
-                 */
-                if ($basePrice > 0 && $price < $basePrice) {
+            $customerMessage = sprintf(
+                'تخفیف سطح %s %s٪',
+                $group['name'],
+                self::formatPercent($discountPercent)
+            );
+        }
+        /* ─── ۲) تخفیف پله‌ای (فقط regular) ─── */ else {
+            $tiers = self::getTiers($db, $productId);
 
-                    $discountPercent =
-                        (($basePrice - $price) / $basePrice) * 100;
+            foreach ($tiers as $tier) {
+                $minQty = $tier['min_qty'];
+                if ($minQty > 0 && $minQty <= $qty) {
+                    $tierApplied     = $tier;
+                    $discountPercent = $tier['discount_percent'];
                 }
+            }
+
+            if ($tierApplied !== null && $discountPercent > 0) {
+                $rawPrice  = (int)round($basePrice * (1 - $discountPercent / 100));
+                $unitPrice = self::roundPrice($rawPrice);
+                $source    = 'tier';
+
+                $customerMessage = sprintf(
+                    'تخفیف خرید %s عدد %s٪',
+                    number_format($tierApplied['min_qty']),
+                    self::formatPercent($discountPercent)
+                );
             }
         }
 
-        $discountPerUnit =
-            max(0, $basePrice - $unitPrice);
+        /* ─── جمع‌ها ─── */
+        $lineTotal      = $unitPrice * $qty;
+        $baseLineTotal  = $basePrice * $qty;
+        $discountAmount = max(0, $baseLineTotal - $lineTotal);
 
-        $baseLineTotal =
-            $basePrice * $qty;
-
-        $lineTotal =
-            $unitPrice * $qty;
-
-        $discountAmount =
-            max(
-                0,
-                $baseLineTotal - $lineTotal
-            );
+        /* درصد واقعی تخفیف (برای نمایش) */
+        $effectiveDiscount = $basePrice > 0
+            ? round((($basePrice - $unitPrice) / $basePrice) * 100, 2)
+            : 0.0;
 
         return [
-            'base_unit_price'   => $basePrice,
-            'unit_price'        => $unitPrice,
-            'discount_percent'  => round($discountPercent, 2),
-            'discount_per_unit' => $discountPerUnit,
-            'discount_amount'   => $discountAmount,
-            'qty'               => $qty,
-            'base_line_total'   => $baseLineTotal,
-            'line_total'        => $lineTotal,
+            'base_price'       => $basePrice,
+            'unit_price'       => $unitPrice,
+            'qty'              => $qty,
+            'line_total'       => $lineTotal,
+            'base_line_total'  => $baseLineTotal,
+            'discount_source'  => $source,
+            'discount_percent' => $effectiveDiscount,
+            'discount_amount'  => $discountAmount,
+            'group'            => $group,
+            'tier_applied'     => $tierApplied,
+            'customer_message' => $customerMessage,
         ];
     }
 
-    /**
-     * محاسبه قیمت بر اساس product_id و تعداد.
-     */
-    public static function calculateForProduct(
-        PDO $db,
-        int $productId,
-        int $basePrice,
-        int $qty
-    ): array {
-        $tiers =
-            self::getWholesaleTiers(
-                $db,
-                $productId
-            );
+    /* ═══════════════════════════════════════════════════════════════
+       کمکی‌ها
+    ═══════════════════════════════════════════════════════════════ */
 
-        return self::calculate(
-            $basePrice,
-            $tiers,
-            $qty
-        );
+    private static function formatPercent(float $p): string
+    {
+        $rounded = round($p, 2);
+        if ($rounded == (int)$rounded) {
+            return number_format((int)$rounded);
+        }
+        return rtrim(rtrim(number_format($rounded, 2, '.', ''), '0'), '.');
+    }
+
+    /**
+     * پاک کردن کش (در تست‌ها یا وقتی گروه‌ها تغییر می‌کنند).
+     */
+    public static function clearCache(): void
+    {
+        self::$groupsCache = null;
     }
 }

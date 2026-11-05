@@ -1,29 +1,270 @@
 ﻿/* ═══════════════════════════════════════════════════════
-   Product Detail — Premium B2B
+   Product Detail — Final 9.5/10
+   نسخه: v4 | 2026-10-30
+   ═══════════════════════════════════════════════════════ */
+
+:root {
+  --pd-primary: #4a2c1a;
+  --pd-primary-hover: #3a2010;
+  --pd-cream: #faf6ee;
+  --pd-cream-light: #f5efe5;
+  --pd-border: #ebe3d5;
+  --pd-border-light: #f2ede5;
+  --pd-text: #3a2418;
+  --pd-text-muted: #8b7355;
+  --pd-text-dim: #a89b8a;
+  --pd-green: #2e8b57;
+  --pd-green-bg: #f0f9f4;
+  --pd-gold: #b8860b;
+  --pd-radius: 16px;
+  --pd-radius-sm: 10px;
+  --pd-shadow: 0 2px 12px rgba(74, 44, 26, 0.05);
+  --pd-shadow-md: 0 4px 20px rgba(74, 44, 26, 0.08);
+}
+
+/* ═══════════════════════════════════════════════════════
+   1) چیدمان اصلی
    ═══════════════════════════════════════════════════════ */
 
 .pd-wrap {
   display: grid;
-  grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
-  gap: 44px;
-  max-width: 1280px;
-  margin: 24px auto 0;
-  padding: 0 24px;
+  grid-template-columns: minmax(0, 1.1fr) minmax(0, 0.9fr);
+  gap: 40px;
+  max-width: 1200px;
+  margin: 20px auto 0;
+  padding: 0 20px;
   box-sizing: border-box;
   width: 100%;
 }
-
-/* ═══ گالری ═══ */
+@media (max-width: 900px) {
+  .pd-wrap {
+    display: flex;
+    flex-direction: column;
+    gap: 18px;
+    padding: 0 14px;
+    margin-top: 10px;
+  }
+}
 
 .pd-gallery-col {
   position: relative;
 }
+.pd-info-col {
+  padding-top: 4px;
+}
+
+/* ═══════════════════════════════════════════════════════
+   2) گالری
+   ═══════════════════════════════════════════════════════ */
+
+.pdg-wrap {
+  display: grid;
+  grid-template-columns: 1fr 76px;
+  gap: 12px;
+}
+
+.pdg-main {
+  position: relative;
+  aspect-ratio: 1;
+  background: var(--pd-cream);
+  border-radius: var(--pd-radius);
+  overflow: hidden;
+  border: 1px solid var(--pd-border);
+  cursor: zoom-in;
+}
+
+.pdg-slides {
+  position: absolute;
+  inset: 0;
+}
+
+.pdg-slide {
+  position: absolute;
+  inset: 0;
+  opacity: 0;
+  visibility: hidden;
+  transition:
+    opacity 0.4s ease,
+    visibility 0.4s ease;
+}
+
+.pdg-slide.is-active {
+  opacity: 1;
+  visibility: visible;
+}
+
+.pdg-slide img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  display: block;
+  user-select: none;
+  pointer-events: none;
+}
+
+.pdg-counter {
+  position: absolute;
+  top: 14px;
+  left: 14px;
+  padding: 5px 12px;
+  background: rgba(0, 0, 0, 0.55);
+  color: #fff;
+  border-radius: 999px;
+  font-size: 0.7rem;
+  font-weight: 600;
+  backdrop-filter: blur(8px);
+  z-index: 3;
+}
+
+.pdg-stock-badge {
+  position: absolute;
+  top: 14px;
+  right: 14px;
+  padding: 5px 12px;
+  border-radius: 999px;
+  font-size: 0.7rem;
+  font-weight: 700;
+  color: #fff;
+  z-index: 3;
+}
+
+.pdg-stock-badge.ok {
+  background: var(--pd-green);
+}
+.pdg-stock-badge.warn {
+  background: #d97706;
+}
+.pdg-stock-badge.out {
+  background: #dc2626;
+}
+
+.pdg-zoom-hint {
+  position: absolute;
+  bottom: 14px;
+  left: 50%;
+  transform: translateX(-50%);
+  padding: 6px 14px;
+  background: rgba(255, 255, 255, 0.95);
+  color: var(--pd-primary);
+  border-radius: 999px;
+  font-size: 0.7rem;
+  font-weight: 600;
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  opacity: 0;
+  transition: opacity 0.3s ease;
+  pointer-events: none;
+  z-index: 3;
+}
+
+.pdg-main:hover .pdg-zoom-hint {
+  opacity: 1;
+}
+.pdg-zoom-hint svg {
+  width: 13px;
+  height: 13px;
+}
+
+.pdg-thumbs {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  max-height: 100%;
+}
+
+.pdg-thumb {
+  width: 76px;
+  height: 76px;
+  border-radius: var(--pd-radius-sm);
+  overflow: hidden;
+  background: var(--pd-cream);
+  border: 2px solid transparent;
+  cursor: pointer;
+  padding: 0;
+  flex-shrink: 0;
+  transition: all 0.25s ease;
+}
+
+.pdg-thumb img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  display: block;
+}
+
+.pdg-thumb:hover {
+  border-color: var(--pd-primary);
+}
+
+.pdg-thumb.is-active {
+  border-color: var(--pd-primary);
+  box-shadow: 0 0 0 2px rgba(74, 44, 26, 0.15);
+}
+
+.pdg-dots {
+  display: none;
+  justify-content: center;
+  gap: 6px;
+  margin-top: 12px;
+}
+
+.pdg-dot {
+  width: 6px;
+  height: 6px;
+  border-radius: 999px;
+  background: rgba(74, 44, 26, 0.2);
+  border: none;
+  padding: 0;
+  cursor: pointer;
+  transition: all 0.3s ease;
+}
+
+.pdg-dot.is-active {
+  background: var(--pd-primary);
+  width: 20px;
+}
+
+.pdg-nav {
+  display: none;
+  position: absolute;
+  top: 50%;
+  transform: translateY(-50%);
+  width: 36px;
+  height: 36px;
+  border-radius: 50%;
+  background: rgba(255, 255, 255, 0.95);
+  color: var(--pd-primary);
+  border: none;
+  cursor: pointer;
+  z-index: 4;
+  align-items: center;
+  justify-content: center;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+}
+
+.pdg-nav.prev {
+  left: 10px;
+}
+.pdg-nav.next {
+  right: 10px;
+}
+.pdg-nav svg {
+  width: 18px;
+  height: 18px;
+}
+
+/* ═══════════════════════════════════════════════════════
+   3) Trust Row
+   ═══════════════════════════════════════════════════════ */
 
 .pd-trust {
   display: grid;
   grid-template-columns: repeat(3, 1fr);
-  gap: 10px;
-  margin-top: 16px;
+  gap: 8px;
+  margin-top: 18px;
+  padding-top: 18px;
+  border-top: 1px solid var(--pd-border);
 }
 
 .pd-trust-item {
@@ -31,45 +272,38 @@
   flex-direction: column;
   align-items: center;
   gap: 6px;
-  padding: 14px 8px;
+  padding: 12px 6px;
   background: #fff;
-  border: 1px solid rgba(107, 74, 47, 0.08);
-  border-radius: 14px;
+  border: 1px solid var(--pd-border);
+  border-radius: var(--pd-radius-sm);
   font-size: 0.72rem;
-  color: #4a2c1a;
+  color: var(--pd-primary);
   font-weight: 600;
   text-align: center;
-  transition: all 0.25s ease;
-}
-
-.pd-trust-item:hover {
-  border-color: rgba(107, 74, 47, 0.2);
-  transform: translateY(-2px);
 }
 
 .pd-trust-item svg {
   width: 22px;
   height: 22px;
-  color: #6b4a2f;
+  color: var(--pd-primary);
+  stroke-width: 2;
 }
 
-/* ═══ اطلاعات ═══ */
-
-.pd-info-col {
-  padding-top: 4px;
-}
+/* ═══════════════════════════════════════════════════════
+   4) عنوان و متا
+   ═══════════════════════════════════════════════════════ */
 
 .pd-meta {
   display: flex;
   align-items: center;
-  gap: 10px;
-  font-size: 0.8rem;
-  margin-bottom: 12px;
+  gap: 8px;
+  font-size: 0.78rem;
+  margin-bottom: 8px;
   flex-wrap: wrap;
 }
 
 .pd-code {
-  color: #8b7355;
+  color: var(--pd-text-muted);
   font-weight: 600;
 }
 
@@ -84,361 +318,570 @@
   font-weight: 700;
 }
 .pd-stock.ok {
-  color: #2e8b57;
+  color: var(--pd-green);
 }
 .pd-stock.no {
-  color: #c53d3d;
+  color: #dc2626;
 }
 
 .pd-title {
-  font-size: clamp(1.4rem, 2.4vw, 1.85rem);
+  font-size: clamp(1.3rem, 2vw, 1.65rem);
   font-weight: 800;
-  color: #3a2418;
+  color: var(--pd-text);
   line-height: 1.4;
-  margin: 0 0 14px;
+  margin: 0 0 12px;
 }
 
 .pd-desc {
-  color: #8b7355;
-  font-size: 0.92rem;
-  line-height: 1.9;
-  margin-bottom: 22px;
+  color: var(--pd-text-muted);
+  font-size: 0.88rem;
+  line-height: 1.8;
+  margin-bottom: 18px;
 }
 
-/* ═══ قیمت ═══ */
+/* ═══════════════════════════════════════════════════════
+   5) قیمت — نسخه ۹.۵ (بازچینش شده)
+   ═══════════════════════════════════════════════════════ */
+/* ═══════════════════════════════════════════════════════
+   5) قیمت — نسخه نهایی (رفع همپوشانی و چیدمان)
+   ═══════════════════════════════════════════════════════ */
 
 .pd-price-block {
-  background: linear-gradient(135deg, #faf6ee 0%, #f0e6d8 100%);
-  border: 1px solid rgba(107, 74, 47, 0.12);
-  border-radius: 20px;
-  padding: 22px 24px;
-  margin-bottom: 22px;
+  position: relative;
+  background: #fff;
+  border: 1px solid var(--pd-border);
+  border-radius: var(--pd-radius);
+  padding: 24px 20px 18px; /* پدینگ بالا بیشتر برای جا دادن بج */
+  margin-bottom: 14px;
+  box-shadow: var(--pd-shadow);
 }
 
+/* ⭐ بج تخفیف — گوشه بالا-چپ (در RTL سمت راست) */
+/* ⭐ بج تخفیف — سمت چپ کارت (در دسکتاپ) */
+
+/* ⭐ بج تخفیف — سمت چپ کارت، با عرض محتوا */
+.pd-price-badge {
+  position: absolute;
+  top: 12px;
+  left: 12px;
+  right: auto;
+  width: fit-content;
+  max-width: calc(100% - 24px);
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 6px 14px;
+  color: #fff;
+  border-radius: 999px;
+  font-size: 0.72rem;
+  font-weight: 700;
+  z-index: 2;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.2);
+  /* درخشش (برجستگی) */
+  border: 1px solid rgba(255, 255, 255, 0.3);
+}
+.pd-price-badge-label {
+  font-size: 0.65rem;
+  opacity: 0.95;
+}
+
+/* ─── طلایی ─── */
+.pd-badge-gold {
+  background: linear-gradient(135deg, #f3c04a 0%, #d4a017 50%, #b8860b 100%);
+  box-shadow:
+    0 4px 12px rgba(184, 134, 11, 0.4),
+    inset 0 1px 0 rgba(255, 255, 255, 0.4);
+  text-shadow: 0 1px 1px rgba(0, 0, 0, 0.15);
+}
+
+/* ─── نقره‌ای ─── */
+.pd-badge-silver {
+  background: linear-gradient(135deg, #f0f2f5 0%, #c0c5ce 50%, #9ca3af 100%);
+  color: #333; /* متن تیره برای کنتراست */
+  box-shadow:
+    0 4px 12px rgba(156, 163, 175, 0.4),
+    inset 0 1px 0 rgba(255, 255, 255, 0.6);
+  text-shadow: 0 1px 1px rgba(255, 255, 255, 0.4);
+}
+
+/* ─── برنزی ─── */
+.pd-badge-bronze {
+  background: linear-gradient(135deg, #d99b6c 0%, #b87333 50%, #8b4513 100%);
+  box-shadow:
+    0 4px 12px rgba(139, 69, 19, 0.4),
+    inset 0 1px 0 rgba(255, 255, 255, 0.3);
+  text-shadow: 0 1px 1px rgba(0, 0, 0, 0.2);
+}
+
+/* ─── پیش‌فرض (آبی) ─── */
+.pd-badge-default {
+  background: linear-gradient(135deg, #60a5fa 0%, #3b82f6 50%, #2563eb 100%);
+  box-shadow:
+    0 4px 12px rgba(37, 99, 235, 0.4),
+    inset 0 1px 0 rgba(255, 255, 255, 0.3);
+  text-shadow: 0 1px 1px rgba(0, 0, 0, 0.15);
+}
+
+.pd-price-badge-label {
+  font-size: 0.65rem;
+  opacity: 0.95;
+}
+
+/* ⭐ قیمت اصلی — تنها، بزرگ، چپ‌چین (در RTL: راست‌چین) */
 .pd-price-main {
   display: flex;
   align-items: baseline;
-  justify-content: space-between;
-  gap: 12px;
-  padding-bottom: 14px;
-  margin-bottom: 14px;
-  border-bottom: 1px dashed rgba(107, 74, 47, 0.18);
-}
-
-.pd-price-label {
-  font-size: 0.82rem;
-  color: #8b7355;
-  font-weight: 600;
+  justify-content: flex-start; /* در RTL = راست‌چین */
+  margin-bottom: 8px;
+  margin-top: 0;
 }
 
 .pd-price-value {
   display: flex;
   align-items: baseline;
   gap: 6px;
+  flex-direction: row; /* چیدمان طبیعی */
 }
 
 .pd-price-value b {
-  font-size: 1.75rem;
-  font-weight: 800;
-  color: #4a2c1a;
+  font-size: 2rem;
+  font-weight: 900;
+  color: var(--pd-primary);
   line-height: 1;
+  letter-spacing: -0.02em;
 }
 
 .pd-price-value small {
-  font-size: 0.78rem;
-  color: #8b7355;
+  font-size: 0.8rem;
+  color: var(--pd-text-muted);
   font-weight: 500;
 }
 
+/* ⭐ قیمت پایه و سود — ریز، زیر قیمت اصلی */
+.pd-price-meta {
+  display: flex;
+  align-items: center;
+  justify-content: flex-start; /* در RTL = راست‌چین */
+  flex-wrap: wrap;
+  gap: 10px;
+  font-size: 0.72rem;
+  color: var(--pd-text-muted);
+  padding-top: 10px;
+  border-top: 1px dashed var(--pd-border);
+}
+
+.pd-price-base {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.pd-price-strike {
+  text-decoration: line-through;
+  color: var(--pd-text-dim);
+  font-weight: 500;
+}
+
+.pd-price-save {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  color: var(--pd-green);
+  font-weight: 700;
+}
+
+.pd-price-save b {
+  color: var(--pd-green);
+  font-weight: 800;
+}
+
+.pd-price-label {
+  font-size: 0.75rem;
+  color: var(--pd-text-muted);
+  font-weight: 600;
+}
+
+.pd-price-message {
+  font-size: 0.75rem;
+  color: var(--pd-text-muted);
+  margin-top: 6px;
+  padding: 6px 10px;
+  background: var(--pd-cream-light);
+  border-radius: var(--pd-radius-sm);
+}
+
+/* پله‌ها */
 .pd-tiers {
   display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
-  gap: 10px;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 8px;
+  margin-top: 16px;
+  padding-top: 16px;
+  border-top: 1px solid var(--pd-border-light);
 }
 
 .pd-tier {
   display: flex;
   flex-direction: column;
-  gap: 4px;
-  padding: 10px 14px;
-  background: rgba(255, 255, 255, 0.75);
-  border-radius: 12px;
-  border: 1px solid rgba(107, 74, 47, 0.08);
+  gap: 2px;
+  padding: 8px 12px;
+  background: var(--pd-cream-light);
+  border-radius: var(--pd-radius-sm);
 }
 
 .pd-tier-qty {
-  font-size: 0.7rem;
-  color: #8b7355;
+  font-size: 0.68rem;
+  color: var(--pd-text-muted);
   font-weight: 600;
 }
 
 .pd-tier-price {
-  font-size: 1rem;
+  font-size: 0.92rem;
   font-weight: 800;
-  color: #6b4a2f;
-  display: flex;
-  align-items: baseline;
-  gap: 3px;
+  color: var(--pd-primary);
 }
 
-.pd-tier-price small {
+.pd-tier-discount {
   font-size: 0.65rem;
-  color: #8b7355;
-  font-weight: 500;
+  color: var(--pd-green);
+  font-weight: 700;
 }
 
-.pd-no-price {
-  padding: 18px 22px;
-  background: #fff4e5;
-  border: 1px solid #f5d9b3;
-  border-radius: 14px;
-  color: #c96f12;
-  font-weight: 600;
-  margin-bottom: 22px;
+.pd-tier-note {
+  margin-top: 14px;
+  padding: 12px 14px;
+  background: var(--pd-green-bg);
+  border: 1px solid #d1f0dd;
+  border-radius: var(--pd-radius-sm);
+  color: var(--pd-green);
+  font-size: 0.78rem;
+  line-height: 1.6;
   text-align: center;
 }
 
-/* ═══ سفارش ═══ */
+.pd-no-price {
+  padding: 16px 20px;
+  background: #fff7ed;
+  border: 1px solid #fed7aa;
+  border-radius: var(--pd-radius-sm);
+  color: #c2410c;
+  font-weight: 600;
+  text-align: center;
+  margin-bottom: 14px;
+}
+
+/* ═══ اصلاح موبایل برای کارت قیمت ═══ */
+
+@media (max-width: 900px) {
+  .pd-price-block {
+    padding: 20px 16px 14px;
+  }
+  .pd-price-badge {
+    top: 10px;
+    left: 10px; /* 👈 در موبایل هم چپ */
+    right: auto; /* 👈 مطمئن شویم right را override می‌کند */
+    padding: 5px 12px;
+    font-size: 0.68rem;
+  }
+
+  .pd-price-badge-pct {
+    font-size: 0.8rem;
+  }
+
+  .pd-price-badge-label {
+    font-size: 0.6rem;
+  }
+
+  .pd-price-main {
+    margin-top: 8px; /* فاصله از بج در موبایل */
+    margin-bottom: 6px;
+  }
+
+  .pd-price-value b {
+    font-size: 1.6rem;
+  }
+
+  .pd-price-value small {
+    font-size: 0.72rem;
+  }
+
+  .pd-price-meta {
+    font-size: 0.68rem;
+    gap: 8px;
+    padding-top: 8px;
+  }
+
+  .pd-tiers {
+    grid-template-columns: 1fr 1fr;
+    gap: 6px;
+    margin-top: 12px;
+    padding-top: 12px;
+  }
+
+  .pd-tier {
+    padding: 8px 10px;
+  }
+
+  .pd-tier-qty {
+    font-size: 0.62rem;
+  }
+
+  .pd-tier-price {
+    font-size: 0.82rem;
+  }
+
+  .pd-tier-discount {
+    font-size: 0.6rem;
+  }
+}
+
+/* ═══════════════════════════════════════════════════════
+   6) سفارش — CTA قوی
+   ═══════════════════════════════════════════════════════ */
 
 .pd-order-block {
   background: #fff;
-  border: 1px solid rgba(107, 74, 47, 0.1);
-  border-radius: 20px;
-  padding: 22px;
-  margin-bottom: 18px;
-  box-shadow: 0 6px 20px rgba(107, 74, 47, 0.06);
+  border: 1px solid var(--pd-border);
+  border-radius: var(--pd-radius);
+  padding: 16px 18px;
+  margin-bottom: 14px;
+  box-shadow: var(--pd-shadow);
 }
 
 .pd-qty-row {
   display: flex;
   align-items: center;
-  gap: 14px;
-  margin-bottom: 16px;
+  gap: 12px;
+  margin-bottom: 14px;
   flex-wrap: wrap;
 }
 
 .pd-qty-label {
-  font-size: 0.84rem;
-  color: #3a2418;
+  font-size: 0.82rem;
+  color: var(--pd-text);
   font-weight: 700;
+  flex-shrink: 0;
 }
 
 .pd-stepper {
   display: flex;
   align-items: center;
-  background: #faf6ee;
-  border: 1px solid rgba(107, 74, 47, 0.14);
+  background: var(--pd-cream);
+  border: 1px solid var(--pd-border);
   border-radius: 999px;
-  padding: 4px;
+  padding: 3px;
   gap: 2px;
 }
 
 .pd-step {
-  width: 38px;
-  height: 38px;
+  width: 32px;
+  height: 32px;
   border-radius: 50%;
   border: none;
   background: #fff;
-  color: #6b4a2f;
-  font-size: 1.15rem;
+  color: var(--pd-primary);
+  font-size: 1rem;
   font-weight: 700;
   cursor: pointer;
   display: grid;
   place-items: center;
   transition: all 0.2s ease;
-  box-shadow: 0 2px 6px rgba(107, 74, 47, 0.08);
+  box-shadow: 0 1px 3px rgba(74, 44, 26, 0.08);
 }
 
 .pd-step:hover {
-  background: #6b4a2f;
+  background: var(--pd-primary);
   color: #fff;
-  transform: scale(1.06);
 }
 
 .pd-qty-input {
-  width: 66px;
+  width: 48px;
   text-align: center;
   border: none;
   background: transparent;
   font-family: inherit;
-  font-size: 1rem;
+  font-size: 0.95rem;
   font-weight: 800;
-  color: #4a2c1a;
+  color: var(--pd-primary);
   outline: none;
 }
 
 .pd-qty-hint {
-  font-size: 0.74rem;
-  color: #8b7355;
+  font-size: 0.7rem;
+  color: var(--pd-text-muted);
   margin-inline-start: auto;
+  white-space: nowrap;
 }
 
+/* دکمه‌ها */
 .pd-actions-row {
   display: grid;
   grid-template-columns: 1fr 1fr;
-  gap: 10px;
+  gap: 8px;
 }
 
 .pd-btn {
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  gap: 8px;
-  padding: 14px 20px;
-  border-radius: 14px;
+  gap: 6px;
+  padding: 12px 14px;
+  border-radius: var(--pd-radius-sm);
   border: none;
   font-family: inherit;
-  font-size: 0.88rem;
+  font-size: 0.82rem;
   font-weight: 700;
   cursor: pointer;
-  transition: all 0.3s cubic-bezier(0.34, 1.4, 0.64, 1);
+  transition: all 0.25s ease;
   text-decoration: none;
+  min-height: 44px;
 }
 
 .pd-btn svg {
-  width: 18px;
-  height: 18px;
+  width: 16px;
+  height: 16px;
 }
-
 .pd-btn:disabled {
-  opacity: 0.6;
+  opacity: 0.5;
   cursor: not-allowed;
 }
 
+/* ⭐ CTA اصلی */
 .pd-btn-cart {
-  background: #fff;
-  color: #6b4a2f;
-  border: 2px solid #6b4a2f;
-  box-shadow: 0 4px 12px rgba(107, 74, 47, 0.08);
+  background: var(--pd-primary);
+  color: #fff;
+  border: 2px solid var(--pd-primary);
+  box-shadow: 0 4px 12px rgba(74, 44, 26, 0.2);
 }
 
 .pd-btn-cart:hover:not(:disabled) {
-  background: #f0e6d8;
-  transform: translateY(-2px);
+  background: var(--pd-primary-hover);
+  border-color: var(--pd-primary-hover);
+  transform: translateY(-1px);
+  box-shadow: 0 6px 16px rgba(74, 44, 26, 0.3);
 }
 
+/* ⭐ CTA ثانویه */
 .pd-btn-buy {
-  background: linear-gradient(135deg, #6b4a2f 0%, #4a2c1a 100%);
-  color: #fff;
-  box-shadow: 0 8px 22px rgba(107, 74, 47, 0.3);
-  position: relative;
-  overflow: hidden;
-}
-
-.pd-btn-buy::before {
-  content: "";
-  position: absolute;
-  top: 0;
-  left: -100%;
-  width: 100%;
-  height: 100%;
-  background: linear-gradient(
-    90deg,
-    transparent,
-    rgba(255, 255, 255, 0.28),
-    transparent
-  );
-  transition: left 0.6s ease;
-}
-
-.pd-btn-buy:hover:not(:disabled)::before {
-  left: 100%;
+  background: #fff;
+  color: var(--pd-primary);
+  border: 2px solid var(--pd-primary);
 }
 
 .pd-btn-buy:hover:not(:disabled) {
-  transform: translateY(-2px);
-  box-shadow: 0 12px 30px rgba(107, 74, 47, 0.4);
+  background: var(--pd-cream-light);
+  transform: translateY(-1px);
 }
 
+/* متن راهنما — کوچک */
 .pd-hint {
-  font-size: 0.74rem;
-  color: #8b7355;
-  margin: 12px 0 0;
-  line-height: 1.7;
+  font-size: 0.7rem;
+  color: var(--pd-text-muted);
+  margin: 10px 0 0;
+  line-height: 1.5;
   text-align: center;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 5px;
 }
 
-.pd-hint b {
-  color: #4a2c1a;
+.pd-hint-icon {
+  display: inline-grid;
+  place-items: center;
+  width: 14px;
+  height: 14px;
+  border-radius: 50%;
+  background: var(--pd-border);
+  color: var(--pd-text-muted);
+  font-size: 0.6rem;
+  font-weight: 700;
 }
 
-/* ═══ ناموجود ═══ */
+/* ═══════════════════════════════════════════════════════
+   7) ناموجود
+   ═══════════════════════════════════════════════════════ */
 
 .pd-out-block {
-  padding: 22px;
-  background: #fff0f0;
-  border: 1px solid #f5c2c2;
-  border-radius: 16px;
+  padding: 20px;
+  background: #fef2f2;
+  border: 1px solid #fecaca;
+  border-radius: var(--pd-radius);
   text-align: center;
 }
 
 .pd-out-block p {
-  color: #c53d3d;
+  color: #b91c1c;
   font-weight: 700;
-  margin: 0 0 12px;
+  margin: 0 0 10px;
 }
 
 .pd-btn-outline {
   background: #fff;
-  color: #4a2c1a;
-  border: 2px solid #6b4a2f;
+  color: var(--pd-primary);
+  border: 2px solid var(--pd-primary);
 }
 
 .pd-btn-outline:hover {
-  background: #6b4a2f;
+  background: var(--pd-primary);
   color: #fff;
 }
 
-/* ═══ سفارش اختصاصی ═══ */
+/* ═══════════════════════════════════════════════════════
+   8) سفارش اختصاصی — مینیمال
+   ═══════════════════════════════════════════════════════ */
 
 .pd-custom-link {
   display: flex;
   align-items: center;
-  gap: 10px;
-  padding: 14px 18px;
-  background: linear-gradient(135deg, #fff8ec 0%, #ffeccd 100%);
-  border: 1px solid rgba(229, 138, 36, 0.2);
-  border-radius: 16px;
+  gap: 8px;
+  padding: 12px 16px;
+  background: #fff;
+  border: 1px solid var(--pd-border);
+  border-radius: var(--pd-radius-sm);
   text-decoration: none;
-  color: #c96f12;
-  font-size: 0.84rem;
-  font-weight: 700;
-  transition: all 0.3s ease;
+  color: var(--pd-primary);
+  font-size: 0.8rem;
+  font-weight: 600;
+  transition: all 0.25s ease;
+  margin-top: 14px;
 }
 
 .pd-custom-link:hover {
-  border-color: rgba(229, 138, 36, 0.45);
-  transform: translateY(-2px);
-  box-shadow: 0 8px 24px rgba(229, 138, 36, 0.15);
+  border-color: var(--pd-primary);
+  background: var(--pd-cream-light);
 }
 
 .pd-custom-link svg {
-  width: 20px;
-  height: 20px;
+  width: 18px;
+  height: 18px;
   flex-shrink: 0;
+  color: var(--pd-gold);
 }
 
 .pd-custom-arrow {
   margin-inline-start: auto;
-  font-size: 1.1rem;
+  font-size: 1rem;
 }
 
-/* ═══ مشخصات فنی ═══ */
+/* ═══════════════════════════════════════════════════════
+   9) مشخصات فنی — ۳×۲ مینیمال، border یکدست
+   ═══════════════════════════════════════════════════════ */
 
 .pd-specs-section,
 .pd-related {
-  max-width: 1280px;
-  margin: 56px auto 0;
-  padding: 0 24px;
+  max-width: 1200px;
+  margin: 40px auto 0;
+  padding: 0 20px;
 }
 
 .pd-section-title {
-  font-size: 1.25rem;
+  font-size: 1.1rem;
   font-weight: 800;
-  color: #3a2418;
-  margin: 0 0 22px;
+  color: var(--pd-text);
+  margin: 0 0 16px;
   position: relative;
-  padding-inline-start: 18px;
+  padding-inline-start: 14px;
 }
 
 .pd-section-title::before {
@@ -447,75 +890,100 @@
   inset-inline-start: 0;
   top: 50%;
   transform: translateY(-50%);
-  width: 4px;
-  height: 22px;
-  background: #6b4a2f;
-  border-radius: 3px;
+  width: 3px;
+  height: 18px;
+  background: var(--pd-primary);
+  border-radius: 2px;
 }
 
+/* ⭐ گرید ۳×۲ با border یکدست */
 .pd-specs-grid {
   display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
-  gap: 12px;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 0;
+  background: #fff;
+  border: 1px solid var(--pd-border);
+  border-radius: var(--pd-radius-sm);
+  overflow: hidden;
+  max-width: 720px;
+  margin: 0 auto;
 }
 
 .pd-spec-item {
   display: flex;
   flex-direction: column;
   gap: 4px;
-  padding: 14px 18px;
+  padding: 14px 10px;
   background: #fff;
-  border: 1px solid rgba(107, 74, 47, 0.08);
-  border-radius: 14px;
-  transition: all 0.25s ease;
+  text-align: center;
+  justify-content: center;
+  min-height: 64px;
+  border-bottom: 1px solid var(--pd-border);
+  border-inline-start: 1px solid var(--pd-border);
 }
 
-.pd-spec-item:hover {
-  border-color: rgba(107, 74, 47, 0.2);
-  transform: translateY(-2px);
+/* ⭐ border یکدست — همه سلول‌ها */
+.pd-spec-item:nth-child(3n) {
+  border-inline-start: none;
+}
+
+.pd-spec-item:nth-last-child(-n + 3) {
+  border-bottom: none;
+}
+
+/* ⭐ اگر ۶ آیتم بود، ۳ سلول آخر هم border پایین داشته باشند */
+.pd-spec-item:nth-last-child(-n + 3):nth-child(odd) {
+  border-bottom: 1px solid var(--pd-border);
 }
 
 .pd-spec-key {
-  font-size: 0.72rem;
-  color: #8b7355;
-  font-weight: 600;
+  font-size: 0.7rem;
+  color: var(--pd-text-muted);
+  font-weight: 400;
+  line-height: 1.3;
+  display: block;
 }
 
 .pd-spec-val {
-  font-size: 0.92rem;
-  color: #3a2418;
+  font-size: 0.85rem;
+  color: var(--pd-primary);
   font-weight: 700;
+  line-height: 1.4;
+  word-break: break-word;
+  display: block;
 }
 
-/* ═══ محصولات مشابه ═══ */
+/* ═══════════════════════════════════════════════════════
+   10) محصولات مشابه
+   ═══════════════════════════════════════════════════════ */
 
 .pd-related-grid {
   display: grid;
   grid-template-columns: repeat(4, minmax(0, 1fr));
-  gap: 18px;
+  gap: 16px;
 }
 
 .pd-related-card {
   display: flex;
   flex-direction: column;
   background: #fff;
-  border-radius: 18px;
+  border-radius: var(--pd-radius);
   overflow: hidden;
-  border: 1px solid rgba(107, 74, 47, 0.08);
+  border: 1px solid var(--pd-border);
   text-decoration: none;
   color: inherit;
-  transition: all 0.3s ease;
+  transition: all 0.25s ease;
 }
 
 .pd-related-card:hover {
-  transform: translateY(-4px);
-  box-shadow: 0 16px 40px rgba(107, 74, 47, 0.12);
-  border-color: rgba(107, 74, 47, 0.2);
+  transform: translateY(-3px);
+  box-shadow: var(--pd-shadow-md);
+  border-color: var(--pd-primary);
 }
 
 .pd-related-img {
   aspect-ratio: 1;
-  background: linear-gradient(135deg, #faf6ee 0%, #f0e6d8 100%);
+  background: var(--pd-cream);
   overflow: hidden;
 }
 
@@ -523,181 +991,664 @@
   width: 100%;
   height: 100%;
   object-fit: cover;
-  transition: transform 0.5s ease;
+  transition: transform 0.4s ease;
 }
 
 .pd-related-card:hover .pd-related-img img {
-  transform: scale(1.06);
+  transform: scale(1.05);
 }
 
 .pd-related-info {
-  padding: 14px 16px 16px;
+  padding: 12px 14px 14px;
   display: flex;
   flex-direction: column;
-  gap: 6px;
+  gap: 4px;
 }
 
 .pd-related-code {
-  font-size: 0.7rem;
-  color: #8b7355;
+  font-size: 0.68rem;
+  color: var(--pd-text-muted);
   font-weight: 600;
 }
 
 .pd-related-info h3 {
-  font-size: 0.88rem;
+  font-size: 0.85rem;
   font-weight: 700;
-  color: #3a2418;
+  color: var(--pd-text);
   margin: 0;
   line-height: 1.4;
-  min-height: 2.8em;
+  min-height: 2.7em;
 }
 
 .pd-related-info b {
-  font-size: 0.9rem;
-  color: #4a2c1a;
+  font-size: 0.88rem;
+  color: var(--pd-primary);
   font-weight: 800;
 }
+
 /* ═══════════════════════════════════════════════════════
-   🔥 OVERRIDE MOBILE — تضمینی
+   11) Lightbox
+   ═══════════════════════════════════════════════════════ */
+
+.pdg-lb {
+  position: fixed;
+  inset: 0;
+  background: rgba(30, 15, 8, 0.96);
+  z-index: 2147483647;
+  display: none;
+  align-items: center;
+  justify-content: center;
+  padding: 40px 16px;
+  box-sizing: border-box;
+  opacity: 0;
+  transition: opacity 0.3s ease;
+}
+
+.pdg-lb.is-open {
+  display: flex;
+  opacity: 1;
+}
+
+.pdg-lb-img {
+  max-width: 92vw;
+  max-height: calc(100vh - 100px);
+  border-radius: var(--pd-radius);
+  box-shadow: 0 30px 80px rgba(0, 0, 0, 0.6);
+  display: block;
+}
+
+.pdg-lb-close,
+.pdg-lb-nav {
+  position: absolute;
+  border-radius: 50%;
+  background: rgba(255, 255, 255, 0.15);
+  color: #fff;
+  border: 1px solid rgba(255, 255, 255, 0.25);
+  cursor: pointer;
+  display: grid;
+  place-items: center;
+  transition: all 0.2s ease;
+}
+
+.pdg-lb-close {
+  top: 16px;
+  right: 16px;
+  width: 42px;
+  height: 42px;
+}
+
+.pdg-lb-nav {
+  top: 50%;
+  transform: translateY(-50%);
+  width: 48px;
+  height: 48px;
+}
+
+.pdg-lb-nav.prev {
+  left: 16px;
+}
+.pdg-lb-nav.next {
+  right: 16px;
+}
+
+.pdg-lb-close:hover,
+.pdg-lb-nav:hover {
+  background: rgba(255, 255, 255, 0.25);
+}
+
+.pdg-lb-close svg {
+  width: 20px;
+  height: 20px;
+}
+.pdg-lb-nav svg {
+  width: 22px;
+  height: 22px;
+}
+
+.pdg-lb-counter {
+  position: absolute;
+  bottom: 20px;
+  left: 50%;
+  transform: translateX(-50%);
+  padding: 6px 14px;
+  background: rgba(255, 255, 255, 0.15);
+  color: #fff;
+  border-radius: 999px;
+  font-size: 0.75rem;
+  font-weight: 600;
+}
+
+/* ═══════════════════════════════════════════════════════
+   12) حالت خالی گالری
+   ═══════════════════════════════════════════════════════ */
+
+.pdg-empty {
+  position: relative;
+  aspect-ratio: 1;
+  background: var(--pd-cream);
+  border-radius: var(--pd-radius);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  color: var(--pd-text-muted);
+  border: 2px dashed var(--pd-border);
+}
+
+.pdg-empty svg {
+  width: 56px;
+  height: 56px;
+  opacity: 0.3;
+}
+.pdg-empty span {
+  font-size: 0.82rem;
+  font-weight: 600;
+}
+
+/* ═══════════════════════════════════════════════════════
+   13) موبایل — فشرده، تمیز
    ═══════════════════════════════════════════════════════ */
 
 @media (max-width: 900px) {
   .pd-wrap {
-    display: flex !important;
-    flex-direction: column !important;
-    grid-template-columns: none !important;
-    gap: 20px !important;
-    padding: 0 14px !important;
-    margin-top: 14px !important;
-    max-width: 100% !important;
-    width: 100% !important;
+    display: flex;
+    flex-direction: column;
+    gap: 18px;
+    padding: 0 14px;
+    margin-top: 10px;
+  }
+  .pd-price-main {
+    margin-top: 24px;
+  } /* ← فاصله از بج */
+  .pd-price-value b {
+    font-size: 1.6rem;
   }
 
   .pd-gallery-col,
   .pd-info-col {
-    width: 100% !important;
-    max-width: 100% !important;
-    min-width: 0 !important;
-    flex: 1 1 100% !important;
+    width: 100%;
   }
 
+  /* گالری */
+  .pdg-wrap {
+    display: flex;
+    flex-direction: column;
+    gap: 0;
+  }
+
+  .pdg-main {
+    border-radius: var(--pd-radius-sm);
+    cursor: default;
+  }
+
+  .pdg-thumbs {
+    display: flex;
+    flex-direction: row;
+    gap: 6px;
+    overflow-x: auto;
+    padding: 10px 0 0;
+    scrollbar-width: none;
+  }
+
+  .pdg-thumbs::-webkit-scrollbar {
+    display: none;
+  }
+
+  .pdg-thumb {
+    width: 56px;
+    height: 56px;
+    min-width: 56px;
+    border-radius: 8px;
+  }
+
+  .pdg-dots {
+    display: none;
+  }
+  .pdg-nav {
+    display: flex;
+    width: 32px;
+    height: 32px;
+  }
+  .pdg-nav svg {
+    width: 16px;
+    height: 16px;
+  }
+  .pdg-zoom-hint {
+    display: none;
+  }
+
+  .pdg-counter {
+    font-size: 0.62rem;
+    padding: 4px 10px;
+  }
+  .pdg-stock-badge {
+    font-size: 0.62rem;
+    padding: 4px 10px;
+  }
+
+  /* عنوان */
   .pd-title {
-    font-size: 1.2rem !important;
-    line-height: 1.5 !important;
-    margin-bottom: 10px !important;
+    font-size: 1.15rem;
+    line-height: 1.5;
+    margin-bottom: 8px;
   }
 
   .pd-desc {
-    font-size: 0.86rem !important;
-    line-height: 1.8 !important;
-    margin-bottom: 16px !important;
+    font-size: 0.84rem;
+    margin-bottom: 14px;
   }
 
+  .pd-meta {
+    margin-bottom: 6px;
+    font-size: 0.72rem;
+  }
+
+  /* Trust */
   .pd-trust {
-    display: grid !important;
-    grid-template-columns: repeat(3, 1fr) !important;
-    gap: 8px !important;
-    margin-top: 12px !important;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 6px;
+    margin-top: 14px;
+    padding-top: 14px;
   }
 
   .pd-trust-item {
-    padding: 10px 6px !important;
-    font-size: 0.66rem !important;
-    border-radius: 12px !important;
+    padding: 10px 4px;
+    font-size: 0.66rem;
   }
 
   .pd-trust-item svg {
-    width: 20px !important;
-    height: 20px !important;
+    width: 22px;
+    height: 22px;
   }
 
+  /* قیمت — بازچینش‌شده */
   .pd-price-block {
-    padding: 14px 16px !important;
-    border-radius: 16px !important;
-    margin-bottom: 14px !important;
+    padding: 14px 16px;
+    margin-bottom: 12px;
+  }
+
+  .pd-price-badge {
+    padding: 4px 10px;
+    font-size: 0.65rem;
+    top: 8px;
+    left: 8px;
+  }
+
+  .pd-price-badge-pct {
+    font-size: 0.8rem;
+  }
+  .pd-price-badge-label {
+    font-size: 0.6rem;
   }
 
   .pd-price-main {
-    padding-bottom: 10px !important;
-    margin-bottom: 10px !important;
+    margin-top: 6px;
   }
-
-  .pd-price-label {
-    font-size: 0.72rem !important;
-  }
-
   .pd-price-value b {
-    font-size: 1.3rem !important;
+    font-size: 1.6rem;
+  }
+  .pd-price-value small {
+    font-size: 0.72rem;
+  }
+
+  .pd-price-meta {
+    font-size: 0.68rem;
+    padding-top: 8px;
   }
 
   .pd-tiers {
-    grid-template-columns: 1fr 1fr !important;
-    gap: 6px !important;
+    grid-template-columns: 1fr 1fr;
+    gap: 6px;
+    margin-top: 12px;
+    padding-top: 12px;
+  }
+  .pd-tier {
+    padding: 8px 10px;
+  }
+  .pd-tier-qty {
+    font-size: 0.62rem;
+  }
+  .pd-tier-price {
+    font-size: 0.82rem;
+  }
+  .pd-tier-discount {
+    font-size: 0.6rem;
   }
 
+  /* سفارش */
   .pd-order-block {
-    padding: 14px !important;
-    border-radius: 16px !important;
+    padding: 14px;
+    margin-bottom: 12px;
   }
-
   .pd-qty-row {
-    gap: 8px !important;
-    flex-wrap: wrap !important;
-    margin-bottom: 12px !important;
+    gap: 8px;
+    margin-bottom: 12px;
+  }
+  .pd-qty-label {
+    font-size: 0.78rem;
   }
 
+  .pd-stepper {
+    padding: 3px;
+  }
   .pd-step {
-    width: 34px !important;
-    height: 34px !important;
-    font-size: 1rem !important;
+    width: 30px;
+    height: 30px;
+    font-size: 0.95rem;
   }
-
   .pd-qty-input {
-    width: 50px !important;
-    font-size: 0.92rem !important;
+    width: 40px;
+    font-size: 0.9rem;
   }
-
   .pd-qty-hint {
-    font-size: 0.66rem !important;
-    flex-basis: 100% !important;
-    order: 3 !important;
+    font-size: 0.64rem;
   }
 
   .pd-actions-row {
-    grid-template-columns: 1fr !important;
-    gap: 8px !important;
+    grid-template-columns: 1fr 1fr;
+    gap: 8px;
   }
-
   .pd-btn {
-    padding: 13px 16px !important;
-    font-size: 0.84rem !important;
+    padding: 10px 12px;
+    font-size: 0.78rem;
+    min-height: 42px;
+  }
+  .pd-btn svg {
+    width: 15px;
+    height: 15px;
   }
 
+  .pd-hint {
+    font-size: 0.64rem;
+    margin-top: 8px;
+  }
+
+  /* سفارش اختصاصی */
+  .pd-custom-link {
+    padding: 10px 14px;
+    font-size: 0.75rem;
+  }
+
+  /* مشخصات فنی */
   .pd-specs-section,
   .pd-related {
-    padding: 0 14px !important;
-    margin-top: 32px !important;
+    padding: 0 14px;
+    margin-top: 28px;
+  }
+  .pd-section-title {
+    font-size: 1rem;
+    margin-bottom: 12px;
   }
 
   .pd-specs-grid {
-    grid-template-columns: 1fr 1fr !important;
-    gap: 8px !important;
+    grid-template-columns: repeat(3, 1fr);
+    max-width: 100%;
   }
 
+  .pd-spec-item {
+    padding: 10px 4px;
+    min-height: 56px;
+  }
+
+  .pd-spec-key {
+    font-size: 0.6rem;
+  }
+  .pd-spec-val {
+    font-size: 0.72rem;
+  }
+
+  /* محصولات مشابه */
   .pd-related-grid {
-    grid-template-columns: repeat(2, 1fr) !important;
-    gap: 10px !important;
+    grid-template-columns: repeat(2, 1fr);
+    gap: 10px;
   }
 }
 
-@media (max-width: 480px) {
-  .pd-title {
-    font-size: 1.1rem !important;
+/* ═══ موبایل خیلی باریک ═══ */
+
+@media (max-width: 380px) {
+  .pd-spec-item {
+    padding: 8px 3px;
+    min-height: 52px;
   }
-  .pd-tiers {
-    grid-template-columns: 1fr !important;
+  .pd-spec-key {
+    font-size: 0.56rem;
   }
-  .pd-specs-grid {
-    grid-template-columns: 1fr !important;
+  .pd-spec-val {
+    font-size: 0.68rem;
+  }
+
+  .pd-price-value b {
+    font-size: 1.45rem;
+  }
+}
+
+/* ═══ Reduced Motion ═══ */
+
+@media (prefers-reduced-motion: reduce) {
+  .pdg-slide,
+  .pdg-thumb,
+  .pd-related-card {
+    transition: none !important;
+  }
+}
+/* ═══════════════════════════════════════════════════════
+   لیبل کد محصول — وسط پایین عکس (طرح شیشه‌ای)
+   ═══════════════════════════════════════════════════════ */
+
+.pdg-code-label {
+  position: absolute;
+  bottom: 16px;
+  left: 50%;
+  transform: translateX(-50%);
+  z-index: 10;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 6px 18px;
+
+  /* افکت شیشه‌ای (Glassmorphism) */
+  background: rgba(255, 255, 255, 0.65);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+
+  /* حاشیه و سایه */
+  border: 1px solid rgba(255, 255, 255, 0.8);
+  border-radius: 999px; /* کاملاً گرد */
+  box-shadow:
+    0 4px 15px rgba(0, 0, 0, 0.08),
+    inset 0 0 0 1px rgba(255, 255, 255, 0.5);
+
+  /* انیمیشن ملایم */
+  transition: all 0.3s ease;
+}
+
+/* افکت هاور */
+.pdg-code-label:hover {
+  background: rgba(255, 255, 255, 0.85);
+  box-shadow: 0 6px 20px rgba(0, 0, 0, 0.12);
+  transform: translateX(-50%) translateY(-2px);
+}
+
+/* متن لیبل */
+.pdg-code-text {
+  font-size: 0.9rem;
+  font-weight: 800;
+  color: #3a2418; /* قهوه‌ای تیره */
+  letter-spacing: 0.5px;
+  direction: rtl;
+}
+
+/* ═══ موبایل ═══ */
+@media (max-width: 900px) {
+  .pdg-code-label {
+    bottom: 2px;
+    padding: 7px 25px;
+    backdrop-filter: blur(8px);
+    -webkit-backdrop-filter: blur(8px);
+  }
+
+  .pdg-code-text {
+    font-size: 0.9rem;
+  }
+}
+/* ═══════════════════════════════════════════════════════
+   اصلاح کارت محصولات (صفحه products)
+   ═══════════════════════════════════════════════════════ */
+
+/* ۱. فشرده‌سازی دکمه‌های افزایش/کاهش و دکمه خرید */
+.r6-stepper {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  border: 1px solid #ebe3d5;
+  border-radius: 8px;
+  padding: 4px;
+  background: #faf6ee;
+  margin-bottom: 10px; /* فاصله از دکمه خرید */
+}
+
+.r6-step {
+  width: 32px;
+  height: 32px;
+  border-radius: 6px;
+  background: #fff;
+  border: 1px solid #ebe3d5;
+  color: #4a2c1a;
+  font-size: 1.1rem;
+  font-weight: 700;
+  cursor: pointer;
+  display: grid;
+  place-items: center;
+  transition: all 0.2s;
+}
+
+.r6-step:hover {
+  background: #4a2c1a;
+  color: #fff;
+  border-color: #4a2c1a;
+}
+
+.r6-num {
+  font-size: 1rem;
+  font-weight: 700;
+  color: #3a2418;
+  text-align: center;
+  width: 50px;
+  border: none;
+  background: transparent;
+  font-family: inherit;
+}
+
+/* ۲. اصلاح دکمه خرید (کوچک‌تر، مینیمال‌تر، با فاصله مناسب) */
+.r6-add {
+  display: block;
+  width: 100%;
+  padding: 10px 14px;
+  background: #4a2c1a;
+  color: #fff;
+  border: none;
+  border-radius: 8px;
+  font-size: 0.85rem;
+  font-weight: 700;
+  font-family: inherit;
+  cursor: pointer;
+  transition: all 0.25s ease;
+  box-shadow: 0 2px 6px rgba(74, 44, 26, 0.15);
+}
+
+.r6-add:hover {
+  background: #3a2010;
+  transform: translateY(-1px);
+  box-shadow: 0 4px 10px rgba(74, 44, 26, 0.25);
+}
+
+/* ==========================================
+   PRODUCT DETAIL — FINAL OVERRIDES
+   اصلاح چیدمان کارت قیمت
+   ========================================== */
+
+.pd-price-block {
+  display: flex;
+  flex-direction: column;
+  align-items: stretch;
+  direction: rtl;
+  padding: 20px;
+}
+
+/* بج تخفیف در جریان عادی صفحه */
+.pd-price-badge {
+  position: static;
+  inset: auto;
+  align-self: flex-start;
+  width: fit-content;
+  max-width: 100%;
+  box-sizing: border-box;
+  margin: 0 0 16px;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.10);
+}
+
+/* قیمت مستقل از بج */
+.pd-price-main {
+  display: flex;
+  align-items: baseline;
+  justify-content: flex-start;
+  margin: 0 0 10px !important;
+}
+
+.pd-price-value {
+  display: flex;
+  align-items: baseline;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+
+.pd-price-value b {
+  font-size: clamp(1.45rem, 4vw, 2rem);
+  line-height: 1.5;
+  white-space: nowrap;
+}
+
+/* اطلاعات زیر قیمت */
+.pd-price-meta {
+  margin-top: 4px;
+  padding-top: 12px;
+  justify-content: flex-start;
+}
+
+/* موبایل */
+@media (max-width: 900px) {
+  .pd-price-block {
+    padding: 16px;
+  }
+
+  .pd-price-badge {
+    margin-bottom: 12px;
+    padding: 5px 11px;
+  }
+
+  .pd-price-main {
+    margin: 0 0 8px !important;
+  }
+
+  .pd-price-value b {
+    font-size: 1.55rem;
+  }
+}
+
+/* موبایل باریک */
+@media (max-width: 380px) {
+  .pd-price-block {
+    padding: 14px;
+  }
+
+  .pd-price-value b {
+    font-size: 1.4rem;
+  }
+
+  .pd-price-badge {
+    gap: 5px;
+    font-size: 0.64rem;
   }
 }

@@ -6,7 +6,12 @@ $__bp = [
     __DIR__ . '/../sock-b2b/config/bootstrap.php',
     __DIR__ . '/../config/bootstrap.php',
 ];
-foreach ($__bp as $__b) { if (is_file($__b)) { require_once $__b; break; } }
+foreach ($__bp as $__b) {
+    if (is_file($__b)) {
+        require_once $__b;
+        break;
+    }
+}
 unset($__bp, $__b);
 require_once ROOT_PATH . '/config/database.php';
 require_once ROOT_PATH . '/config/auth.php';
@@ -17,6 +22,25 @@ if (!is_logged_in()) {
 }
 
 $h = static fn($v): string => htmlspecialchars((string)$v, ENT_QUOTES, 'UTF-8');
+$moneyFa = static function ($amount, int $decimals = 0): string {
+    $formatted = number_format((float)$amount, $decimals, '.', ',');
+    $formatted = strtr($formatted, [
+        '0' => '۰',
+        '1' => '۱',
+        '2' => '۲',
+        '3' => '۳',
+        '4' => '۴',
+        '5' => '۵',
+        '6' => '۶',
+        '7' => '۷',
+        '8' => '۸',
+        '9' => '۹',
+        ',' => '٬',
+        '.' => '٫',  // اعشار فارسی (اختیاری)
+    ]);
+    return $formatted . ' تومان';
+};
+
 
 $userId = (int)($_SESSION['admin_id'] ?? $_SESSION['customer_id'] ?? 0);
 $db = db();
@@ -28,11 +52,6 @@ if ($orderNumber === '') {
     exit;
 }
 
-/* ─── Helpers ─── */
-function moneyFa(int $amount): string
-{
-    return number_format(max(0, $amount)) . ' تومان';
-}
 
 function uploadReceipt(array $file): array
 {
@@ -201,7 +220,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                     if ($claimedAmount <= 0) {
                         $error = 'مبلغ پرداخت را وارد کنید.';
                     } elseif ($claimedAmount > $invoiceRemaining) {
-                        $error = 'مبلغ پرداخت نمی‌تواند بیشتر از ' . moneyFa($invoiceRemaining) . ' باشد.';
+                        $error = 'مبلغ پرداخت نمی‌تواند بیشتر از ' . $moneyFa($invoiceRemaining) . ' باشد.';
                     } elseif ($referenceNo === '' && $receiptPath === null) {
                         $error = 'شماره پیگیری یا تصویر فیش الزامی است.';
                     }
@@ -345,21 +364,21 @@ ob_start();
         <div class="payment-summary">
             <div class="payment-summary-row">
                 <span>مبلغ فاکتور</span>
-                <strong><?= moneyFa($invoiceTotal) ?></strong>
+                <strong><?= $moneyFa($invoiceTotal) ?></strong>
             </div>
             <div class="payment-summary-row">
                 <span>پرداخت تأییدشده</span>
-                <strong class="payment-paid"><?= moneyFa($paidTotal) ?></strong>
+                <strong class="payment-paid"><?= $moneyFa($paidTotal) ?></strong>
             </div>
             <?php if ($pendingAmount > 0): ?>
                 <div class="payment-summary-row">
                     <span>درخواست در انتظار بررسی</span>
-                    <strong class="payment-pending"><?= moneyFa($pendingAmount) ?></strong>
+                    <strong class="payment-pending"><?= $moneyFa($pendingAmount) ?></strong>
                 </div>
             <?php endif; ?>
             <div class="payment-summary-row payment-summary-total">
                 <span>مبلغ قابل پرداخت</span>
-                <strong><?= moneyFa($payableAmount) ?></strong>
+                <strong><?= $moneyFa($payableAmount) ?></strong>
             </div>
         </div>
 
@@ -369,7 +388,7 @@ ob_start();
                 <div class="payment-result-icon">⏳</div>
                 <div>
                     <h2>پرداخت شما در انتظار بررسی مالی است</h2>
-                    <p>مبلغ اعلام‌شده: <b><?= moneyFa($pendingAmount) ?></b><br>
+                    <p>مبلغ اعلام‌شده: <b><?= $moneyFa($pendingAmount) ?></b><br>
                         تا تعیین تکلیف، امکان ثبت پرداخت دیگری برای این فاکتور وجود ندارد.</p>
                 </div>
             </div>
@@ -394,7 +413,7 @@ ob_start();
                         <span class="payment-step">۱</span>
                         <div>
                             <h2>انتخاب روش پرداخت</h2>
-                            <p>مبلغ دقیق قابل پرداخت: <b><?= moneyFa($payableAmount) ?></b></p>
+                            <p>مبلغ دقیق قابل پرداخت: <b><?= $moneyFa($payableAmount) ?></b></p>
                         </div>
                     </div>
 
@@ -484,7 +503,7 @@ ob_start();
                                 inputmode="numeric" placeholder="<?= (int)$payableAmount ?>">
                             <span>تومان</span>
                         </div>
-                        <small>حداکثر قابل پرداخت: <b><?= moneyFa($payableAmount) ?></b></small>
+                        <small>حداکثر قابل پرداخت: <b><?= $moneyFa($payableAmount) ?></b></small>
                     </div>
                 </section>
 

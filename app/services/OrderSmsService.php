@@ -17,14 +17,8 @@ final class OrderSmsService
 {
     /**
      * ارسال پیامک تأیید ثبت سفارش
-     *
-     * Setting:
-     * sms_pattern_order_approved
-     *
-     * Event:
-     * order_approved
      */
-    public static function orderApproved(int $orderId): array
+    public static function orderApproved(int $orderId, array $fin = []): array
     {
         $order = self::getOrder($orderId);
 
@@ -35,40 +29,23 @@ final class OrderSmsService
         $mobile = self::resolveMobile($order);
 
         if ($mobile === '') {
-            throw new RuntimeException(
-                'شماره موبایل مشتری برای ارسال پیامک پیدا نشد.'
-            );
+            throw new RuntimeException('شماره موبایل مشتری برای ارسال پیامک پیدا نشد.');
         }
 
-        $patternId = Setting::getInt(
-            'sms_pattern_order_approved',
-            0
-        );
+        $patternId = Setting::getInt('sms_pattern_order_approved', 0);
 
         if ($patternId <= 0) {
-            throw new RuntimeException(
-                'Pattern تأیید سفارش تنظیم نشده است.'
-            );
+            throw new RuntimeException('Pattern تأیید سفارش تنظیم نشده است.');
         }
 
-        if (
-            self::alreadySent(
-                $orderId,
-                'order_approved',
-                $patternId
-            )
-        ) {
-            return [
-                'success' => true,
-                'skipped' => true,
-                'reason'  => 'already_sent',
-            ];
+        if (self::alreadySent($orderId, 'order_approved', $patternId)) {
+            return ['success' => true, 'skipped' => true, 'reason' => 'already_sent'];
         }
 
         return SmsService::sendPattern(
             $mobile,
             $patternId,
-            self::orderVariables($order),
+            self::orderVariables($order, $fin),
             (int)$order['user_id'],
             $orderId,
             'order_approved'
@@ -77,15 +54,6 @@ final class OrderSmsService
 
     /**
      * ارسال پیامک «ارسال شد»
-     *
-     * Setting:
-     * sms_pattern_order_shipping
-     *
-     * Event:
-     * order_shipping
-     *
-     * این پیام فقط زمانی باید ارسال شود که سفارش
-     * واقعاً وارد وضعیت shipped شده باشد.
      */
     public static function orderShipping(int $orderId): array
     {
@@ -98,29 +66,15 @@ final class OrderSmsService
         $mobile = self::resolveMobile($order);
 
         if ($mobile === '') {
-            throw new RuntimeException(
-                'شماره موبایل مشتری برای ارسال پیامک پیدا نشد.'
-            );
+            throw new RuntimeException('شماره موبایل مشتری برای ارسال پیامک پیدا نشد.');
         }
 
-        /*
-         * Pattern از Settings خوانده می‌شود.
-         * عدد Pattern نباید در کد هاردکد شود.
-         */
-        $patternId = Setting::getInt(
-            'sms_pattern_order_shipping',
-            0
-        );
+        $patternId = Setting::getInt('sms_pattern_order_shipping', 0);
 
         if ($patternId <= 0) {
-            throw new RuntimeException(
-                'Pattern پیامک ارسال سفارش تنظیم نشده است.'
-            );
+            throw new RuntimeException('Pattern پیامک ارسال سفارش تنظیم نشده است.');
         }
-        /*
- * event مخصوص هر وضعیت — تا هر transition پیامک خودش را داشته باشد
- * و alreadySent جلوی transition بعدی را نگیرد.
- */
+
         $statusEventMap = [
             'packed'       => 'order_shipping_packed',
             'shipped-pik'  => 'order_shipping_pik',
@@ -130,24 +84,14 @@ final class OrderSmsService
         $currentStatus = (string)($order['status'] ?? '');
         $event = $statusEventMap[$currentStatus] ?? 'order_shipping';
 
-        if (
-            self::alreadySent(
-                $orderId,
-                $event,
-                $patternId
-            )
-        ) {
-            return [
-                'success' => true,
-                'skipped' => true,
-                'reason'  => 'already_sent',
-            ];
+        if (self::alreadySent($orderId, $event, $patternId)) {
+            return ['success' => true, 'skipped' => true, 'reason' => 'already_sent'];
         }
 
         return SmsService::sendPattern(
             $mobile,
             $patternId,
-            self::orderVariables($order),
+            self::orderVariables($order, []),
             (int)$order['user_id'],
             $orderId,
             $event
@@ -169,14 +113,12 @@ final class OrderSmsService
                 o.shipping_mobile,
                 u.mobile AS user_mobile
             FROM orders o
-            LEFT JOIN users u
-                ON u.id = o.user_id
+            LEFT JOIN users u ON u.id = o.user_id
             WHERE o.id = ?
             LIMIT 1
         ");
 
         $stmt->execute([$orderId]);
-
         $row = $stmt->fetch(PDO::FETCH_ASSOC);
 
         return $row ?: null;
@@ -184,89 +126,116 @@ final class OrderSmsService
 
     /**
      * انتخاب شماره موبایل مقصد
-     *
-     * اولویت:
-     * 1) شماره گیرنده سفارش
-     * 2) شماره حساب مشتری
      */
     private static function resolveMobile(array $order): string
     {
-        $mobile = trim(
-            (string)($order['shipping_mobile'] ?? '')
-        );
-
+        // ⬅️ اولویت به شماره کاربر (صاحب حساب)
+        $mobile = trim((string)($order['user_mobile'] ?? ''));
         if ($mobile !== '') {
             return $mobile;
         }
+        // اگه شماره کاربر نبود، از شماره گیرنده استفاده کن
+        return trim((string)($order['shipping_mobile'] ?? ''));
+    }
+    /**
+     * متغیرهای Pattern
+     */
+    private static function orderVariables(array $order, array $fin = []): array
+    {
+        $paid      = (float)($fin['paid'] ?? 0);
+        $remaining = (float)($fin['remaining'] ?? 0);
 
-        return trim(
-            (string)($order['user_mobile'] ?? '')
-        );
+        if ($remaining > 0) {
+            $statusText = 'بدهکار';
+        } elseif ($remaining < 0) {
+            $statusText = 'بستانکار';
+        } else {
+            $statusText = 'تسویه شده';
+        }
+
+        return [
+            'ORDER'     => (string)$order['order_number'],
+            'DATE'      => self::jalaliDate(),
+            'PAID'      => self::formatMoney($paid),
+            'REMAINING' => self::formatMoney(abs($remaining)),
+            'STATUS'    => $statusText,
+        ];
     }
 
     /**
-     * متغیرهای مشترک Patternهای سفارش
+     * تبدیل تاریخ میلادی به شمسی
      */
-
-    private static function orderVariables(array $order): array
+    private static function jalaliDate(): string
     {
-        $statusLabels = [
-            'packed'       => 'بسته بندی و آماده تحویل',
-            'shipped-pik'  => 'تحویل پیک جهت ارسال',
-            'shipped-post' => 'تحویل پست جهت ارسال',
-        ];
+        $gy = (int)date('Y');
+        $gm = (int)date('n');
+        $gd = (int)date('j');
 
-        $status = (string)($order['status'] ?? '');
+        $g = [0, 31, 59, 90, 120, 151, 181, 212, 243, 273, 304, 334];
+        $jy = ($gy <= 1600) ? 0 : 979;
+        $gy -= ($gy <= 1600) ? 621 : 1600;
+        $gy2 = ($gm > 2) ? $gy + 1 : $gy;
+        $d = (365 * $gy) + intdiv($gy2 + 3, 4) - intdiv($gy2 + 99, 100) + intdiv($gy2 + 399, 400) - 80 + $gd + $g[$gm - 1];
+        $jy += 33 * intdiv($d, 12053);
+        $d %= 12053;
+        $jy += 4 * intdiv($d, 1461);
+        $d %= 1461;
+        if ($d > 365) {
+            $jy += intdiv($d - 1, 365);
+            $d = ($d - 1) % 365;
+        }
+        $jm = ($d < 186) ? 1 + intdiv($d, 31) : 7 + intdiv($d - 186, 30);
+        $jd = 1 + (($d < 186) ? $d % 31 : ($d - 186) % 30);
 
-        return [
-            'ORDER'  => (string)$order['order_number'],
-            'DATE'   => date('Y/m/d'),
-            'TIME'   => date('H:i'),
-            'MONEY'  => self::formatMoney(
-                (float)$order['total']
-            ),
-            'PACKED' => $statusLabels[$status] ?? '',
-            'LOGO'   => 'از خرید شما متشکریم',
-        ];
+        $formatted = $jy . '/' . str_pad((string)$jm, 2, '0', STR_PAD_LEFT) . '/' . str_pad((string)$jd, 2, '0', STR_PAD_LEFT);
+
+        return strtr($formatted, [
+            '0' => '۰',
+            '1' => '۱',
+            '2' => '۲',
+            '3' => '۳',
+            '4' => '۴',
+            '5' => '۵',
+            '6' => '۶',
+            '7' => '۷',
+            '8' => '۸',
+            '9' => '۹',
+        ]);
+    }
+
+    /**
+     * فرمت مبلغ — فارسی + کاما + تومان
+     */
+    private static function formatMoney(float $amount): string
+    {
+        $formatted = number_format($amount, 0, '.', ',');
+        $formatted = strtr($formatted, [
+            '0' => '۰',
+            '1' => '۱',
+            '2' => '۲',
+            '3' => '۳',
+            '4' => '۴',
+            '5' => '۵',
+            '6' => '۶',
+            '7' => '۷',
+            '8' => '۸',
+            '9' => '۹',
+            ',' => '٬',
+        ]);
+        return $formatted . ' تومان';
     }
 
     /**
      * بررسی ارسال موفق قبلی
      */
-    private static function alreadySent(
-        int $orderId,
-        string $event,
-        int $patternId
-    ): bool {
+    private static function alreadySent(int $orderId, string $event, int $patternId): bool
+    {
         $stmt = db()->prepare("
-            SELECT id
-            FROM sms_logs
-            WHERE order_id = ?
-              AND event = ?
-              AND pattern_id = ?
-              AND status = 'sent'
+            SELECT id FROM sms_logs
+            WHERE order_id = ? AND event = ? AND pattern_id = ? AND status = 'sent'
             LIMIT 1
         ");
-
-        $stmt->execute([
-            $orderId,
-            $event,
-            $patternId,
-        ]);
-
+        $stmt->execute([$orderId, $event, $patternId]);
         return (bool)$stmt->fetchColumn();
-    }
-
-    /**
-     * فرمت مبلغ برای SMS
-     */
-    private static function formatMoney(float $amount): string
-    {
-        return number_format(
-            $amount,
-            0,
-            '.',
-            ''
-        );
     }
 }

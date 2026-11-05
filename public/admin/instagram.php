@@ -7,7 +7,12 @@ $__bp = [
     __DIR__ . '/../../sock-b2b/config/bootstrap.php',
     __DIR__ . '/../../config/bootstrap.php',
 ];
-foreach ($__bp as $__b) { if (is_file($__b)) { require_once $__b; break; } }
+foreach ($__bp as $__b) {
+    if (is_file($__b)) {
+        require_once $__b;
+        break;
+    }
+}
 unset($__bp, $__b);
 require_once ROOT_PATH . '/config/database.php';
 require_once ROOT_PATH . '/config/auth.php';
@@ -19,13 +24,10 @@ $db = db();
 $error = '';
 $success = '';
 
-/* ═══════════════════════════════════════════════
-   POST
-   ═══════════════════════════════════════════════ */
+/* ═══════════════ POST ═══════════════ */
 
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     verify_csrf();
-
 
     $do = $_POST['do'] ?? '';
 
@@ -44,8 +46,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             $db->prepare("
                 INSERT INTO instagram_posts
                     (image_path, caption, link, sort_order, is_active)
-                VALUES
-                    (?,?,?,?,1)
+                VALUES (?,?,?,?,1)
             ")->execute([
                 $imagePath,
                 $caption !== '' ? $caption : null,
@@ -161,61 +162,83 @@ ob_start();
     </div>
 <?php endif; ?>
 
-<!-- افزودن -->
-<div class="admin-card" style="padding:18px;margin-bottom:22px;">
-    <h2 class="section-title" style="font-size:1rem;margin-bottom:14px;">
-        افزودن پست جدید
-    </h2>
+
+<!-- ═══ افزودن پست جدید ═══ -->
+<div class="admin-card" style="padding:22px;margin-bottom:22px;">
+
+    <div style="display:flex;align-items:center;gap:10px;margin-bottom:18px;">
+        <div style="width:34px;height:34px;display:grid;place-items:center;border-radius:9px;background:var(--admin-primary-soft);color:var(--admin-primary);">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" width="18" height="18">
+                <rect x="3" y="3" width="18" height="18" rx="5" />
+                <circle cx="12" cy="12" r="4" />
+                <circle cx="17.5" cy="6.5" r=".8" fill="currentColor" />
+            </svg>
+        </div>
+        <h2 style="margin:0;font-size:1rem;font-weight:800;color:var(--admin-text);">
+            افزودن پست جدید
+        </h2>
+    </div>
 
     <form method="post" enctype="multipart/form-data"
-        style="display:grid;grid-template-columns:1fr 1fr 1fr 90px auto;gap:10px;align-items:end;">
+        style="display:grid;grid-template-columns:1.2fr 1fr 1fr 100px auto;gap:14px;align-items:end;">
         <?= csrf_field() ?>
 
         <input type="hidden" name="do" value="add">
 
         <div>
-            <label style="display:block;font-size:.7rem;color:var(--muted);margin-bottom:4px;">
-                تصویر *
+            <label style="display:block;font-size:.72rem;font-weight:700;color:var(--admin-text);margin-bottom:6px;">
+                تصویر <span style="color:var(--admin-danger);">*</span>
             </label>
-            <input type="file" name="image" required
-                accept="image/jpeg,image/png,image/webp"
-                style="font-size:.72rem;padding:8px;">
+            <label class="admin-file" style="padding:6px 10px;min-height:42px;">
+                <input type="file" name="image" required
+                    accept="image/jpeg,image/png,image/webp"
+                    onchange="updateFileName(this)">
+                <span class="admin-file-btn" style="padding:6px 12px;font-size:.72rem;">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                        <path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4" />
+                        <polyline points="17 8 12 3 7 8" />
+                        <line x1="12" y1="3" x2="12" y2="15" />
+                    </svg>
+                    انتخاب
+                </span>
+                <span class="admin-file-name" data-placeholder="—" style="font-size:.7rem;">—</span>
+            </label>
         </div>
 
         <div>
-            <label style="display:block;font-size:.7rem;color:var(--muted);margin-bottom:4px;">
+            <label style="display:block;font-size:.72rem;font-weight:700;color:var(--admin-text);margin-bottom:6px;">
                 متن (کپشن)
             </label>
             <input type="text" name="caption"
                 placeholder="مثلاً: جدیدترین طرح"
-                style="width:100%;padding:10px 14px;border:1px solid var(--card-border);border-radius:12px;font-family:inherit;">
+                style="width:100%;padding:10px 14px;border:1.5px solid var(--admin-border);border-radius:10px;font-family:inherit;font-size:.86rem;">
         </div>
 
         <div>
-            <label style="display:block;font-size:.7rem;color:var(--muted);margin-bottom:4px;">
-                لینک پست (اختیاری)
+            <label style="display:block;font-size:.72rem;font-weight:700;color:var(--admin-text);margin-bottom:6px;">
+                لینک پست
             </label>
             <input type="url" name="link" dir="ltr"
                 placeholder="https://instagram.com/p/..."
-                style="width:100%;padding:10px 14px;border:1px solid var(--card-border);border-radius:12px;font-family:inherit;">
+                style="width:100%;padding:10px 14px;border:1.5px solid var(--admin-border);border-radius:10px;font-family:inherit;font-size:.86rem;">
         </div>
 
         <div>
-            <label style="display:block;font-size:.7rem;color:var(--muted);margin-bottom:4px;">
+            <label style="display:block;font-size:.72rem;font-weight:700;color:var(--admin-text);margin-bottom:6px;">
                 ترتیب
             </label>
             <input type="number" name="sort_order" value="99" min="0"
-                style="width:100%;padding:10px;border:1px solid var(--card-border);border-radius:12px;text-align:center;">
+                style="width:100%;padding:10px;border:1.5px solid var(--admin-border);border-radius:10px;text-align:center;font-family:inherit;font-size:.86rem;">
         </div>
 
-        <button type="submit" class="btn btn-orange"
-            style="padding:11px 22px;font-size:.82rem;">
+        <button type="submit" class="btn btn-orange" style="padding:11px 22px;font-size:.82rem;">
             + افزودن
         </button>
     </form>
 </div>
 
-<!-- لیست -->
+
+<!-- ═══ لیست پست‌ها ═══ -->
 <div class="admin-table-wrap">
     <table class="admin-table">
         <thead>
@@ -225,14 +248,14 @@ ob_start();
                 <th>لینک</th>
                 <th style="width:80px;">ترتیب</th>
                 <th style="width:100px;">وضعیت</th>
-                <th style="width:200px;">عملیات</th>
+                <th style="width:220px;">عملیات</th>
             </tr>
         </thead>
         <tbody>
 
             <?php if (!$posts): ?>
                 <tr>
-                    <td colspan="6" style="text-align:center;padding:30px;color:var(--muted);">
+                    <td colspan="6" style="text-align:center;padding:30px;color:var(--admin-text-muted);">
                         هنوز پستی اضافه نشده.
                     </td>
                 </tr>
@@ -242,7 +265,7 @@ ob_start();
                 <tr>
                     <td>
                         <img src="<?= htmlspecialchars($post['image_path']) ?>" alt=""
-                            style="width:64px;height:64px;object-fit:cover;border-radius:10px;border:1px solid var(--card-border);">
+                            style="width:64px;height:64px;object-fit:cover;border-radius:10px;border:1px solid var(--admin-border);">
                     </td>
 
                     <td>
@@ -254,11 +277,11 @@ ob_start();
                             <a href="<?= htmlspecialchars($post['link']) ?>"
                                 target="_blank" rel="noopener"
                                 dir="ltr"
-                                style="color:var(--teal-700);font-size:.75rem;">
-                                مشاهده
+                                style="color:var(--admin-primary);font-size:.75rem;font-weight:600;">
+                                مشاهده ↗
                             </a>
                         <?php else: ?>
-                            <span style="color:var(--muted);">—</span>
+                            <span style="color:var(--admin-text-muted);">—</span>
                         <?php endif; ?>
                     </td>
 
@@ -273,16 +296,16 @@ ob_start();
                     </td>
 
                     <td>
-                        <div style="display:flex;gap:6px;flex-wrap:wrap;">
+                        <div style="display:flex;gap:6px;flex-wrap:wrap;align-items:center;">
 
-                            <button type="button" class="btn"
+                            <button type="button" class="btn btn-sm"
                                 onclick='openEditIg(
                                     <?= (int)$post["id"] ?>,
                                     <?= htmlspecialchars(json_encode($post["caption"] ?? "", JSON_UNESCAPED_UNICODE), ENT_QUOTES, "UTF-8") ?>,
                                     <?= htmlspecialchars(json_encode($post["link"] ?? "", JSON_UNESCAPED_UNICODE), ENT_QUOTES, "UTF-8") ?>,
                                     <?= (int)$post["sort_order"] ?>
                                 )'
-                                style="padding:6px 12px;font-size:.72rem;background:var(--teal-100);color:var(--teal-800);">
+                                style="background:var(--admin-primary-soft);color:var(--admin-primary);border-color:transparent;">
                                 ✏️ ویرایش
                             </button>
 
@@ -290,7 +313,7 @@ ob_start();
                                 <?= csrf_field() ?>
                                 <input type="hidden" name="do" value="toggle">
                                 <input type="hidden" name="id" value="<?= (int)$post['id'] ?>">
-                                <button class="btn" style="padding:6px 12px;font-size:.72rem;">
+                                <button class="btn btn-sm">
                                     <?= $post['is_active'] ? 'غیرفعال' : 'فعال' ?>
                                 </button>
                             </form>
@@ -300,8 +323,8 @@ ob_start();
                                 <?= csrf_field() ?>
                                 <input type="hidden" name="do" value="delete">
                                 <input type="hidden" name="id" value="<?= (int)$post['id'] ?>">
-                                <button class="btn"
-                                    style="padding:6px 12px;font-size:.72rem;background:#fff0f0;color:#c62828;">
+                                <button class="btn btn-sm"
+                                    style="background:var(--admin-danger-soft);color:var(--admin-danger);border-color:transparent;">
                                     🗑
                                 </button>
                             </form>
@@ -315,48 +338,76 @@ ob_start();
     </table>
 </div>
 
-<!-- Modal ویرایش -->
-<div id="editIgModal"
-    style="display:none;position:fixed;inset:0;background:rgba(0,0,0,.45);z-index:9999;align-items:center;justify-content:center;padding:20px;">
 
-    <div style="width:min(500px,100%);background:#fff;border-radius:18px;padding:22px;box-shadow:0 20px 60px rgba(0,0,0,.2);">
+<!-- ═══ Modal ویرایش ═══ -->
+<div id="editIgModal" class="admin-modal-overlay" style="display:none;">
+    <div class="admin-modal">
 
-        <h3 style="margin:0 0 18px;">ویرایش پست</h3>
+        <div class="admin-modal-head">
+            <h3>ویرایش پست</h3>
+            <button type="button" class="admin-modal-close" onclick="closeEditIg()" aria-label="بستن">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                    <path d="M18 6L6 18M6 6l12 12" />
+                </svg>
+            </button>
+        </div>
 
-        <form method="post" enctype="multipart/form-data">
+        <form method="post" enctype="multipart/form-data" class="admin-modal-body">
             <?= csrf_field() ?>
             <input type="hidden" name="do" value="edit">
             <input type="hidden" name="id" id="edit_ig_id">
 
-            <div class="form-field">
+            <div class="admin-modal-field">
                 <label>متن (کپشن)</label>
                 <input type="text" name="caption" id="edit_ig_caption">
             </div>
 
-            <div class="form-field">
+            <div class="admin-modal-field">
                 <label>لینک پست</label>
                 <input type="url" name="link" id="edit_ig_link" dir="ltr">
             </div>
 
-            <div class="form-field">
+            <div class="admin-modal-field">
                 <label>ترتیب</label>
-                <input type="number" name="sort_order" id="edit_ig_sort" min="0"
-                    style="text-align:center;">
+                <input type="number" name="sort_order" id="edit_ig_sort" min="0">
             </div>
 
-            <div class="form-field">
+            <div class="admin-modal-field">
                 <label>تصویر جدید (اختیاری)</label>
-                <input type="file" name="image" accept="image/jpeg,image/png,image/webp">
+                <label class="admin-file">
+                    <input type="file" name="image" accept="image/jpeg,image/png,image/webp"
+                        onchange="updateFileName(this)">
+                    <span class="admin-file-btn">
+                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                            <path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4" />
+                            <polyline points="17 8 12 3 7 8" />
+                            <line x1="12" y1="3" x2="12" y2="15" />
+                        </svg>
+                        انتخاب تصویر
+                    </span>
+                    <span class="admin-file-name" data-placeholder="تصویری انتخاب نشده">
+                        تصویری انتخاب نشده
+                    </span>
+                </label>
+                <small class="admin-modal-hint">اگر عکس جدید انتخاب کنید جایگزین تصویر فعلی می‌شود.</small>
             </div>
 
-            <div style="display:flex;gap:8px;justify-content:flex-end;margin-top:18px;">
+            <div class="admin-modal-actions">
                 <button type="button" class="btn" onclick="closeEditIg()">انصراف</button>
-                <button type="submit" class="btn btn-orange">ذخیره</button>
+                <button type="submit" class="btn btn-orange">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" width="16" height="16">
+                        <path d="M19 21H5a2 2 0 01-2-2V5a2 2 0 012-2h11l5 5v11a2 2 0 01-2 2z" />
+                        <polyline points="17 21 17 13 7 13 7 21" />
+                        <polyline points="7 3 7 8 15 8" />
+                    </svg>
+                    ذخیره تغییرات
+                </button>
             </div>
         </form>
 
     </div>
 </div>
+
 
 <script>
     function openEditIg(id, caption, link, sortOrder) {
@@ -370,9 +421,24 @@ ob_start();
     function closeEditIg() {
         document.getElementById('editIgModal').style.display = 'none';
     }
+
     document.getElementById('editIgModal').addEventListener('click', function(e) {
         if (e.target === this) closeEditIg();
     });
+
+    function updateFileName(input) {
+        var label = input.closest('.admin-file');
+        var nameEl = label ? label.querySelector('.admin-file-name') : null;
+        if (!nameEl) return;
+
+        if (input.files && input.files.length > 0) {
+            nameEl.textContent = input.files[0].name;
+            nameEl.classList.add('is-selected');
+        } else {
+            nameEl.textContent = nameEl.dataset.placeholder || 'تصویری انتخاب نشده';
+            nameEl.classList.remove('is-selected');
+        }
+    }
 </script>
 
 <?php

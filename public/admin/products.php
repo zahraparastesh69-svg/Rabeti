@@ -4,7 +4,12 @@ $__bp = [
     __DIR__ . '/../../sock-b2b/config/bootstrap.php',
     __DIR__ . '/../../config/bootstrap.php',
 ];
-foreach ($__bp as $__b) { if (is_file($__b)) { require_once $__b; break; } }
+foreach ($__bp as $__b) {
+    if (is_file($__b)) {
+        require_once $__b;
+        break;
+    }
+}
 unset($__bp, $__b);
 require_once ROOT_PATH . '/config/database.php';
 require_once ROOT_PATH . '/config/auth.php';
@@ -24,15 +29,23 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && ($_POST['do'] ?? '') === 'deactivat
 }
 
 $products = db()->query("
-    SELECT p.id, p.code, p.name, p.slug, p.base_moq, p.is_active,
-           c.name AS cat_name,
-           pr.price, inv.qty_available
+    SELECT 
+        p.id, 
+        p.code, 
+        p.name, 
+        p.slug, 
+        p.base_moq, 
+        p.is_active,
+        p.base_price,
+        p.status,
+        c.name AS cat_name,
+        GREATEST(0, COALESCE(inv.qty_physical, 0) - COALESCE(inv.reserved, 0) - COALESCE(inv.unsellable, 0)) AS qty_available
     FROM products p
     JOIN categories c ON c.id = p.category_id
-    LEFT JOIN product_prices pr ON pr.product_id = p.id AND pr.customer_group='wholesale'
     LEFT JOIN inventory inv ON inv.product_id = p.id
     ORDER BY p.id DESC
 ")->fetchAll();
+
 
 $activeMenu = 'products';
 $pageTitle  = 'مدیریت محصولات';
@@ -68,12 +81,28 @@ ob_start();
                         </a>
                     </td>
                     <td><?= htmlspecialchars($p['cat_name']) ?></td>
-                    <td><?= $p['price'] ? number_format((float)$p['price']) . ' ت' : '—' ?></td>
+                    <td><?= $p['base_price'] > 0 ? number_format((float)$p['base_price']) . ' ت' : '—' ?></td>
                     <td><?= number_format((int)($p['qty_available'] ?? 0)) ?></td>
                     <td><?= (int)$p['base_moq'] ?></td>
                     <td>
-                        <span class="st-badge <?= $p['is_active'] ? 'st-converted' : 'st-rejected' ?>">
-                            <?= $p['is_active'] ? 'فعال' : 'غیرفعال' ?>
+                        <?php
+                        $statusLabels = [
+                            'draft'    => 'پیش‌نویس',
+                            'active'   => 'فعال',
+                            'inactive' => 'غیرفعال',
+                        ];
+                        $statusClasses = [
+                            'draft'    => 'st-quoted',
+                            'active'   => 'st-converted',
+                            'inactive' => 'st-rejected',
+                        ];
+                        $s = $p['status'] ?? 'draft';
+                        if (!(int)$p['is_active']) {
+                            $s = 'inactive';
+                        }
+                        ?>
+                        <span class="st-badge <?= $statusClasses[$s] ?? 'st-quoted' ?>">
+                            <?= $statusLabels[$s] ?? 'نامشخص' ?>
                         </span>
                     </td>
                     <td style="white-space:nowrap;">
@@ -84,7 +113,7 @@ ob_start();
                                 <?= csrf_field() ?>
                                 <input type="hidden" name="do" value="deactivate">
                                 <input type="hidden" name="id" value="<?= (int)$p['id'] ?>">
-                                <button class="btn" style="padding:6px 14px;font-size:.72rem;background:#fff0f0;color:#c62828;">حذف</button>
+                                <button class="btn" style="padding:6px 14px;font-size:.72rem;background:#fff0f0;color:#c62828;">غیرفعال</button>
                             </form>
                         <?php endif; ?>
                     </td>

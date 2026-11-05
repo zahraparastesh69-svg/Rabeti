@@ -1,0 +1,266 @@
+/* ═══════════════════════════════════════════════════════════════
+   RABETI-CUSTOM-ORDER | custom-order-admin.css | v5 | 2026-10-30
+   استایل پنل ادمین سفارشات اختصاصی — RTL
+   محل نصب: /assets/css/custom-order-admin.css
+═══════════════════════════════════════════════════════════════ */
+
+* { box-sizing: border-box; margin: 0; padding: 0; }
+
+body {
+    font-family: Tahoma, "Vazirmatn", Arial, sans-serif;
+    background: #f1f5f9;
+    color: #1f2937;
+    font-size: 13px;
+    line-height: 1.9;
+    padding: 20px;
+}
+
+/* ───────── هدر ───────── */
+.coa-head {
+    display: flex;
+    align-items: center;
+    gap: 14px;
+    flex-wrap: wrap;
+    margin-bottom: 18px;
+}
+.coa-head h1 {
+    color: #2a5f78;
+    font-size: 21px;
+    margin-left: auto;
+}
+.coa-head a {
+    color: #2a5f78;
+    text-decoration: none;
+    font-weight: 700;
+    font-size: 12.5px;
+    background: #fff;
+    border: 1px solid #e5e7eb;
+    border-radius: 8px;
+    padding: 8px 14px;
+}
+.coa-head a:hover { background: #f0f9ff; }
+
+/* ───────── پیام‌ها ───────── */
+.coa-msg {
+    background: #f0fdf4;
+    border: 1px solid #86efac;
+    color: #065f46;
+    border-radius: 10px;
+    padding: 11px 16px;
+    margin-bottom: 14px;
+    font-weight: 700;
+}
+
+/* ───────── فیلترها ───────── */
+.coa-filters {
+    display: flex;
+    gap: 8px;
+    flex-wrap: wrap;
+    background: #fff;
+    border: 1px solid #e5e7eb;
+    border-radius: 12px;
+    padding: 12px 14px;
+    margin-bottom: 16px;
+}
+.coa-filters select, .coa-filters input {
+    border: 1px solid #d1d5db;
+    border-radius: 8px;
+    padding: 8px 12px;
+    font-family: inherit;
+    font-size: 12.5px;
+    background: #fff;
+}
+.coa-filters input { min-width: 240px; flex: 1 1 240px; }
+
+/* ───────── دکمه‌ها ───────── */
+.coa-btn {
+    display: inline-block;
+    background: #2a5f78;
+    color: #fff;
+    border: 0;
+    border-radius: 8px;
+    padding: 8px 16px;
+    font-family: inherit;
+    font-size: 12.5px;
+    font-weight: 700;
+    cursor: pointer;
+    text-decoration: none;
+    line-height: 1.9;
+    transition: filter .15s;
+}
+.coa-btn:hover:not(:disabled) { filter: brightness(1.12); }
+.coa-btn:disabled { opacity: .45; cursor: not-allowed; }
+.coa-btn.ghost { background: #fff; color: #374151; border: 1px solid #e5e7eb; }
+.coa-btn.ok { background: #16a34a; }
+.coa-btn.warn { background: #d97706; }
+.coa-btn.bad { background: #dc2626; }
+
+/* ───────── جدول لیست — چیدمان ثابت و بدون شکستن سلول‌ها ⭐ ───────── */
+.coa-table-wrap {
+    overflow-x: auto;
+    background: #fff;
+    border: 1px solid #e5e7eb;
+    border-radius: 12px;
+    padding: 4px;
+}
+.coa-table {
+    table-layout: fixed;          /* عرض ستون‌ها مستقل از محتوا */
+    width: 100%;
+    min-width: 980px;             /* در موبایل اسکرول افقی به‌جای به‌هم‌ریختگی */
+    border-collapse: collapse;
+}
+.coa-table th, .coa-table td {
+    padding: 10px 8px;
+    vertical-align: middle;
+    text-align: center;
+    border-bottom: 1px solid #f1f5f9;
+    white-space: nowrap;          /* جلوگیری از شکستن خط داخل سلول */
+    overflow: hidden;
+    text-overflow: ellipsis;      /* محتوای بلند: سه‌نقطه */
+    font-size: 12.5px;
+}
+.coa-table thead th {
+    background: #f8fafc;
+    color: #475569;
+    font-weight: 800;
+    border-bottom: 2px solid #e2e8f0;
+}
+.coa-table tbody tr:hover { background: #f8fafc; }
+
+/* عرض ستون‌ها (۱۰ ستون لیست) */
+.coa-table th:nth-child(1), .coa-table td:nth-child(1) { width: 150px; }
+.coa-table th:nth-child(1), .coa-table td:nth-child(1) { font-family: monospace; }
+.coa-table th:nth-child(2), .coa-table td:nth-child(2) { max-width: 140px; }
+.coa-table th:nth-child(3), .coa-table td:nth-child(3) { width: 115px; }
+.coa-table th:nth-child(4), .coa-table td:nth-child(4) { max-width: 150px; }
+.coa-table th:nth-child(5), .coa-table td:nth-child(5) { width: 70px; }
+.coa-table th:nth-child(6), .coa-table td:nth-child(6) { width: 90px; }
+.coa-table th:nth-child(7), .coa-table td:nth-child(7) { width: 130px; font-feature-settings: "tnum"; }
+.coa-table th:nth-child(8), .coa-table td:nth-child(8) { width: 170px; }
+.coa-table th:nth-child(9), .coa-table td:nth-child(9) { width: 110px; }
+.coa-table th:nth-child(10), .coa-table td:nth-child(10) { width: 80px; }
+
+.coa-empty { color: #94a3b8; padding: 26px 0 !important; font-weight: 700; }
+
+/* جدول کوچک داخل کارت‌ها (آیتم‌های سفارش) */
+.coa-table.small { min-width: 0; margin-top: 10px; }
+.coa-table.small th, .coa-table.small td {
+    padding: 6px 8px;
+    font-size: 12px;
+    white-space: normal;          /* در کارت، شکستن خط مجاز است */
+}
+.coa-table.small th { background: #f8fafc; }
+
+/* ───────── چیپ وضعیت — رنگ اختصاصی هر مرحله ⭐ ───────── */
+.coa-chip {
+    display: inline-block;
+    border-radius: 999px;
+    padding: 2px 10px;
+    font-size: 11px;
+    font-weight: 700;
+    background: #f1f5f9;
+    color: #475569;
+    border: 1px solid #e2e8f0;
+    line-height: 1.9;
+}
+.coa-chip.s-submitted         { background: #eff6ff; color: #1d4ed8; border-color: #bfdbfe; }
+.coa-chip.s-admin_review      { background: #eef2ff; color: #4338ca; border-color: #c7d2fe; }
+.coa-chip.s-down_payment      { background: #fffbeb; color: #b45309; border-color: #fde68a; }
+.coa-chip.s-sample_production { background: #f5f3ff; color: #6d28d9; border-color: #ddd6fe; }
+.coa-chip.s-sample_sent       { background: #f0f9ff; color: #0369a1; border-color: #bae6fd; }
+.coa-chip.s-sample_approval   { background: #f0fdfa; color: #0f766e; border-color: #99f6e4; }
+.coa-chip.s-settlement        { background: #fff7ed; color: #c2410c; border-color: #fed7aa; }
+.coa-chip.s-production        { background: #eff6ff; color: #1e40af; border-color: #bfdbfe; }
+.coa-chip.s-quality_control   { background: #ecfeff; color: #0e7490; border-color: #a5f3fc; }
+.coa-chip.s-shipped           { background: #f0fdf4; color: #15803d; border-color: #bbf7d0; }
+.coa-chip.s-delivered         { background: #dcfce7; color: #166534; border-color: #86efac; }
+.coa-chip.s-agreement         { background: #fdf4ff; color: #a21caf; border-color: #f5d0fe; }
+.coa-chip.s-documents         { background: #fdf2f8; color: #be185d; border-color: #fbcfe8; }
+.coa-chip.s-rejected          { background: #fef2f2; color: #b91c1c; border-color: #fecaca; }
+.coa-chip.s-cancelled         { background: #f3f4f6; color: #6b7280; border-color: #e5e7eb; }
+
+/* ───────── جزئیات سفارش ───────── */
+.coa-detail { display: block; }
+.coa-detail > h2 {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    flex-wrap: wrap;
+    font-size: 18px;
+    margin: 14px 0 10px;
+    font-family: monospace;
+}
+
+/* نوار دکمه‌های چاپ سند */
+.coa-printbar {
+    display: flex;
+    gap: 8px;
+    flex-wrap: wrap;
+    margin-bottom: 14px;
+}
+
+.coa-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(320px, 1fr));
+    gap: 14px;
+    margin-bottom: 14px;
+}
+.coa-card {
+    background: #fff;
+    border: 1px solid #e5e7eb;
+    border-radius: 12px;
+    padding: 16px 18px;
+}
+.coa-card h3 {
+    font-size: 14px;
+    color: #2a5f78;
+    margin-bottom: 10px;
+    padding-bottom: 8px;
+    border-bottom: 1px solid #f1f5f9;
+}
+.coa-card p { margin-bottom: 6px; font-size: 12.5px; word-break: break-word; }
+.coa-card p a { color: #2a5f78; font-weight: 700; }
+
+/* ───────── اقدامات ───────── */
+.coa-actions { display: flex; flex-direction: column; gap: 10px; }
+.coa-act-row {
+    display: flex;
+    gap: 8px;
+    flex-wrap: wrap;
+    align-items: center;
+    background: #f8fafc;
+    border: 1px solid #f1f5f9;
+    border-radius: 10px;
+    padding: 10px 12px;
+}
+.coa-act-row input[type="text"], .coa-act-row input[type="number"], .coa-act-row select {
+    border: 1px solid #d1d5db;
+    border-radius: 8px;
+    padding: 7px 12px;
+    font-family: inherit;
+    font-size: 12.5px;
+    background: #fff;
+    flex: 1 1 200px;
+    min-width: 160px;
+}
+.coa-act-row small { flex-basis: 100%; }
+
+/* ───────── تایم‌لاین ───────── */
+.coa-tl { list-style: none; }
+.coa-tl li {
+    background: #f8fafc;
+    border: 1px solid #f1f5f9;
+    border-radius: 10px;
+    padding: 10px 14px;
+    margin-bottom: 8px;
+}
+.coa-tl li b { color: #2a5f78; }
+.coa-tl li small { color: #94a3b8; margin-right: 8px; }
+.coa-tl li p { font-size: 12px; color: #4b5563; margin-top: 4px; }
+
+/* ───────── واکنش‌گرا ───────── */
+@media (max-width: 720px) {
+    body { padding: 10px; }
+    .coa-head h1 { font-size: 17px; }
+    .coa-act-row input[type="text"], .coa-act-row input[type="number"], .coa-act-row select { flex-basis: 100%; }
+}

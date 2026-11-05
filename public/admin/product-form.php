@@ -1,5 +1,35 @@
 ﻿<?php
-/* Auto-detect bootstrap (local + host) */
+
+/**
+ * product-form.php — فرم ثبت و ویرایش محصول
+ *
+ * ═══════════════════════════════════════════════════════════════════
+ * ساختار:
+ *   ۱. PHP — اعتبارسنجی، ذخیره در DB، لود داده اولیه
+ *   ۲. HTML — فرم ۶ بخشی
+ *   ۳. JS — آپلود عکس، پله‌های تخفیف، به‌روزرسانی خودکار
+ * ═══════════════════════════════════════════════════════════════════
+ *
+ * وابستگی‌ها:
+ *   - products.base_price             (قیمت پایه، از فاز A)
+ *   - products.status                 (draft/active/inactive)
+ *   - product_tier_discounts          (پله‌های درصدی)
+ *   - product_prices                  (فقط legacy fallback برای wholesale min_qty=1)
+ *   - customer_groups                 (از طریق PricingService)
+ *   - product_specs, product_images, inventory
+ *
+ * قواعد:
+ *   - هزینه/قیمت تمام‌شده (cost_price) در این فرم استفاده نمی‌شود.
+ *   - قیمت گروهی مرکزی (customer_groups.discount_percent) در این فرم تعریف نمی‌شود.
+ *   - پله‌های تخفیف درصدی در product_tier_discounts ذخیره می‌شوند.
+ *   - موجودی: فقط qty_physical تغییر می‌کند — reserved و unsellable دست‌نخورده می‌مانند.
+ *   - slug در ویرایش بدون تغییر صریح کاربر حفظ می‌شود.
+ */
+
+/* ─────────────────────────────────────────────────────────────────
+   Bootstrap
+   ───────────────────────────────────────────────────────────────── */
+
 $__bp = [
     __DIR__ . '/../../sock-b2b/config/bootstrap.php',
     __DIR__ . '/../../config/bootstrap.php',
@@ -11,50 +41,101 @@ foreach ($__bp as $__b) {
     }
 }
 unset($__bp, $__b);
+
 require_once ROOT_PATH . '/config/database.php';
 require_once ROOT_PATH . '/config/auth.php';
 require_once ROOT_PATH . '/config/upload.php';
+require_once ROOT_PATH . '/app/services/PricingService.php';
 
 require_admin();
 
 $db = db();
 
-/* ═══════════════ فیلدهای مشخصات ═══════════════ */
+/* ─────────────────────────────────────────────────────────────────
+   ثابت‌های فرم
+   ───────────────────────────────────────────────────────────────── */
+
+/** فیلدهای مشخصات فنی محصول */
 $specFields = [
-    'نوع جوراب',
-    'جنس',
-    'طرح',
     'مناسب برای',
     'تعداد در بسته',
-    'رنگ',
+    'واحد سفارش',
     'دوخت پنجه',
-    'پاشنه و پنجه',
-    'وسط‌کش',
     'سایز',
+    'جنس',
 ];
+
+/** مقادیر پیش‌فرض مشخصات (حالت new) */
+$defaultSpecs = [
+    'تعداد در بسته' => '12',
+    'واحد سفارش'    => 'جین',
+    'دوخت پنجه'     => 'روسو',
+    'سایز'          => 'فری سایز',
+    'جنس'           => 'نخ پنبه',
+];
+
+/** برند پیش‌فرض بر اساس دسته ریشه */
+$brandDefaults = [
+    'مردانه' => 'Romeo',
+    'زنانه'  => 'Aysel',
+    'بچگانه' => 'Rafaella',
+];
+
+/** گزینه‌های مشخصات (select) */
+$unitOptions  = ['جفتی' => 'جفتی (۱ جفت)', 'بسته' => 'بسته (۱۰ جفتی)', 'جین' => 'جین (۱۲ جفتی)'];
+$toeOptions   = ['روسو' => 'روسو', 'بدون دوخت' => 'بدون دوخت', 'ماکرو' => 'ماکرو'];
+$sizeOptions  = ['فری سایز' => 'فری سایز', '۳۹-۴۲' => '۳۹-۴۲', 'S-XL' => 'S-XL', 'کودک' => 'کودک'];
+$matOptions   = ['نخ پنبه' => 'نخ پنبه', 'پنبه' => 'پنبه', 'پلی‌استر' => 'پلی‌استر', 'مخلوط' => 'مخلوط'];
+
+/** گزینه‌های وضعیت محصول */
+$statusOptions = [
+    'draft'    => 'پیش‌نویس (در سایت نمایش داده نمی‌شود)',
+    'active'   => 'فعال (در سایت قابل سفارش)',
+    'inactive' => 'غیرفعال (مخفی)',
+];
+
+/* ─────────────────────────────────────────────────────────────────
+   پارامترهای درخواست
+   ───────────────────────────────────────────────────────────────── */
 
 $action    = ($_GET['action'] ?? 'new') === 'edit' ? 'edit' : 'new';
 $productId = (int)($_GET['id'] ?? 0);
 
-$errors = [];
+/* ─────────────────────────────────────────────────────────────────
+   متغیرهای فرم
+   ───────────────────────────────────────────────────────────────── */
+
+$errors       = [];
 $currentSpecs = [];
-$priceTiers = [];
-$images = [];
+$priceTiers   = [];
+$images       = [];
 
 $product = [
-    'code' => '',
-    'name' => '',
-    'slug' => '',
-    'description' => '',
-    'base_moq' => '48',
-    'category_id' => '',
+    'code'                => '',
+    'name'                => '',
+    'slug'                => '',
+    'description'         => '',
+    'meta_title'          => '',
+    'meta_description'    => '',
+    'base_moq'            => '1',
+    'category_id'         => '',
+    'base_price'          => 0,
+    'brand'               => '',
+    'material'            => '',
+    'color'               => '',
+    'size'                => '',
+    'is_custom_orderable' => 0,
+    'is_active'           => 1,
+    'status'              => 'draft',
 ];
 
-$price = 0;
-$qty = 0;
-$discountEnabled = false;
+$qty              = 0;
+$discountEnabled  = false;
 
-/* ═══════════════ ویرایش محصول ═══════════════ */
+/* ─────────────────────────────────────────────────────────────────
+   لود محصول (edit)
+   ───────────────────────────────────────────────────────────────── */
+
 if ($action === 'edit' && $productId > 0) {
 
     $stmt = $db->prepare("SELECT * FROM products WHERE id = ?");
@@ -66,38 +147,28 @@ if ($action === 'edit' && $productId > 0) {
         exit;
     }
 
-    $stmt = $db->prepare("
-        SELECT price FROM product_prices
-        WHERE product_id = ? AND customer_group = 'wholesale' AND min_qty = 1
-        LIMIT 1
-    ");
-    $stmt->execute([$productId]);
-    $price = (int)($stmt->fetchColumn() ?: 0);
+    /* قیمت پایه — از products.base_price با fallback به legacy */
+    $product['base_price'] = (int)($product['base_price'] ?? 0);
+    if ($product['base_price'] <= 0) {
+        $product['base_price'] = PricingService::getBasePrice($db, $productId);
+    }
 
-    $stmt = $db->prepare("
-        SELECT min_qty, price FROM product_prices
-        WHERE product_id = ? AND customer_group = 'wholesale' AND min_qty > 1
-        ORDER BY min_qty ASC
-    ");
-    $stmt->execute([$productId]);
-
-    foreach ($stmt->fetchAll() as $row) {
-        $tp = (int)$row['price'];
-        $percent = ($price > 0 && $tp < $price)
-            ? round((1 - ($tp / $price)) * 100, 2) : 0;
-
+    /* پله‌های تخفیف درصدی */
+    $tiersRaw = PricingService::getTiers($db, $productId);
+    foreach ($tiersRaw as $t) {
         $priceTiers[] = [
-            'min_qty' => (int)$row['min_qty'],
-            'percent' => $percent,
-            'price'   => $tp,
+            'min_qty'          => (int)$t['min_qty'],
+            'discount_percent' => (float)$t['discount_percent'],
         ];
     }
     $discountEnabled = !empty($priceTiers);
 
-    $stmt = $db->prepare("SELECT qty_available FROM inventory WHERE product_id = ? LIMIT 1");
+    /* موجودی — فقط qty_physical در فرم نمایش داده می‌شود */
+    $stmt = $db->prepare("SELECT qty_physical FROM inventory WHERE product_id = ? LIMIT 1");
     $stmt->execute([$productId]);
     $qty = (int)($stmt->fetchColumn() ?: 0);
 
+    /* تصاویر */
     $stmt = $db->prepare("
         SELECT id, image_path, alt_text, is_main, sort_order
         FROM product_images
@@ -107,6 +178,7 @@ if ($action === 'edit' && $productId > 0) {
     $stmt->execute([$productId]);
     $images = $stmt->fetchAll();
 
+    /* مشخصات */
     $stmt = $db->prepare("SELECT spec_key, spec_value FROM product_specs WHERE product_id = ?");
     $stmt->execute([$productId]);
     foreach ($stmt->fetchAll() as $s) {
@@ -114,10 +186,12 @@ if ($action === 'edit' && $productId > 0) {
     }
 }
 
-/* ═══════════════ حذف عکس ═══════════════ */
+/* ─────────────────────────────────────────────────────────────────
+   حذف تصویر
+   ───────────────────────────────────────────────────────────────── */
+
 if ($_SERVER['REQUEST_METHOD'] === 'POST' && ($_POST['do'] ?? '') === 'delete_image') {
     verify_csrf();
-
 
     $imgId = (int)($_POST['image_id'] ?? 0);
 
@@ -138,13 +212,12 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && ($_POST['do'] ?? '') === 'delete_im
             $db->prepare("DELETE FROM product_images WHERE id = ?")->execute([$imgId]);
 
             if ((int)$row['is_main'] === 1) {
-                $stmt = $db->prepare("
+                $db->prepare("
                     UPDATE product_images SET is_main = 1
                     WHERE product_id = ?
                     ORDER BY sort_order ASC, id ASC
                     LIMIT 1
-                ");
-                $stmt->execute([$productId]);
+                ")->execute([$productId]);
             }
         }
     }
@@ -153,10 +226,12 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && ($_POST['do'] ?? '') === 'delete_im
     exit;
 }
 
-/* ═══════════════ تعیین عکس اصلی ═══════════════ */
+/* ─────────────────────────────────────────────────────────────────
+   تعیین تصویر اصلی
+   ───────────────────────────────────────────────────────────────── */
+
 if ($_SERVER['REQUEST_METHOD'] === 'POST' && ($_POST['do'] ?? '') === 'set_main') {
     verify_csrf();
-
 
     $imgId = (int)($_POST['image_id'] ?? 0);
 
@@ -171,10 +246,12 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && ($_POST['do'] ?? '') === 'set_main'
     exit;
 }
 
-/* ═══════════════ آپلود فوری عکس (AJAX) ═══════════════ */
+/* ─────────────────────────────────────────────────────────────────
+   آپلود تصویر (AJAX)
+   ───────────────────────────────────────────────────────────────── */
+
 if ($_SERVER['REQUEST_METHOD'] === 'POST' && ($_POST['do'] ?? '') === 'upload_image') {
     verify_csrf();
-
 
     header('Content-Type: application/json; charset=utf-8');
 
@@ -244,7 +321,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && ($_POST['do'] ?? '') === 'upload_im
             $up['path'],
             $product['name'] ?? null,
             $isMain,
-            $existingCount + count($uploaded)
+            $existingCount + count($uploaded),
         ]);
 
         $newId = (int)$db->lastInsertId();
@@ -263,12 +340,15 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && ($_POST['do'] ?? '') === 'upload_im
         'uploaded' => $uploaded,
         'failed'   => $failed,
         'message'  => count($uploaded) . ' عکس آپلود شد'
-            . ($failed ? ' — ' . count($failed) . ' خطا' : '')
+            . ($failed ? ' — ' . count($failed) . ' خطا' : ''),
     ], JSON_UNESCAPED_UNICODE);
     exit;
 }
 
-/* ═══════════════ ثبت فرم اصلی ═══════════════ */
+/* ─────────────────────────────────────────────────────────────────
+   ذخیره فرم اصلی
+   ───────────────────────────────────────────────────────────────── */
+
 if (
     $_SERVER['REQUEST_METHOD'] === 'POST' &&
     ($_POST['do'] ?? '') !== 'delete_image' &&
@@ -277,57 +357,89 @@ if (
 ) {
     verify_csrf();
 
+    /* ─── جمع‌آوری ورودی ─── */
     $code        = strtoupper(trim($_POST['code'] ?? ''));
     $name        = trim($_POST['name'] ?? '');
     $slug        = trim($_POST['slug'] ?? '');
     $slugEn      = trim($_POST['slug_en'] ?? '');
     $description = trim($_POST['description'] ?? '');
+    $metaTitle   = trim($_POST['meta_title'] ?? '');
+    $metaDesc    = trim($_POST['meta_description'] ?? '');
 
     $baseMoq    = max(1, (int)($_POST['base_moq'] ?? 1));
     $categoryId = (int)($_POST['category_id'] ?? 0);
-    $price      = max(0, (int)($_POST['price'] ?? 0));
+    $basePrice  = max(0, (int)($_POST['base_price'] ?? 0));
     $qty        = max(0, (int)($_POST['qty'] ?? 0));
 
+    $brand             = trim((string)($_POST['brand'] ?? ''));
+    $material          = trim((string)($_POST['material'] ?? ''));
+    $color             = trim((string)($_POST['color'] ?? ''));
+    $size              = trim((string)($_POST['size'] ?? ''));
+    $isCustomOrderable = isset($_POST['is_custom_orderable']) && $_POST['is_custom_orderable'] === '1' ? 1 : 0;
+    $isActive          = isset($_POST['is_active']) && $_POST['is_active'] === '0' ? 0 : 1;
+    $status            = in_array($_POST['status'] ?? 'draft', ['draft', 'active', 'inactive'], true)
+        ? $_POST['status'] : 'draft';
+
+    /* ─── پله‌های تخفیف ─── */
     $discountEnabled = isset($_POST['discount_enabled']) && $_POST['discount_enabled'] === '1';
+    $tierQtyInput     = is_array($_POST['discount_qty'] ?? null)     ? $_POST['discount_qty']     : [];
+    $tierPercentInput = is_array($_POST['discount_percent'] ?? null) ? $_POST['discount_percent'] : [];
 
-    $tierQtyInput     = $_POST['discount_qty'] ?? [];
-    $tierPercentInput = $_POST['discount_percent'] ?? [];
-
-    $tierQtyInput     = is_array($tierQtyInput) ? $tierQtyInput : [];
-    $tierPercentInput = is_array($tierPercentInput) ? $tierPercentInput : [];
-
-    $priceTiers = [];
-
+    /* ─── مشخصات ─── */
     $specs = [];
     foreach ($specFields as $key) {
         $v = trim($_POST['spec_' . md5($key)] ?? '');
         if ($v !== '') $specs[] = [$key, $v];
     }
 
-    if (!preg_match('/^S\d{3}$/', $code)) $errors['code'] = 'کد باید مثل S125 باشد';
-    if (mb_strlen($name) < 3) $errors['name'] = 'نام محصول را کامل وارد کنید';
-    if ($categoryId < 1) $errors['category_id'] = 'دسته را انتخاب کنید';
-    if ($price < 1000) $errors['price'] = 'قیمت را به تومان وارد کنید';
-
-    if (!$errors && $slug === '') {
-        $base = preg_replace('/[^a-z0-9]+/', '-', strtolower($slugEn !== '' ? $slugEn : $code));
-        $base = trim($base, '-');
-        if ($base === '') $base = strtolower($code);
-        $slug = $base . '-' . strtolower($code);
+    /* ─── اعتبارسنجی پایه ─── */
+    if ($code === '') {
+        $errors['code'] = 'کد محصول را وارد کنید';
+    } elseif (!preg_match('/^[A-Z0-9][A-Z0-9\-_]{1,19}$/', $code)) {
+        $errors['code'] = 'کد فقط حروف بزرگ، عدد، - و _ (۲ تا ۲۰ کاراکتر)';
     }
 
+    if (mb_strlen($name) < 3)         $errors['name']        = 'نام محصول را کامل وارد کنید';
+    if ($categoryId < 1)              $errors['category_id'] = 'دسته را انتخاب کنید';
+    if ($basePrice < 1000)            $errors['base_price']  = 'قیمت پایه را به تومان وارد کنید';
+    if ($baseMoq < 1)                 $errors['base_moq']    = 'حداقل سفارش باید ۱ یا بیشتر باشد';
+
+    /* ─── یکتایی کد ─── */
     if (!$errors) {
         $stmt = $db->prepare("SELECT id FROM products WHERE code = ? AND id != ? LIMIT 1");
         $stmt->execute([$code, $productId]);
         if ($stmt->fetch()) $errors['code'] = 'این کد قبلاً استفاده شده است';
     }
 
+    /* ─── slug: در ویرایش، اگر کاربر تغییر نداده، از slug فعلی استفاده کن ─── */
+    if ($action === 'edit') {
+        $currentSlug = (string)($product['slug'] ?? '');
+        if ($slug === '') {
+            $slug = $currentSlug;
+        }
+    }
+
+    if ($slug === '') {
+        $base = preg_replace('/[^a-z0-9]+/', '-', strtolower($slugEn !== '' ? $slugEn : $code));
+        $base = trim($base, '-');
+        if ($base === '') $base = strtolower($code);
+        $slug = $base . '-' . strtolower($code);
+    }
+
+    /* ─── یکتایی slug ─── */
+    if (!$errors) {
+        $stmt = $db->prepare("SELECT id FROM products WHERE slug = ? AND id != ? LIMIT 1");
+        $stmt->execute([$slug, $productId]);
+        if ($stmt->fetch()) $errors['slug'] = 'این نامک قبلاً استفاده شده است';
+    }
+
+    /* ─── اعتبارسنجی پله‌های تخفیف ─── */
     if (!$errors && $discountEnabled) {
         $lastQty = 0;
         $rowCount = max(count($tierQtyInput), count($tierPercentInput));
 
         for ($i = 0; $i < $rowCount; $i++) {
-            $tierQty = (int)($tierQtyInput[$i] ?? 0);
+            $tierQty    = (int)($tierQtyInput[$i] ?? 0);
             $percentRaw = trim((string)($tierPercentInput[$i] ?? ''));
 
             if ($tierQty === 0 && $percentRaw === '') continue;
@@ -347,75 +459,131 @@ if (
                 break;
             }
 
-            $calculatedPrice = (int)round($price * (1 - ($percent / 100)), -2);
-
-            if ($calculatedPrice < 1 || $calculatedPrice >= $price) {
-                $errors['discount'] = 'قیمت پله نامعتبر است';
-                break;
-            }
-
             $priceTiers[] = [
-                'min_qty' => $tierQty,
-                'percent' => $percent,
-                'price'   => $calculatedPrice,
+                'min_qty'          => $tierQty,
+                'discount_percent' => $percent,
             ];
             $lastQty = $tierQty;
         }
 
-        if (!$errors && !$priceTiers) $errors['discount'] = 'حداقل یک پله تخفیف تعریف کنید';
+        if (!$errors && !$priceTiers) {
+            $errors['discount'] = 'حداقل یک پله تخفیف تعریف کنید';
+        }
     }
 
-    /* ═══════ ذخیره در DB ═══════ */
+    /* ─── ذخیره در DB ─── */
     if (!$errors) {
-
         try {
             $db->beginTransaction();
 
             if ($action === 'new') {
                 $db->prepare("
-                    INSERT INTO products (category_id, code, name, slug, description, base_moq)
-                    VALUES (?, ?, ?, ?, ?, ?)
-                ")->execute([$categoryId, $code, $name, $slug, $description ?: null, $baseMoq]);
+                    INSERT INTO products
+                    (category_id, code, name, slug, description, meta_title, meta_description, base_moq,
+                     base_price, brand, material, color, size, is_custom_orderable, is_active, status)
+                    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+                ")->execute([
+                    $categoryId,
+                    $code,
+                    $name,
+                    $slug,
+                    $description ?: null,
+                    $metaTitle ?: null,
+                    $metaDesc ?: null,
+                    $baseMoq,
+                    $basePrice,
+                    $brand !== '' ? $brand : null,
+                    $material !== '' ? $material : null,
+                    $color !== '' ? $color : null,
+                    $size !== '' ? $size : null,
+                    $isCustomOrderable,
+                    $isActive,
+                    $status,
+                ]);
 
                 $productId = (int)$db->lastInsertId();
             } else {
                 $db->prepare("
-                    UPDATE products SET category_id=?, code=?, name=?, slug=?, description=?, base_moq=?
+                    UPDATE products SET
+                        category_id = ?, code = ?, name = ?, slug = ?, description = ?,
+                        meta_title = ?, meta_description = ?, base_moq = ?, base_price = ?,
+                        brand = ?, material = ?, color = ?, size = ?,
+                        is_custom_orderable = ?, is_active = ?, status = ?
                     WHERE id = ?
-                ")->execute([$categoryId, $code, $name, $slug, $description ?: null, $baseMoq, $productId]);
+                ")->execute([
+                    $categoryId,
+                    $code,
+                    $name,
+                    $slug,
+                    $description ?: null,
+                    $metaTitle ?: null,
+                    $metaDesc ?: null,
+                    $baseMoq,
+                    $basePrice,
+                    $brand !== '' ? $brand : null,
+                    $material !== '' ? $material : null,
+                    $color !== '' ? $color : null,
+                    $size !== '' ? $size : null,
+                    $isCustomOrderable,
+                    $isActive,
+                    $status,
+                    $productId,
+                ]);
             }
 
-            /* قیمت‌ها */
-            $db->prepare("DELETE FROM product_prices WHERE product_id = ? AND customer_group = 'wholesale'")
+            /* ─── پله‌های تخفیف: پاک و درج مجدد ─── */
+            /* ─── پله‌های تخفیف: پاک و درج مجدد ─── */
+            $db->prepare("DELETE FROM product_tier_discounts WHERE product_id = ?")
                 ->execute([$productId]);
 
-            $db->prepare("INSERT INTO product_prices (product_id, customer_group, min_qty, price) VALUES (?, 'wholesale', 1, ?)")
-                ->execute([$productId, $price]);
-
-            foreach ($priceTiers as $tier) {
-                $db->prepare("INSERT INTO product_prices (product_id, customer_group, min_qty, price) VALUES (?, 'wholesale', ?, ?)")
-                    ->execute([$productId, $tier['min_qty'], $tier['price']]);
+            if ($priceTiers) {
+                $insTier = $db->prepare("
+        INSERT INTO product_tier_discounts
+        (product_id, min_qty, discount_percent, sort_order)
+        VALUES (?, ?, ?, ?)
+        ON DUPLICATE KEY UPDATE
+            discount_percent = VALUES(discount_percent),
+            sort_order = VALUES(sort_order)
+    ");
+                foreach ($priceTiers as $i => $t) {
+                    $insTier->execute([
+                        $productId,
+                        $t['min_qty'],
+                        $t['discount_percent'],
+                        $i,
+                    ]);
+                }
             }
 
-            /* موجودی — روش مطمئن (UPDATE + INSERT) */
-            /* موجودی — بررسی وجود رکورد قبل از UPDATE/INSERT */
+            /* ─── legacy: product_prices wholesale min_qty=1 (برای سازگاری) ─── */
+            $db->prepare("DELETE FROM product_prices WHERE product_id = ? AND customer_group = 'wholesale' AND min_qty = 1")
+                ->execute([$productId]);
+            $db->prepare("
+                INSERT INTO product_prices (product_id, customer_group, min_qty, price)
+                VALUES (?, 'wholesale', 1, ?)
+            ")->execute([$productId, $basePrice]);
+
+            /* ─── موجودی: فقط qty_physical — reserved و unsellable دست‌نخورده ─── */
             $stmt = $db->prepare("SELECT COUNT(*) FROM inventory WHERE product_id = ?");
             $stmt->execute([$productId]);
             $invExists = ((int)$stmt->fetchColumn()) > 0;
 
             if ($invExists) {
-                $db->prepare("UPDATE inventory SET qty_available = ? WHERE product_id = ?")
+                $db->prepare("UPDATE inventory SET qty_physical = ? WHERE product_id = ?")
                     ->execute([$qty, $productId]);
             } else {
-                $db->prepare("INSERT INTO inventory (product_id, qty_available) VALUES (?, ?)")
+                $db->prepare("INSERT INTO inventory (product_id, qty_physical, reserved, unsellable) VALUES (?, ?, 0, 0)")
                     ->execute([$productId, $qty]);
             }
 
-            /* مشخصات */
+            /* ─── مشخصات: پاک و درج مجدد ─── */
             $db->prepare("DELETE FROM product_specs WHERE product_id = ?")->execute([$productId]);
 
             if ($specs) {
-                $insSpec = $db->prepare("INSERT INTO product_specs (product_id, spec_key, spec_value, sort_order) VALUES (?, ?, ?, ?)");
+                $insSpec = $db->prepare("
+                    INSERT INTO product_specs (product_id, spec_key, spec_value, sort_order)
+                    VALUES (?, ?, ?, ?)
+                ");
                 foreach ($specs as $i => $sv) {
                     $insSpec->execute([$productId, $sv[0], $sv[1], $i]);
                 }
@@ -423,31 +591,102 @@ if (
 
             $db->commit();
 
-            /* ⭐ ریدایرکت موفق */
             header('Location: /admin/product-form?action=edit&id=' . $productId . '&saved=1');
             exit;
         } catch (Throwable $e) {
             if ($db->inTransaction()) $db->rollBack();
-            $errors['general'] = 'ذخیره محصول ناموفق بود: ' . $e->getMessage();
+            error_log('PRODUCT FORM SAVE ERROR: ' . $e->getMessage());
+            $errors['general'] = 'ذخیره محصول ناموفق بود. لطفاً دوباره تلاش کنید.';
         }
     }
 
+    /* ─── بازگردانی مقادیر فرم در صورت خطا ─── */
     $product = array_merge($product, [
-        'code'        => $code,
-        'name'        => $name,
-        'slug'        => $slug,
-        'description' => $description,
-        'base_moq'    => $baseMoq,
-        'category_id' => $categoryId,
+        'code'                => $code,
+        'name'                => $name,
+        'slug'                => $slug,
+        'description'         => $description,
+        'meta_title'          => $metaTitle,
+        'meta_description'    => $metaDesc,
+        'base_moq'            => $baseMoq,
+        'category_id'         => $categoryId,
+        'base_price'          => $basePrice,
+        'brand'               => $brand,
+        'material'            => $material,
+        'color'               => $color,
+        'size'                => $size,
+        'is_custom_orderable' => $isCustomOrderable,
+        'is_active'           => $isActive,
+        'status'              => $status,
     ]);
+    $currentSpecs = [];
+    foreach ($specFields as $key) {
+        $v = trim($_POST['spec_' . md5($key)] ?? '');
+        if ($v !== '') $currentSpecs[$key] = $v;
+    }
 }
 
-/* ═══════════════ دسته‌ها ═══════════════ */
+/* ─────────────────────────────────────────────────────────────────
+   دسته‌ها
+   ───────────────────────────────────────────────────────────────── */
+
 $categories = $db->query("
-    SELECT id, name FROM categories
+    SELECT id, name, parent_id
+    FROM categories
     WHERE is_active = 1
     ORDER BY sort_order
 ")->fetchAll();
+
+/* ─────────────────────────────────────────────────────────────────
+   کمک‌تابع: نام دسته ریشه
+   ───────────────────────────────────────────────────────────────── */
+
+if (!function_exists('find_root_category_name')) {
+    function find_root_category_name(array $categories, int $catId): string
+    {
+        $byId = [];
+        foreach ($categories as $c) $byId[(int)$c['id']] = $c;
+        $current = $byId[$catId] ?? null;
+        $guard = 0;
+        while ($current && !empty($current['parent_id']) && $guard++ < 20) {
+            $parent = $byId[(int)$current['parent_id']] ?? null;
+            if (!$parent) break;
+            $current = $parent;
+        }
+        return $current ? $current['name'] : '';
+    }
+}
+
+$rootCatName = $product['category_id']
+    ? find_root_category_name($categories, (int)$product['category_id'])
+    : '';
+
+if ($action === 'new') {
+    $currentSpecs = array_merge($defaultSpecs, $currentSpecs);
+    if (!empty($rootCatName)) {
+        $currentSpecs['مناسب برای'] = $rootCatName;
+        if (empty($product['brand'])) {
+            $product['brand'] = $brandDefaults[$rootCatName] ?? '';
+        }
+    }
+} else {
+    if (empty($currentSpecs['مناسب برای']) && !empty($rootCatName)) {
+        $currentSpecs['مناسب برای'] = $rootCatName;
+    }
+}
+
+/* ─────────────────────────────────────────────────────────────────
+   آماده‌سازی نقشه دسته → ریشه (برای JS)
+   ───────────────────────────────────────────────────────────────── */
+
+$catRootMap = [];
+foreach ($categories as $c) {
+    $catRootMap[(int)$c['id']] = find_root_category_name($categories, (int)$c['id']);
+}
+
+/* ─────────────────────────────────────────────────────────────────
+   خروجی HTML
+   ───────────────────────────────────────────────────────────────── */
 
 $activeMenu = 'products';
 $pageTitle  = ($action === 'edit' ? 'ویرایش محصول' : 'محصول جدید');
@@ -455,636 +694,885 @@ $pageTitle  = ($action === 'edit' ? 'ویرایش محصول' : 'محصول جد
 ob_start();
 ?>
 
+<div class="pf-wrap">
 
-<div style="margin-bottom:16px;">
-    <a href="/admin/products" style="color:var(--teal-700);font-size:.82rem;">← بازگشت</a>
-</div>
+    <link rel="stylesheet" href="/assets/css/product-form-images.css?v=10">
 
-<?php if (isset($_GET['saved'])): ?>
-    <div class="form-alert" style="display:block;background:#e8f7f3;color:var(--teal-800);margin-bottom:16px;">
-        ✓ تغییرات ذخیره شد
+    <!-- ═══════════════ Header ═══════════════ -->
+    <div class="pf-header">
+        <a href="/admin/products" class="pf-back">← بازگشت به محصولات</a>
+        <h1 class="pf-header-title">
+            <?= $action === 'edit' ? 'ویرایش محصول' : 'محصول جدید' ?>
+        </h1>
     </div>
-<?php endif; ?>
 
-<?php if (isset($_GET['img'])): ?>
-    <div class="form-alert" style="display:block;background:#e8f7f3;color:var(--teal-800);margin-bottom:16px;">
-        <?= $_GET['img'] === 'deleted' ? '✓ عکس حذف شد' : '✓ عکس اصلی تغییر کرد' ?>
-    </div>
-<?php endif; ?>
+    <!-- ═══════════════ Alerts ═══════════════ -->
+    <?php if (isset($_GET['saved'])): ?>
+        <div class="pf-alert pf-alert-success">✓ تغییرات ذخیره شد</div>
+    <?php endif; ?>
 
-
-<!-- ═══════ فرم مخفی برای عملیات عکس (بیرون از فرم اصلی) ═══════ -->
-
-<form id="form_set_main" method="post" style="display:none;">
-    <?= csrf_field() ?>
-    <input type="hidden" name="do" value="set_main">
-</form>
-
-<form id="form_delete_img" method="post" style="display:none;">
-    <?= csrf_field() ?>
-    <input type="hidden" name="do" value="delete_image">
-</form>
-
-
-<!-- ═══════ فرم اصلی ═══════ -->
-
-<form id="mainProductForm" method="post" class="co-form" style="max-width:100%;" enctype="multipart/form-data">
-    <?= csrf_field() ?>
-
-    <input type="hidden" name="do" value="save">
-
-    <?php if ($errors): ?>
-        <div class="form-alert error" style="display:block;">
-            ⚠️
-            <?php foreach ($errors as $er): ?>
-                <?= htmlspecialchars($er, ENT_QUOTES, 'UTF-8') ?><br>
-            <?php endforeach; ?>
+    <?php if (isset($_GET['img'])): ?>
+        <div class="pf-alert pf-alert-success">
+            <?= $_GET['img'] === 'deleted' ? '✓ عکس حذف شد' : '✓ عکس اصلی تغییر کرد' ?>
         </div>
     <?php endif; ?>
 
-
-    <!-- ════════ مشخصات اصلی ════════ -->
-    <div class="form-row">
-        <div class="form-field">
-            <label>کد محصول <i>*</i></label>
-            <input type="text" name="code" dir="ltr"
-                value="<?= htmlspecialchars($product['code'], ENT_QUOTES, 'UTF-8') ?>"
-                placeholder="S125" maxlength="4">
-            <?php if (isset($errors['code'])): ?>
-                <span class="field-error"><?= htmlspecialchars($errors['code']) ?></span>
-            <?php endif; ?>
-        </div>
-
-        <div class="form-field">
-            <label>دسته‌بندی <i>*</i></label>
-            <select name="category_id">
-                <option value="">— انتخاب کنید —</option>
-                <?php foreach ($categories as $c): ?>
-                    <option value="<?= (int)$c['id'] ?>" <?= $product['category_id'] == $c['id'] ? 'selected' : '' ?>>
-                        <?= htmlspecialchars($c['name']) ?>
-                    </option>
+    <?php if ($errors): ?>
+        <div class="pf-alert pf-alert-error">
+            ⚠️
+            <div>
+                <?php foreach ($errors as $er): ?>
+                    <?= htmlspecialchars($er, ENT_QUOTES, 'UTF-8') ?><br>
                 <?php endforeach; ?>
-            </select>
-            <?php if (isset($errors['category_id'])): ?>
-                <span class="field-error"><?= htmlspecialchars($errors['category_id']) ?></span>
-            <?php endif; ?>
+            </div>
         </div>
-    </div>
+    <?php endif; ?>
 
-    <div class="form-field">
-        <label>نام محصول <i>*</i></label>
-        <input type="text" name="name"
-            value="<?= htmlspecialchars($product['name']) ?>"
-            placeholder="مثلاً: جوراب نخی مردانه ساق‌بلند">
-        <?php if (isset($errors['name'])): ?>
-            <span class="field-error"><?= htmlspecialchars($errors['name']) ?></span>
-        <?php endif; ?>
-    </div>
+    <!-- ═══════════════ فرم‌های کمکی ═══════════════ -->
+    <form id="form_set_main" method="post" style="display:none;">
+        <?= csrf_field() ?>
+        <input type="hidden" name="do" value="set_main">
+    </form>
 
-    <div class="form-row">
-        <div class="form-field">
-            <label>نامک انگلیسی (اختیاری)</label>
-            <input type="text" name="slug_en" dir="ltr" placeholder="m-cotton-long">
+    <form id="form_delete_img" method="post" style="display:none;">
+        <?= csrf_field() ?>
+        <input type="hidden" name="do" value="delete_image">
+    </form>
+
+    <!-- ═══════════════ فرم اصلی ═══════════════ -->
+    <form id="mainProductForm" method="post" enctype="multipart/form-data">
+        <?= csrf_field() ?>
+        <input type="hidden" name="do" value="save">
+
+        <!-- ─────────────── بخش ۱: اطلاعات اصلی ─────────────── -->
+        <div class="pf-section">
+            <div class="pf-section-head">
+                <div class="pf-section-icon">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+                        <circle cx="12" cy="12" r="10" />
+                        <path d="M12 16v-4M12 8h.01" />
+                    </svg>
+                </div>
+                <div>
+                    <h3>اطلاعات اصلی</h3>
+                    <small>کد، نام، دسته و توضیحات محصول</small>
+                </div>
+            </div>
+
+            <div class="pf-grid">
+
+                <div class="pf-field">
+                    <label>کد محصول <i>*</i></label>
+                    <input type="text" name="code" dir="ltr"
+                        value="<?= htmlspecialchars($product['code'], ENT_QUOTES, 'UTF-8') ?>"
+                        placeholder="مثلاً: TEST-01 یا ROMEO-500" maxlength="20">
+                    <span class="pf-field-hint">کد دلخواه — باید یکتا باشد</span>
+                    <?php if (isset($errors['code'])): ?>
+                        <span class="pf-field-error"><?= htmlspecialchars($errors['code']) ?></span>
+                    <?php endif; ?>
+                </div>
+
+                <div class="pf-field">
+                    <label>دسته‌بندی <i>*</i></label>
+                    <select name="category_id">
+                        <option value="">— انتخاب کنید —</option>
+                        <?php foreach ($categories as $c): ?>
+                            <option value="<?= (int)$c['id'] ?>" <?= $product['category_id'] == $c['id'] ? 'selected' : '' ?>>
+                                <?= htmlspecialchars($c['name']) ?>
+                            </option>
+                        <?php endforeach; ?>
+                    </select>
+                    <?php if (isset($errors['category_id'])): ?>
+                        <span class="pf-field-error"><?= htmlspecialchars($errors['category_id']) ?></span>
+                    <?php endif; ?>
+                </div>
+
+                <div class="pf-field pf-field-full">
+                    <label>نام محصول <i>*</i></label>
+                    <input type="text" name="name"
+                        value="<?= htmlspecialchars($product['name']) ?>"
+                        placeholder="مثلاً: جوراب نخی مردانه ساق‌بلند">
+                    <?php if (isset($errors['name'])): ?>
+                        <span class="pf-field-error"><?= htmlspecialchars($errors['name']) ?></span>
+                    <?php endif; ?>
+                </div>
+
+                <div class="pf-field">
+                    <label>نامک انگلیسی (اختیاری)</label>
+                    <input type="text" name="slug_en" dir="ltr" placeholder="m-cotton-long">
+                    <span class="pf-field-hint">اگر خالی بماند، از کد ساخته می‌شود</span>
+                </div>
+
+                <div class="pf-field">
+                    <label>حداقل سفارش (MOQ) <i>*</i></label>
+                    <input type="number" name="base_moq" dir="ltr"
+                        value="<?= htmlspecialchars($product['base_moq']) ?>" min="1">
+                    <span class="pf-field-hint">کمترین تعداد قابل سفارش</span>
+                    <?php if (isset($errors['base_moq'])): ?>
+                        <span class="pf-field-error"><?= htmlspecialchars($errors['base_moq']) ?></span>
+                    <?php endif; ?>
+                </div>
+
+                <div class="pf-field">
+                    <label>برند</label>
+                    <input type="text" name="brand"
+                        value="<?= htmlspecialchars($product['brand'] ?? '') ?>"
+                        placeholder="مثلاً: Romeo">
+                    <span class="pf-field-hint">پیش‌فرض بر اساس دسته ریشه — قابل ویرایش</span>
+                </div>
+
+                <div class="pf-field">
+                    <label>جنس (ماده اصلی)</label>
+                    <input type="text" name="material"
+                        value="<?= htmlspecialchars($product['material'] ?? '') ?>"
+                        placeholder="مثلاً: پنبه ۸۰٪ + پلی‌استر ۲۰٪">
+                </div>
+
+                <div class="pf-field">
+                    <label>رنگ غالب</label>
+                    <input type="text" name="color"
+                        value="<?= htmlspecialchars($product['color'] ?? '') ?>"
+                        placeholder="مثلاً: مشکی، سرمه‌ای">
+                </div>
+
+                <div class="pf-field">
+                    <label>سایز</label>
+                    <input type="text" name="size"
+                        value="<?= htmlspecialchars($product['size'] ?? '') ?>"
+                        placeholder="مثلاً: ۳۹-۴۲، فری‌سایز">
+                </div>
+
+                <div class="pf-field">
+                    <label>وضعیت محصول <i>*</i></label>
+                    <select name="status">
+                        <?php foreach ($statusOptions as $val => $label): ?>
+                            <option value="<?= $val ?>" <?= ($product['status'] ?? 'draft') === $val ? 'selected' : '' ?>>
+                                <?= htmlspecialchars($label) ?>
+                            </option>
+                        <?php endforeach; ?>
+                    </select>
+                    <span class="pf-field-hint">پیش‌نویس در سایت نمایش داده نمی‌شود</span>
+                </div>
+
+                <div class="pf-field">
+                    <label>وضعیت فعال/غیرفعال</label>
+                    <select name="is_active">
+                        <option value="1" <?= ($product['is_active'] ?? 1) ? 'selected' : '' ?>>فعال</option>
+                        <option value="0" <?= empty($product['is_active']) ? 'selected' : '' ?>>غیرفعال</option>
+                    </select>
+                </div>
+
+                <div class="pf-field">
+                    <label class="pf-checkbox">
+                        <input type="checkbox" name="is_custom_orderable" value="1"
+                            <?= !empty($product['is_custom_orderable']) ? 'checked' : '' ?>>
+                        <span>این محصول قابل سفارش اختصاصی است</span>
+                    </label>
+                </div>
+
+                <div class="pf-field pf-field-full">
+                    <label>توضیحات محصول</label>
+                    <textarea name="description" rows="5"
+                        placeholder="معرفی کوتاه و دقیق محصول..."><?= htmlspecialchars($product['description'] ?? '') ?></textarea>
+                </div>
+
+            </div>
         </div>
-        <div class="form-field">
-            <label>حداقل سفارش (MOQ) <i>*</i></label>
-            <input type="number" name="base_moq" dir="ltr"
-                value="<?= htmlspecialchars($product['base_moq']) ?>" min="1">
+
+        <!-- ─────────────── بخش ۲: قیمت و موجودی ─────────────── -->
+        <div class="pf-section">
+            <div class="pf-section-head">
+                <div class="pf-section-icon">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+                        <line x1="12" y1="1" x2="12" y2="23" />
+                        <path d="M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6" />
+                    </svg>
+                </div>
+                <div>
+                    <h3>قیمت و موجودی</h3>
+                    <small>قیمت عادی فروش و موجودی انبار</small>
+                </div>
+            </div>
+
+            <div class="pf-grid">
+                <div class="pf-field">
+                    <label>قیمت عادی فروش (تومان) <i>*</i></label>
+                    <input type="number" name="base_price" dir="ltr"
+                        value="<?= (int)$product['base_price'] ?>" min="0" step="1000">
+                    <span class="pf-field-hint">قیمت پایه محصول — بدون تخفیف</span>
+                    <?php if (isset($errors['base_price'])): ?>
+                        <span class="pf-field-error"><?= htmlspecialchars($errors['base_price']) ?></span>
+                    <?php endif; ?>
+                </div>
+
+                <div class="pf-field">
+                    <label>موجودی فیزیکی انبار</label>
+                    <input type="number" name="qty" dir="ltr"
+                        value="<?= (int)$qty ?>" min="0" step="1">
+                    <span class="pf-field-hint">موجودی فیزیکی — رزروها دست‌نخورده می‌مانند</span>
+                </div>
+            </div>
+
+            <!-- پله‌های تخفیف درصدی -->
+            <div style="margin-top: 20px; padding-top: 20px; border-top: 1px solid #f0f3f4;">
+                <label class="pf-checkbox">
+                    <input type="checkbox" name="discount_enabled" value="1"
+                        id="discountEnabled" <?= $discountEnabled ? 'checked' : '' ?>>
+                    <span>این محصول دارای تخفیف پلکانی است</span>
+                </label>
+
+                <div id="discountTiersBox" style="<?= $discountEnabled ? '' : 'display:none;' ?>">
+                    <div id="discountTiers">
+                        <?php if ($priceTiers): ?>
+                            <?php foreach ($priceTiers as $tier): ?>
+                                <div class="pf-tier">
+                                    <input type="number" name="discount_qty[]"
+                                        value="<?= (int)$tier['min_qty'] ?>"
+                                        min="<?= (int)$product['base_moq'] ?>"
+                                        step="1" placeholder="از تعداد">
+                                    <input type="number" name="discount_percent[]"
+                                        value="<?= htmlspecialchars((string)$tier['discount_percent']) ?>"
+                                        min="0.01" max="99.99" step="0.01" placeholder="درصد تخفیف">
+                                    <button type="button" class="pf-tier-remove discount-remove">حذف</button>
+                                </div>
+                            <?php endforeach; ?>
+                        <?php endif; ?>
+                    </div>
+
+                    <button type="button" id="addDiscountTier" class="pf-tier-add">
+                        + افزودن پله تخفیف
+                    </button>
+
+                    <?php if (isset($errors['discount'])): ?>
+                        <span class="pf-field-error" style="display:block;margin-top:10px;">
+                            <?= htmlspecialchars($errors['discount']) ?>
+                        </span>
+                    <?php endif; ?>
+                </div>
+            </div>
         </div>
-    </div>
 
-    <div class="form-row">
-        <div class="form-field">
-            <label>قیمت همکاری پایه (تومان) <i>*</i></label>
-            <input type="number" name="price" dir="ltr" value="<?= (int)$price ?>" min="0" step="100">
-            <?php if (isset($errors['price'])): ?>
-                <span class="field-error"><?= htmlspecialchars($errors['price']) ?></span>
-            <?php endif; ?>
+        <!-- ─────────────── بخش ۳: مشخصات فنی ─────────────── -->
+        <div class="pf-section">
+            <div class="pf-section-head">
+                <div class="pf-section-icon">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+                        <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z" />
+                        <polyline points="14 2 14 8 20 8" />
+                        <line x1="16" y1="13" x2="8" y2="13" />
+                        <line x1="16" y1="17" x2="8" y2="17" />
+                    </svg>
+                </div>
+                <div>
+                    <h3>مشخصات فنی</h3>
+                    <small>فیلدهای خالی در سایت نمایش داده نمی‌شوند</small>
+                </div>
+            </div>
+
+            <div class="pf-specs-grid">
+
+                <!-- مناسب برای (readonly) -->
+                <div class="pf-field">
+                    <label>مناسب برای</label>
+                    <input type="text" name="spec_<?= md5('مناسب برای') ?>"
+                        id="specForField"
+                        value="<?= htmlspecialchars($currentSpecs['مناسب برای'] ?? '') ?>"
+                        readonly
+                        style="background:#f5f7f8;cursor:not-allowed;">
+                    <span class="pf-field-hint">از دسته ریشه ارث می‌برد</span>
+                </div>
+
+                <!-- تعداد در بسته -->
+                <div class="pf-field">
+                    <label>تعداد در بسته</label>
+                    <input type="number" name="spec_<?= md5('تعداد در بسته') ?>"
+                        value="<?= htmlspecialchars($currentSpecs['تعداد در بسته'] ?? '12') ?>"
+                        min="1" step="1" dir="ltr">
+                </div>
+
+                <!-- واحد سفارش -->
+                <div class="pf-field">
+                    <label>واحد سفارش</label>
+                    <select name="spec_<?= md5('واحد سفارش') ?>" id="unitSelect">
+                        <?php $curUnit = $currentSpecs['واحد سفارش'] ?? 'جین'; ?>
+                        <?php foreach ($unitOptions as $val => $label): ?>
+                            <option value="<?= htmlspecialchars($val) ?>" <?= $curUnit === $val ? 'selected' : '' ?>>
+                                <?= htmlspecialchars($label) ?>
+                            </option>
+                        <?php endforeach; ?>
+                    </select>
+                </div>
+
+                <!-- دوخت پنجه -->
+                <div class="pf-field">
+                    <label>دوخت پنجه</label>
+                    <select name="spec_<?= md5('دوخت پنجه') ?>">
+                        <?php $curToe = $currentSpecs['دوخت پنجه'] ?? 'روسو'; ?>
+                        <?php foreach ($toeOptions as $val => $label): ?>
+                            <option value="<?= htmlspecialchars($val) ?>" <?= $curToe === $val ? 'selected' : '' ?>>
+                                <?= htmlspecialchars($label) ?>
+                            </option>
+                        <?php endforeach; ?>
+                    </select>
+                </div>
+
+                <!-- سایز -->
+                <div class="pf-field">
+                    <label>سایز</label>
+                    <select name="spec_<?= md5('سایز') ?>">
+                        <?php $curSize = $currentSpecs['سایز'] ?? 'فری سایز'; ?>
+                        <?php foreach ($sizeOptions as $val => $label): ?>
+                            <option value="<?= htmlspecialchars($val) ?>" <?= $curSize === $val ? 'selected' : '' ?>>
+                                <?= htmlspecialchars($label) ?>
+                            </option>
+                        <?php endforeach; ?>
+                    </select>
+                </div>
+
+                <!-- جنس -->
+                <div class="pf-field">
+                    <label>جنس</label>
+                    <select name="spec_<?= md5('جنس') ?>">
+                        <?php $curMat = $currentSpecs['جنس'] ?? 'نخ پنبه'; ?>
+                        <?php foreach ($matOptions as $val => $label): ?>
+                            <option value="<?= htmlspecialchars($val) ?>" <?= $curMat === $val ? 'selected' : '' ?>>
+                                <?= htmlspecialchars($label) ?>
+                            </option>
+                        <?php endforeach; ?>
+                    </select>
+                </div>
+
+            </div>
         </div>
-        <div class="form-field">
-            <label>موجودی انبار (جفت)</label>
-            <input type="number" name="qty" dir="ltr" value="<?= (int)$qty ?>" min="0" step="1">
-        </div>
-    </div>
 
+        <!-- ─────────────── بخش ۴: تصاویر ─────────────── -->
+        <?php if ($action === 'new'): ?>
+            <div class="pfi-block" style="opacity:.75;">
+                <div class="pfi-head">
+                    <div>
+                        <h3>تصاویر محصول</h3>
+                        <p>پس از ذخیره محصول قابل آپلود است</p>
+                    </div>
+                </div>
+                <div style="display:flex;flex-direction:column;align-items:center;gap:8px;padding:30px 20px;text-align:center;color:var(--teal-700);background:#f8fafb;border:1px dashed #cfd8dc;border-radius:12px;">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" style="width:32px;height:32px;">
+                        <rect x="3" y="11" width="18" height="11" rx="2" ry="2" />
+                        <path d="M7 11V7a5 5 0 0 1 10 0v4" />
+                    </svg>
+                    <b style="font-size:.9rem;">ابتدا محصول را ذخیره کنید</b>
+                    <small style="font-size:.75rem;color:#607d8b;">بعد از ذخیره، می‌توانید تا ۵ عکس آپلود کنید</small>
+                </div>
+            </div>
+        <?php else: ?>
+            <div class="pfi-block">
+                <div class="pfi-head">
+                    <div>
+                        <h3>تصاویر محصول</h3>
+                        <p>حداکثر ۵ عکس — ستاره‌دار = عکس اصلی</p>
+                    </div>
+                    <span class="pfi-counter"><?= count($images) ?> / ۵</span>
+                </div>
 
-    <!-- ════════ قیمت پلکانی ════════ -->
-    <div class="form-field" style="margin-top:8px;padding:18px;border:1px solid var(--card-border);border-radius:16px;">
+                <?php if ($images): ?>
+                    <div class="pfi-grid">
+                        <?php foreach ($images as $img): ?>
+                            <div class="pfi-card <?= (int)$img['is_main'] ? 'is-main' : '' ?>">
+                                <div class="pfi-img-wrap">
+                                    <img src="<?= htmlspecialchars($img['image_path']) ?>" alt="">
+                                    <?php if ((int)$img['is_main']): ?>
+                                        <span class="pfi-badge">★ اصلی</span>
+                                    <?php endif; ?>
+                                </div>
+                                <div class="pfi-actions">
+                                    <?php if (!(int)$img['is_main']): ?>
+                                        <button type="submit" form="form_set_main"
+                                            name="image_id" value="<?= (int)$img['id'] ?>"
+                                            class="pfi-btn pfi-btn-main">★ اصلی شود</button>
+                                    <?php endif; ?>
+                                    <button type="submit" form="form_delete_img"
+                                        name="image_id" value="<?= (int)$img['id'] ?>"
+                                        class="pfi-btn pfi-btn-del"
+                                        onclick="return confirm('این عکس حذف شود؟');">🗑 حذف</button>
+                                </div>
+                            </div>
+                        <?php endforeach; ?>
+                    </div>
+                <?php endif; ?>
 
-        <label style="display:block;margin-bottom:8px;">قیمت‌گذاری پلکانی</label>
+                <?php if (count($images) < 5): ?>
+                    <div class="pfi-uploader">
+                        <input type="file" id="pfiInput"
+                            accept="image/jpeg,image/png,image/webp" multiple
+                            style="display:none;">
 
-        <label style="display:flex;align-items:center;gap:8px;cursor:pointer;margin-bottom:14px;">
-            <input type="checkbox" name="discount_enabled" value="1" id="discountEnabled" <?= $discountEnabled ? 'checked' : '' ?>>
-            <span>این محصول دارای تخفیف پلکانی است</span>
-        </label>
-
-        <div id="discountTiersBox" style="<?= $discountEnabled ? '' : 'display:none;' ?>">
-            <div id="discountTiers">
-                <?php if ($priceTiers): ?>
-                    <?php foreach ($priceTiers as $tier): ?>
-                        <div class="discount-tier" style="display:grid;grid-template-columns:1fr 1fr auto;gap:10px;align-items:center;margin-bottom:10px;">
-                            <input type="number" name="discount_qty[]" value="<?= (int)$tier['min_qty'] ?>" min="<?= (int)$product['base_moq'] ?>" step="1" placeholder="تعداد">
-                            <input type="number" name="discount_percent[]" value="<?= htmlspecialchars((string)$tier['percent']) ?>" min="0.01" max="99.99" step="0.01" placeholder="درصد">
-                            <button type="button" class="btn discount-remove">حذف</button>
+                        <div class="pfi-drop" id="pfiDrop">
+                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round">
+                                <path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4" />
+                                <polyline points="17 8 12 3 7 8" />
+                                <line x1="12" y1="3" x2="12" y2="15" />
+                            </svg>
+                            <b>فایل‌ها را بکشید اینجا یا کلیک کنید</b>
+                            <small>JPG / PNG / WebP — هر فایل زیر ۲ مگابایت</small>
                         </div>
-                    <?php endforeach; ?>
+
+                        <div class="pfi-preview" id="pfiPreview"></div>
+
+                        <div class="pfi-actions-row" id="pfiActionsRow" style="display:none;">
+                            <button type="button" class="pfi-btn-upload" id="pfiUploadBtn">⬆ آپلود عکس‌ها</button>
+                            <button type="button" class="pfi-btn-clear" id="pfiClearBtn">✕ انصراف</button>
+                        </div>
+
+                        <div class="pfi-status" id="pfiStatus"></div>
+                    </div>
+                <?php else: ?>
+                    <div class="pfi-limit">✓ حداکثر عکس (۵) — برای افزودن عکس جدید، یکی را حذف کنید</div>
                 <?php endif; ?>
             </div>
-            <button type="button" id="addDiscountTier" class="btn" style="margin-top:4px;">+ افزودن پله</button>
-        </div>
-
-        <?php if (isset($errors['discount'])): ?>
-            <span class="field-error" style="display:block;margin-top:10px;"><?= htmlspecialchars($errors['discount']) ?></span>
-        <?php endif; ?>
-    </div>
-
-
-    <!-- ════════ تصاویر ════════ -->
-    <div class="form-field pfi-block">
-
-        <div class="pfi-head">
-            <div>
-                <h3>تصاویر محصول</h3>
-                <p>حداکثر <b>۵ عکس</b> — ستاره‌دار = عکس اصلی</p>
-            </div>
-            <span class="pfi-counter">
-                <?= count($images) ?> / ۵
-            </span>
-        </div>
-
-        <?php if ($images): ?>
-            <div class="pfi-grid">
-                <?php foreach ($images as $img): ?>
-                    <div class="pfi-card <?= (int)$img['is_main'] ? 'is-main' : '' ?>">
-
-                        <div class="pfi-img-wrap">
-                            <img src="<?= htmlspecialchars($img['image_path']) ?>" alt="">
-                            <?php if ((int)$img['is_main']): ?>
-                                <span class="pfi-badge">★ اصلی</span>
-                            <?php endif; ?>
-                        </div>
-
-                        <div class="pfi-actions">
-
-                            <?php if (!(int)$img['is_main']): ?>
-                                <button type="submit"
-                                    form="form_set_main"
-                                    name="image_id"
-                                    value="<?= (int)$img['id'] ?>"
-                                    class="pfi-btn pfi-btn-main"
-                                    title="عکس اصلی شود">
-                                    ★ اصلی شود
-                                </button>
-                            <?php endif; ?>
-
-                            <button type="submit"
-                                form="form_delete_img"
-                                name="image_id"
-                                value="<?= (int)$img['id'] ?>"
-                                class="pfi-btn pfi-btn-del"
-                                title="حذف"
-                                onclick="return confirm('این عکس حذف شود؟');">
-                                🗑 حذف
-                            </button>
-
-                        </div>
-                    </div>
-                <?php endforeach; ?>
-            </div>
         <?php endif; ?>
 
-
-        <?php if (count($images) < 5): ?>
-
-            <div class="pfi-uploader">
-
-                <input type="file"
-                    id="pfiInput"
-                    accept="image/jpeg,image/png,image/webp"
-                    multiple
-                    style="display:none;">
-
-                <div class="pfi-drop" id="pfiDrop">
-                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor"
-                        stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round">
-                        <path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4" />
-                        <polyline points="17 8 12 3 7 8" />
-                        <line x1="12" y1="3" x2="12" y2="15" />
+        <!-- ─────────────── بخش ۵: سئو ─────────────── -->
+        <div class="pf-section">
+            <div class="pf-section-head">
+                <div class="pf-section-icon">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+                        <circle cx="11" cy="11" r="8" />
+                        <path d="M21 21l-4.35-4.35" />
                     </svg>
-                    <b>فایل‌ها را بکشید اینجا یا کلیک کنید</b>
-                    <small>JPG / PNG / WebP — هر فایل زیر ۲ مگابایت</small>
                 </div>
-
-                <div class="pfi-preview" id="pfiPreview"></div>
-
-                <div class="pfi-actions-row" id="pfiActionsRow" style="display:none;">
-                    <button type="button" class="pfi-btn-upload" id="pfiUploadBtn">
-                        ⬆ آپلود عکس‌ها
-                    </button>
-                    <button type="button" class="pfi-btn-clear" id="pfiClearBtn">
-                        ✕ انصراف
-                    </button>
+                <div>
+                    <h3>سئو و انتشار</h3>
+                    <small>عنوان و توضیحات متای صفحه محصول</small>
                 </div>
-
-                <div class="pfi-status" id="pfiStatus"></div>
-
             </div>
 
-        <?php else: ?>
+            <div class="pf-grid">
 
-            <div class="pfi-limit">
-                ✓ حداکثر عکس (۵) — برای افزودن عکس جدید، یکی را حذف کنید
+                <div class="pf-field pf-field-full">
+                    <label>عنوان متا (Meta Title)</label>
+                    <input type="text" name="meta_title" maxlength="200"
+                        value="<?= htmlspecialchars($product['meta_title'] ?? '') ?>"
+                        placeholder="مثلاً: جوراب نخی مردانه ساق‌بلند | رابطی">
+                    <span class="pf-field-hint">خالی = نام محصول به‌عنوان عنوان</span>
+                    <?php if (isset($errors['slug'])): ?>
+                        <span class="pf-field-error"><?= htmlspecialchars($errors['slug']) ?></span>
+                    <?php endif; ?>
+                </div>
+
+                <div class="pf-field pf-field-full">
+                    <label>توضیحات متا (Meta Description)</label>
+                    <textarea name="meta_description" rows="3"
+                        placeholder="توضیح کوتاه ۱۵۰-۱۶۰ کاراکتری برای موتور جستجو..."><?= htmlspecialchars($product['meta_description'] ?? '') ?></textarea>
+                </div>
+
+                <?php if ($action === 'edit'): ?>
+                    <div class="pf-field pf-field-full">
+                        <label>نشانی یکتای محصول (slug)</label>
+                        <input type="text" name="slug" dir="ltr"
+                            value="<?= htmlspecialchars($product['slug'] ?? '') ?>">
+                        <span class="pf-field-hint">
+                            تغییر فقط در صورت ضرورت — صفحه محصول:
+                            <code dir="ltr">/product/<?= htmlspecialchars($product['slug'] ?? '') ?></code>
+                        </span>
+                    </div>
+                <?php endif; ?>
+
             </div>
-
-        <?php endif; ?>
-
-    </div>
-
-
-    <!-- ════════ توضیحات ════════ -->
-    <div class="form-field" style="margin-top:24px;">
-        <label>توضیحات</label>
-        <textarea name="description" rows="6" placeholder="معرفی کوتاه و دقیق..."><?= htmlspecialchars($product['description'] ?? '') ?></textarea>
-    </div>
-
-
-    <!-- ════════ مشخصات ════════ -->
-    <?php foreach ($specFields as $key): ?>
-        <div class="form-field">
-            <label><?= htmlspecialchars($key) ?></label>
-            <input type="text" name="spec_<?= md5($key) ?>"
-                value="<?= htmlspecialchars($currentSpecs[$key] ?? '') ?>">
         </div>
-    <?php endforeach; ?>
 
+        <!-- ─────────────── دکمه ذخیره ─────────────── -->
+        <div class="pf-submit-row">
+            <button type="submit" class="pf-submit">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+                    <path d="M19 21H5a2 2 0 01-2-2V5a2 2 0 012-2h11l5 5v11a2 2 0 01-2 2z" />
+                    <polyline points="17 21 17 13 7 13 7 21" />
+                    <polyline points="7 3 7 8 15 8" />
+                </svg>
+                <?= $action === 'edit' ? 'ذخیره تغییرات' : 'افزودن محصول' ?>
+            </button>
+        </div>
 
-    <button type="submit" class="btn btn-orange co-submit" style="margin-top:24px;">
-        <?= $action === 'edit' ? 'ذخیره تغییرات' : 'افزودن محصول' ?> →
-    </button>
+    </form>
+</div>
 
-</form>
-
-
-<!-- ═══ نوار ذخیره شناور ═══ -->
-
+<!-- ═══════════════ نوار شناور ═══════════════ -->
 <div class="pf-sticky-bar" id="pfStickyBar" aria-hidden="true">
     <div class="pf-sticky-inner">
-
         <div class="pf-sticky-info">
             <span class="pf-sticky-dot" id="pfStickyDot"></span>
-            <span class="pf-sticky-text" id="pfStickyText">
-                تغییری ثبت نشده
-            </span>
+            <span class="pf-sticky-text" id="pfStickyText">تغییری ثبت نشده</span>
         </div>
-
         <div class="pf-sticky-actions">
-
             <?php if ($action === 'edit'): ?>
                 <a href="/product/<?= htmlspecialchars($product['slug']) ?>"
-                    target="_blank"
-                    rel="noopener"
+                    target="_blank" rel="noopener"
                     class="pf-sticky-btn pf-sticky-btn-view">
-                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor"
-                        stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
                         <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z" />
                         <circle cx="12" cy="12" r="3" />
                     </svg>
                     <span>مشاهده</span>
                 </a>
             <?php endif; ?>
-
-            <button type="submit"
-                form="mainProductForm"
-                class="pf-sticky-btn pf-sticky-btn-save"
-                id="pfStickySave">
-                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor"
-                    stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+            <button type="submit" form="mainProductForm"
+                class="pf-sticky-btn pf-sticky-btn-save" id="pfStickySave">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
                     <path d="M19 21H5a2 2 0 01-2-2V5a2 2 0 012-2h11l5 5v11a2 2 0 01-2 2z" />
                     <polyline points="17 21 17 13 7 13 7 21" />
                     <polyline points="7 3 7 8 15 8" />
                 </svg>
-                <span>ذخیره تغییرات</span>
+                <span>ذخیره</span>
             </button>
-
         </div>
-
     </div>
 </div>
-
-</form>
-
 
 <script>
     (function() {
         'use strict';
 
-        /* ─── Discount tiers ─── */
-        var enabled = document.getElementById('discountEnabled');
-        var box = document.getElementById('discountTiersBox');
-        var tiers = document.getElementById('discountTiers');
-        var addBtn = document.getElementById('addDiscountTier');
+        /* ═══════════════════════════════════════════════════════════
+           پله‌های تخفیف — toggle
+           ═══════════════════════════════════════════════════════════ */
 
-        if (enabled && box) {
-            enabled.addEventListener('change', function() {
-                box.style.display = enabled.checked ? '' : 'none';
+        var discountEnabled = document.getElementById('discountEnabled');
+        var tiersBox = document.getElementById('discountTiersBox');
+
+        if (discountEnabled && tiersBox) {
+            discountEnabled.addEventListener('change', function() {
+                tiersBox.style.display = discountEnabled.checked ? '' : 'none';
             });
         }
 
-        if (addBtn && tiers) {
-            addBtn.addEventListener('click', function() {
+        /* ═══════════════════════════════════════════════════════════
+           پله‌های تخفیف — افزودن/حذف ردیف
+           ═══════════════════════════════════════════════════════════ */
+
+        var addTierBtn = document.getElementById('addDiscountTier');
+        var tiersList = document.getElementById('discountTiers');
+
+        if (addTierBtn && tiersList) {
+            addTierBtn.addEventListener('click', function() {
                 var row = document.createElement('div');
-                row.className = 'discount-tier';
-                row.style.cssText = 'display:grid;grid-template-columns:1fr 1fr auto;gap:10px;align-items:center;margin-bottom:10px;';
+                row.className = 'pf-tier';
                 row.innerHTML = '' +
-                    '<input type="number" name="discount_qty[]" min="1" step="1" placeholder="تعداد">' +
-                    '<input type="number" name="discount_percent[]" min="0.01" max="99.99" step="0.01" placeholder="درصد">' +
-                    '<button type="button" class="btn discount-remove">حذف</button>';
-                tiers.appendChild(row);
+                    '<input type="number" name="discount_qty[]" min="1" step="1" placeholder="از تعداد">' +
+                    '<input type="number" name="discount_percent[]" min="0.01" max="99.99" step="0.01" placeholder="درصد تخفیف">' +
+                    '<button type="button" class="pf-tier-remove discount-remove">حذف</button>';
+                tiersList.appendChild(row);
             });
 
-            tiers.addEventListener('click', function(e) {
+            tiersList.addEventListener('click', function(e) {
                 var btn = e.target.closest('.discount-remove');
                 if (!btn) return;
-                var rows = tiers.querySelectorAll('.discount-tier');
+
+                var rows = tiersList.querySelectorAll('.pf-tier');
                 if (rows.length === 1) {
                     rows[0].querySelectorAll('input').forEach(function(i) {
                         i.value = '';
                     });
                     return;
                 }
-                btn.closest('.discount-tier').remove();
+                btn.closest('.pf-tier').remove();
             });
         }
 
-        /* ─── آپلودر عکس ─── */
-        var input = document.getElementById('pfiInput');
-        var drop = document.getElementById('pfiDrop');
-        var preview = document.getElementById('pfiPreview');
-        var actionsRow = document.getElementById('pfiActionsRow');
-        var uploadBtn = document.getElementById('pfiUploadBtn');
-        var clearBtn = document.getElementById('pfiClearBtn');
-        var status = document.getElementById('pfiStatus');
+        /* ═══════════════════════════════════════════════════════════
+           به‌روزرسانی خودکار «مناسب برای» و «برند» با تغییر دسته
+           ═══════════════════════════════════════════════════════════ */
 
-        if (!input || !drop || !uploadBtn) return;
+        var catSelect = document.querySelector('select[name="category_id"]');
+        var specForField = document.getElementById('specForField');
+        var brandField = document.querySelector('input[name="brand"]');
 
-        var MAX = 5;
-        var MAX_SIZE = 2 * 1024 * 1024;
-        var productId = <?= (int)$productId ?>;
+        if (catSelect) {
 
-        drop.addEventListener('click', function() {
-            input.click();
-        });
+            var catRootMap = <?= json_encode($catRootMap, JSON_UNESCAPED_UNICODE) ?>;
+            var brandByRoot = <?= json_encode($brandDefaults, JSON_UNESCAPED_UNICODE) ?>;
 
-        ['dragenter', 'dragover'].forEach(function(ev) {
-            drop.addEventListener(ev, function(e) {
-                e.preventDefault();
-                drop.classList.add('is-drag');
+            catSelect.addEventListener('change', function() {
+                var catId = parseInt(catSelect.value, 10);
+                var rootName = catRootMap[catId] || '';
+
+                if (specForField) {
+                    specForField.value = rootName;
+                }
+
+                if (brandField) {
+                    var currentBrand = brandField.value.trim();
+                    var newBrand = brandByRoot[rootName] || '';
+                    var oldDefault = brandField.dataset.defaultBrand || '';
+
+                    if (currentBrand === '' || currentBrand === oldDefault) {
+                        brandField.value = newBrand;
+                    }
+                    brandField.dataset.defaultBrand = newBrand;
+                }
             });
-        });
 
-        ['dragleave', 'drop'].forEach(function(ev) {
-            drop.addEventListener(ev, function(e) {
-                e.preventDefault();
-                drop.classList.remove('is-drag');
+            if (brandField) {
+                brandField.dataset.defaultBrand = brandField.value.trim();
+            }
+        }
+
+        /* ═══════════════════════════════════════════════════════════
+           به‌روزرسانی MOQ با تغییر واحد سفارش
+           ═══════════════════════════════════════════════════════════ */
+
+        var unitSelect = document.getElementById('unitSelect');
+        var moqField = document.querySelector('input[name="base_moq"]');
+
+        if (unitSelect && moqField) {
+            unitSelect.addEventListener('change', function() {
+                var v = unitSelect.value;
+                if (moqField.value === '' || moqField.value === '0') {
+                    if (v === 'جین') moqField.value = '1';
+                    if (v === 'بسته') moqField.value = '10';
+                    if (v === 'جفتی') moqField.value = '1';
+                }
             });
-        });
+        }
 
-        drop.addEventListener('drop', function(e) {
-            setFiles(Array.from(e.dataTransfer.files));
-        });
+        /* ═══════════════════════════════════════════════════════════
+           آپلود تصویر (AJAX)
+           ═══════════════════════════════════════════════════════════ */
 
-        input.addEventListener('change', function() {
-            setFiles(Array.from(input.files));
-        });
+        var pfiInput = document.getElementById('pfiInput');
+        var pfiDrop = document.getElementById('pfiDrop');
+        var pfiPreview = document.getElementById('pfiPreview');
+        var pfiActions = document.getElementById('pfiActionsRow');
+        var pfiUploadBtn = document.getElementById('pfiUploadBtn');
+        var pfiClearBtn = document.getElementById('pfiClearBtn');
+        var pfiStatus = document.getElementById('pfiStatus');
 
-        function setFiles(files) {
-            status.innerHTML = '';
-            var valid = [];
-            var errors = [];
+        if (pfiInput && pfiDrop && pfiUploadBtn) {
 
-            files.forEach(function(f) {
-                if (!/image\/(jpeg|png|webp)/i.test(f.type)) {
-                    errors.push(f.name + ' — فرمت پشتیبانی نمی‌شه');
+            var MAX_SIZE = 2 * 1024 * 1024;
+            var productId = <?= (int)$productId ?>;
+
+            pfiDrop.addEventListener('click', function() {
+                pfiInput.click();
+            });
+
+            ['dragenter', 'dragover'].forEach(function(ev) {
+                pfiDrop.addEventListener(ev, function(e) {
+                    e.preventDefault();
+                    pfiDrop.classList.add('is-drag');
+                });
+            });
+
+            ['dragleave', 'drop'].forEach(function(ev) {
+                pfiDrop.addEventListener(ev, function(e) {
+                    e.preventDefault();
+                    pfiDrop.classList.remove('is-drag');
+                });
+            });
+
+            pfiDrop.addEventListener('drop', function(e) {
+                setFiles(Array.from(e.dataTransfer.files));
+            });
+
+            pfiInput.addEventListener('change', function() {
+                setFiles(Array.from(pfiInput.files));
+            });
+
+            function setFiles(files) {
+                pfiStatus.innerHTML = '';
+
+                var valid = [];
+                var errors = [];
+
+                files.forEach(function(f) {
+                    if (!/image\/(jpeg|png|webp)/i.test(f.type)) {
+                        errors.push(f.name + ' — فرمت نامعتبر');
+                        return;
+                    }
+                    if (f.size > MAX_SIZE) {
+                        errors.push(f.name + ' — بزرگ‌تر از ۲ مگ');
+                        return;
+                    }
+                    valid.push(f);
+                });
+
+                valid = valid.slice(0, 5);
+
+                if (errors.length) {
+                    pfiStatus.innerHTML = '<div class="pfi-alert pfi-alert-error">⚠️ ' + errors.join('<br>') + '</div>';
+                }
+
+                if (!valid.length) {
+                    pfiActions.style.display = 'none';
                     return;
                 }
-                if (f.size > MAX_SIZE) {
-                    errors.push(f.name + ' — بزرگ‌تر از ۲ مگ');
-                    return;
-                }
-                valid.push(f);
-            });
 
-            valid = valid.slice(0, MAX);
+                try {
+                    var dt = new DataTransfer();
+                    valid.forEach(function(f) {
+                        dt.items.add(f);
+                    });
+                    pfiInput.files = dt.files;
+                } catch (err) {}
 
-            if (errors.length) {
-                status.innerHTML = '<div class="pfi-alert pfi-alert-error">⚠️ ' +
-                    errors.join('<br>') + '</div>';
-            }
-
-            if (!valid.length) {
-                actionsRow.style.display = 'none';
-                return;
-            }
-
-            try {
-                var dt = new DataTransfer();
+                pfiPreview.innerHTML = '';
                 valid.forEach(function(f) {
-                    dt.items.add(f);
+                    var url = URL.createObjectURL(f);
+                    var el = document.createElement('div');
+                    el.className = 'pfi-preview-item';
+                    el.innerHTML = '<img src="' + url + '" alt=""><span class="pfi-preview-name">' + f.name + '</span>';
+                    pfiPreview.appendChild(el);
                 });
-                input.files = dt.files;
-            } catch (err) {
-                console.warn('DataTransfer not supported:', err);
+
+                pfiActions.style.display = 'flex';
+                pfiUploadBtn.textContent = '⬆ آپلود ' + valid.length + ' عکس';
+                pfiUploadBtn.disabled = false;
             }
 
-            preview.innerHTML = '';
-            valid.forEach(function(f) {
-                var url = URL.createObjectURL(f);
-                var el = document.createElement('div');
-                el.className = 'pfi-preview-item';
-                el.innerHTML = '<img src="' + url + '" alt="">' +
-                    '<span class="pfi-preview-name">' + f.name + '</span>';
-                preview.appendChild(el);
+            pfiUploadBtn.addEventListener('click', function() {
+                if (!pfiInput.files.length) {
+                    pfiStatus.innerHTML = '<div class="pfi-alert pfi-alert-error">⚠️ عکسی انتخاب نشده</div>';
+                    return;
+                }
+
+                var fd = new FormData();
+                fd.append('do', 'upload_image');
+                for (var i = 0; i < pfiInput.files.length; i++) {
+                    fd.append('images[]', pfiInput.files[i]);
+                }
+
+                pfiUploadBtn.disabled = true;
+                pfiUploadBtn.textContent = 'در حال آپلود...';
+                pfiStatus.innerHTML = '<div class="pfi-alert pfi-alert-loading">⏳ در حال آپلود...</div>';
+
+                fetch('/admin/product-form?action=edit&id=' + productId, {
+                        method: 'POST',
+                        body: fd,
+                        headers: {
+                            'Accept': 'application/json',
+                            'X-CSRF-Token': (document.querySelector('meta[name="csrf-token"]') || {}).content || ''
+                        }
+                    })
+                    .then(function(r) {
+                        return r.json();
+                    })
+                    .then(function(data) {
+                        if (data.ok) {
+                            pfiStatus.innerHTML = '<div class="pfi-alert pfi-alert-success">✓ ' + data.message + '</div>';
+                            setTimeout(function() {
+                                window.location.reload();
+                            }, 900);
+                        } else {
+                            pfiStatus.innerHTML = '<div class="pfi-alert pfi-alert-error">⚠️ ' + (data.error || 'خطا') + '</div>';
+                            pfiUploadBtn.disabled = false;
+                            pfiUploadBtn.textContent = '⬆ تلاش دوباره';
+                        }
+                    })
+                    .catch(function() {
+                        pfiStatus.innerHTML = '<div class="pfi-alert pfi-alert-error">⚠️ خطای ارتباط</div>';
+                        pfiUploadBtn.disabled = false;
+                        pfiUploadBtn.textContent = '⬆ تلاش دوباره';
+                    });
             });
 
-            actionsRow.style.display = 'flex';
-            uploadBtn.textContent = '⬆ آپلود ' + valid.length + ' عکس';
-            uploadBtn.disabled = false;
+            pfiClearBtn.addEventListener('click', function() {
+                pfiInput.value = '';
+                pfiPreview.innerHTML = '';
+                pfiStatus.innerHTML = '';
+                pfiActions.style.display = 'none';
+            });
         }
 
-        uploadBtn.addEventListener('click', function() {
+        /* ═══════════════════════════════════════════════════════════
+           نوار شناور ذخیره
+           ═══════════════════════════════════════════════════════════ */
 
-            if (!input.files.length) {
-                status.innerHTML = '<div class="pfi-alert pfi-alert-error">⚠️ عکسی انتخاب نشده</div>';
-                return;
+        var stickyBar = document.getElementById('pfStickyBar');
+        var stickyDot = document.getElementById('pfStickyDot');
+        var stickyText = document.getElementById('pfStickyText');
+        var mainForm = document.getElementById('mainProductForm');
+        var saveBtn = document.getElementById('pfStickySave');
+
+        if (stickyBar && mainForm && saveBtn) {
+
+            var isDirty = false;
+            var isSubmitting = false;
+
+            function updateBarVisibility() {
+                var scrollY = window.pageYOffset || document.documentElement.scrollTop;
+                var form = mainForm.getBoundingClientRect();
+
+                if (form.top < 100 || scrollY > 200) {
+                    stickyBar.classList.add('is-visible');
+                    stickyBar.setAttribute('aria-hidden', 'false');
+                } else if (!isDirty) {
+                    stickyBar.classList.remove('is-visible');
+                    stickyBar.setAttribute('aria-hidden', 'true');
+                }
             }
 
-            var fd = new FormData();
-            fd.append('do', 'upload_image');
+            function setDirty(state) {
+                isDirty = state;
 
-            for (var i = 0; i < input.files.length; i++) {
-                fd.append('images[]', input.files[i]);
+                if (isDirty) {
+                    stickyDot.classList.add('is-dirty');
+                    stickyDot.classList.remove('is-saved');
+                    stickyText.classList.add('is-dirty');
+                    stickyText.classList.remove('is-saved');
+                    stickyText.textContent = 'تغییرات ذخیره نشده';
+                    updateBarVisibility();
+                } else {
+                    stickyDot.classList.remove('is-dirty');
+                    stickyDot.classList.add('is-saved');
+                    stickyText.classList.remove('is-dirty');
+                    stickyText.classList.add('is-saved');
+                    stickyText.textContent = 'همه‌چیز ذخیره شد';
+                    setTimeout(function() {
+                        if (!isDirty) {
+                            stickyText.classList.remove('is-saved');
+                            stickyText.textContent = 'تغییری ثبت نشده';
+                        }
+                    }, 2400);
+                }
             }
 
-            uploadBtn.disabled = true;
-            uploadBtn.textContent = 'در حال آپلود...';
-            status.innerHTML = '<div class="pfi-alert pfi-alert-loading">⏳ در حال آپلود...</div>';
+            mainForm.addEventListener('input', function(e) {
+                if (e.target.closest('#pfiInput')) return;
+                if (isSubmitting) return;
+                setDirty(true);
+            });
 
-            fetch('/admin/product-form?action=edit&id=' + productId, {
-                    method: 'POST',
-                    body: fd,
-                    headers: {
-                        'Accept': 'application/json',
-                        'X-CSRF-Token': (document.querySelector('meta[name="csrf-token"]') || {}).content || ''
-                    }
-                })
-                .then(function(r) {
-                    return r.json();
-                })
-                .then(function(data) {
-                    if (data.ok) {
-                        status.innerHTML = '<div class="pfi-alert pfi-alert-success">✓ ' +
-                            data.message +
-                            (data.failed && data.failed.length ?
-                                '<br>⚠️ ' + data.failed.join('<br>') :
-                                '') +
-                            '</div>';
+            mainForm.addEventListener('change', function(e) {
+                if (e.target.closest('#pfiInput')) return;
+                if (isSubmitting) return;
+                setDirty(true);
+            });
 
-                        setTimeout(function() {
-                            window.location.reload();
-                        }, 900);
-                    } else {
-                        status.innerHTML = '<div class="pfi-alert pfi-alert-error">⚠️ ' +
-                            (data.error || 'خطا') +
-                            '</div>';
-                        uploadBtn.disabled = false;
-                        uploadBtn.textContent = '⬆ تلاش دوباره';
-                    }
-                })
-                .catch(function(err) {
-                    console.error('UPLOAD_ERROR:', err);
-                    status.innerHTML = '<div class="pfi-alert pfi-alert-error">⚠️ خطای ارتباط با سرور</div>';
-                    uploadBtn.disabled = false;
-                    uploadBtn.textContent = '⬆ تلاش دوباره';
-                });
-        });
+            saveBtn.addEventListener('click', function() {
+                isSubmitting = true;
+                saveBtn.disabled = true;
+                saveBtn.querySelector('span').textContent = 'در حال ذخیره...';
+                mainForm.submit();
+            });
 
-        clearBtn.addEventListener('click', function() {
-            input.value = '';
-            preview.innerHTML = '';
-            status.innerHTML = '';
-            actionsRow.style.display = 'none';
-        });
+            window.addEventListener('scroll', updateBarVisibility, {
+                passive: true
+            });
 
+            <?php if (isset($_GET['saved'])): ?>
+                setDirty(false);
+            <?php endif; ?>
+
+            window.addEventListener('beforeunload', function(e) {
+                if (isDirty && !isSubmitting) {
+                    e.preventDefault();
+                    e.returnValue = '';
+                    return '';
+                }
+            });
+
+            setTimeout(updateBarVisibility, 300);
+        }
     })();
-
-    /* ═══ نوار ذخیره شناور ═══ */
-    var stickyBar = document.getElementById('pfStickyBar');
-    var stickyDot = document.getElementById('pfStickyDot');
-    var stickyText = document.getElementById('pfStickyText');
-    var mainForm = document.getElementById('mainProductForm');
-    var saveBtn = document.getElementById('pfStickySave');
-
-    if (stickyBar && mainForm && saveBtn) {
-
-        var isDirty = false;
-        var isSubmitting = false;
-
-        /* چک کن کاربر جایی از صفحه اسکرول کرده */
-        function updateBarVisibility() {
-            var scrollY = window.pageYOffset || document.documentElement.scrollTop;
-            var form = mainForm.getBoundingClientRect();
-
-            /* وقتی راس فرم از بالا رد شد، نوار بیاد */
-            if (form.top < 100 || scrollY > 200) {
-                stickyBar.classList.add('is-visible');
-                stickyBar.setAttribute('aria-hidden', 'false');
-            } else if (!isDirty) {
-                stickyBar.classList.remove('is-visible');
-                stickyBar.setAttribute('aria-hidden', 'true');
-            }
-        }
-
-        /* هر تغییر توی فرم → dirty */
-        function setDirty(state) {
-            isDirty = state;
-
-            if (isDirty) {
-                stickyDot.classList.add('is-dirty');
-                stickyDot.classList.remove('is-saved');
-                stickyText.classList.add('is-dirty');
-                stickyText.classList.remove('is-saved');
-                stickyText.textContent = 'تغییرات ذخیره نشده';
-                updateBarVisibility();
-            } else {
-                stickyDot.classList.remove('is-dirty');
-                stickyDot.classList.add('is-saved');
-                stickyText.classList.remove('is-dirty');
-                stickyText.classList.add('is-saved');
-                stickyText.textContent = 'همه‌چیز ذخیره شد';
-
-                setTimeout(function() {
-                    if (!isDirty) {
-                        stickyText.classList.remove('is-saved');
-                        stickyText.textContent = 'تغییری ثبت نشده';
-                    }
-                }, 2400);
-            }
-        }
-
-        /* رویداد تغییر */
-        mainForm.addEventListener('input', function(e) {
-            if (e.target.closest('#pfiInput')) return; /* عکس‌ها را نادیده بگیر */
-            if (isSubmitting) return;
-            setDirty(true);
-        });
-
-        mainForm.addEventListener('change', function(e) {
-            if (e.target.closest('#pfiInput')) return;
-            if (isSubmitting) return;
-            setDirty(true);
-        });
-
-        /* کلیک دکمه ذخیره شناور */
-        saveBtn.addEventListener('click', function(e) {
-            isSubmitting = true;
-            saveBtn.disabled = true;
-            saveBtn.querySelector('span').textContent = 'در حال ذخیره...';
-
-            /* فرم اصلی رو submit کن */
-            mainForm.submit();
-        });
-
-        /* اسکرول */
-        window.addEventListener('scroll', updateBarVisibility, {
-            passive: true
-        });
-
-        /* موقع لود — اگه پرچم saved باشه */
-        <?php if (isset($_GET['saved'])): ?>
-            setDirty(false);
-        <?php endif; ?>
-
-        /* هشدار قبل از خروج با تغییرات ذخیره نشده */
-        window.addEventListener('beforeunload', function(e) {
-            if (isDirty && !isSubmitting) {
-                e.preventDefault();
-                e.returnValue = '';
-                return '';
-            }
-        });
-
-        /* موقع لود، بار رو مخفی کن */
-        setTimeout(updateBarVisibility, 300);
-    }
 </script>
 
 <?php
-
 $content = ob_get_clean();
-
-// ═══ CSS اختصاصی این صفحه (در admin.php لود می‌شود) ═══
-$pageCss = [
-    '/assets/css/product-form-images.css',
-];
-
 require ROOT_PATH . '/views/layouts/admin.php';

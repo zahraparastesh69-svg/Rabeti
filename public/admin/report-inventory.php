@@ -6,7 +6,12 @@ $__bp = [
     __DIR__ . '/../../sock-b2b/config/bootstrap.php',
     __DIR__ . '/../../config/bootstrap.php',
 ];
-foreach ($__bp as $__b) { if (is_file($__b)) { require_once $__b; break; } }
+foreach ($__bp as $__b) {
+    if (is_file($__b)) {
+        require_once $__b;
+        break;
+    }
+}
 unset($__bp, $__b);
 require_once ROOT_PATH . '/config/database.php';
 require_once ROOT_PATH . '/config/auth.php';
@@ -31,7 +36,9 @@ $categories = $db->query("SELECT id, name FROM categories WHERE is_active=1 ORDE
 $sql = "
     SELECT p.id, p.code, p.name,
            c.name AS cat_name,
-           COALESCE(inv.qty_available, 0) AS stock,
+           (SELECT spec_value FROM product_specs 
+            WHERE product_id = p.id AND spec_key = 'واحد سفارش' LIMIT 1) AS unit_code,
+           GREATEST(0, COALESCE(inv.qty_physical, 0) - COALESCE(inv.reserved, 0) - COALESCE(inv.unsellable, 0)) AS stock,
            COALESCE((
                SELECT SUM(oi.qty)
                FROM order_items oi
@@ -81,6 +88,27 @@ foreach ($rows as $r) {
     $totalAmount += (int)$r['sold_amount'];
 }
 
+/* ═══ خروجی CSV ═══ */
+if (($_GET['export'] ?? '') === 'csv') {
+    require_once ROOT_PATH . '/app/services/CsvExporter.php';
+    $csv = new CsvExporter('inventory-sales-' . date('Y-m-d'));
+    $csv->header(['#', 'باشگاه', 'دسته', 'محصول', 'موجودی', 'فروش', 'مبلغ']);
+    $i = 1;
+    foreach ($rows as $r) {
+        $csv->row([
+            $i++,
+            $r['code'],
+            $r['cat_name'],
+            $r['name'],
+            (int)$r['stock'],
+            (int)$r['sold_qty'],
+            (int)$r['sold_amount'],
+        ]);
+    }
+    $csv->row(['', '', '', 'جمع جل', $totalStock, $totalSold, $totalAmount]);
+    $csv->end();
+}
+
 $pageTitle  = 'گزارش موجودی و فروش';
 $activeMenu = 'reports';
 
@@ -95,6 +123,13 @@ ob_start();
 </section>
 
 <?php fin_rangeForm('/admin/report-inventory', ['cat' => $catId, 'q' => $q]); ?>
+
+<!-- دکمه خروجی CSV -->
+<div style="text-align:left;margin:8px 0 14px;">
+    <a href="?export=csv&from=<?= $h($from) ?>&to=<?= $h($to) ?>&cat=<?= (int)$catId ?>&q=<?= $h($q) ?>" class="btn btn-orange" style="padding:7px 16px;font-size:.78rem;">
+        ⬇ خروجی CSV
+    </a>
+</div>
 
 <!-- ═══ فیلتر دسته + جستجو ═══ -->
 <div class="admin-card" style="padding:14px;margin-bottom:16px;">
@@ -129,10 +164,11 @@ ob_start();
     <div class="stat-card stat-card-accent">
         <div class="stat-card-top"><span class="stat-card-label">موجودی کل انبار</span><span class="stat-card-icon">📦</span></div>
         <div class="num"><?= number_format($totalStock) ?></div>
-        <div class="stat-card-note">جفت</div>
+        <div class="stat-card-note">واحد</div>
+
     </div>
     <div class="stat-card">
-        <div class="stat-card-top"><span class="stat-card-label">فروش بازه (جفت)</span><span class="stat-card-icon">🧦</span></div>
+        <div class="stat-card-top"><span class="stat-card-label">فروش بازه</span><span class="stat-card-icon">🧦</span></div>
         <div class="num"><?= number_format($totalSold) ?></div>
         <div class="stat-card-note">از <?= count($rows) ?> محصول</div>
     </div>
@@ -169,16 +205,17 @@ ob_start();
                         <b style="color:<?= (int)$r['stock'] > 0 ? 'var(--admin-success)' : 'var(--admin-danger)' ?>;">
                             <?= number_format((int)$r['stock']) ?>
                         </b>
-                        جفت
+                        <?= htmlspecialchars(unit_label($r['unit_code'] ?? 'جفتی')) ?>
+
                     </td>
-                    <td><?= number_format((int)$r['sold_qty']) ?> جفت</td>
+                    <td><?= number_format((int)$r['sold_qty']) ?> <?= htmlspecialchars(unit_label($r['unit_code'] ?? 'جفتی')) ?></td>
                     <td><?= $money((int)$r['sold_amount']) ?></td>
                 </tr>
             <?php endforeach; ?>
             <tr style="background:#f8fafc;font-weight:800;">
                 <td colspan="4" style="text-align:left;">جمع کل</td>
-                <td><?= number_format($totalStock) ?> جفت</td>
-                <td><?= number_format($totalSold) ?> جفت</td>
+                <td><?= number_format($totalStock) ?> واحد</td>
+                <td><?= number_format($totalSold) ?> واحد</td>
                 <td><?= $money($totalAmount) ?></td>
             </tr>
         </tbody>

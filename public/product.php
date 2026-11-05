@@ -1,15 +1,60 @@
 <?php
+/* ════ RABETI-CUSTOM-ORDER | نسخه: v1 | 2026-10-22 | جدیدترین نسخه (LATEST) ════ */
 
 /* Auto-detect bootstrap (local + host) */
 $__bp = [
     __DIR__ . '/../sock-b2b/config/bootstrap.php',
     __DIR__ . '/../config/bootstrap.php',
 ];
-foreach ($__bp as $__b) { if (is_file($__b)) { require_once $__b; break; } }
+foreach ($__bp as $__b) {
+    if (is_file($__b)) {
+        require_once $__b;
+        break;
+    }
+}
 unset($__bp, $__b);
 require_once ROOT_PATH . '/config/database.php';
+require_once ROOT_PATH . '/config/auth.php';
 
 $h = static fn($v) => htmlspecialchars((string)$v, ENT_QUOTES, 'UTF-8');
+
+$moneyFa = static function ($amount, int $decimals = 0): string {
+    $formatted = number_format((float)$amount, $decimals, '.', ',');
+    $formatted = strtr($formatted, [
+        '0' => '۰',
+        '1' => '۱',
+        '2' => '۲',
+        '3' => '۳',
+        '4' => '۴',
+        '5' => '۵',
+        '6' => '۶',
+        '7' => '۷',
+        '8' => '۸',
+        '9' => '۹',
+        ',' => '٬',
+        '.' => '٫',  // اعشار فارسی (اختیاری)
+    ]);
+    return $formatted . ' تومان';
+};
+
+// ⭐ تابع جدید — فقط عدد فارسی، بدون "تومان"
+$numFa = static function ($value, int $decimals = 0): string {
+    $formatted = number_format((float)$value, $decimals, '.', ',');
+    return strtr($formatted, [
+        '0' => '۰',
+        '1' => '۱',
+        '2' => '۲',
+        '3' => '۳',
+        '4' => '۴',
+        '5' => '۵',
+        '6' => '۶',
+        '7' => '۷',
+        '8' => '۸',
+        '9' => '۹',
+        ',' => '٬',
+        '.' => '٫',
+    ]);
+};
 
 /* ═══════════════ خواندن محصول ═══════════════ */
 
@@ -23,7 +68,9 @@ $stmt = db()->prepare("
         c.parent_id AS cat_parent_id,
         parent.name AS parent_name,
         parent.slug AS parent_slug,
-        COALESCE(inv.qty_available, 0) AS stock
+        (SELECT spec_value FROM product_specs 
+         WHERE product_id = p.id AND spec_key = 'واحد سفارش' LIMIT 1) AS unit_code,
+        GREATEST(0, COALESCE(inv.qty_physical, 0) - COALESCE(inv.reserved, 0) - COALESCE(inv.unsellable, 0)) AS stock
     FROM products p
     JOIN categories c ON c.id = p.category_id
     LEFT JOIN categories parent ON parent.id = c.parent_id
@@ -61,32 +108,43 @@ if (!$product) {
 $productId = (int)$product['id'];
 $stock     = (int)$product['stock'];
 $moq       = max(1, (int)$product['base_moq']);
+$unitLabel = unit_label($product['unit_code'] ?? 'جفتی');
+
 
 /* ═══════════════ قیمت‌ها (wholesale فقط) ═══════════════ */
+/* ═══════════════ قیمت‌ها — از PricingService v2 ═══════════════ */
 
-$stmt = db()->prepare("
-    SELECT min_qty, price
-    FROM product_prices
-    WHERE product_id = ?
-      AND customer_group = 'wholesale'
-    ORDER BY min_qty ASC
-");
-$stmt->execute([$productId]);
-$prices = $stmt->fetchAll();
+require_once ROOT_PATH . '/app/services/PricingService.php';
 
-$basePrice = null;
-$tiers     = [];
+$userGroup = current_user_group();
 
-foreach ($prices as $row) {
-    $mq = (int)$row['min_qty'];
-    $pr = (float)$row['price'];
+// قیمت پایه از products.base_price (با fallback legacy در PricingService)
+$basePrice = PricingService::getBasePrice(db(), $productId);
 
-    if ($mq === 1) {
-        $basePrice = $pr;
-    } else {
-        $tiers[] = ['min_qty' => $mq, 'price' => $pr];
-    }
+// پله‌ها از product_tier_discounts (درصدی)
+$tiersRaw = PricingService::getTiers(db(), $productId);
+
+// ساختار پله‌ها برای نمایش در صفحه محصول
+$tiers = [];
+foreach ($tiersRaw as $t) {
+    $tiers[] = [
+        'min_qty'          => (int)$t['min_qty'],
+        'discount_percent' => (float)$t['discount_percent'],
+        'price'            => PricingService::roundPrice(
+            (int)round($basePrice * (1 - $t['discount_percent'] / 100))
+        ),
+    ];
 }
+
+// قیمت برای گروه فعلی کاربر (اگر bronze/silver/gold باشد، پله‌ها اعمال نمی‌شوند)
+$userPricing = PricingService::calculate(db(), $productId, $moq, $userGroup);
+
+// آیا کاربر تخفیف سطح دارد؟
+$hasGroupDiscount = in_array($userPricing['discount_source'], ['group'], true);
+$groupDiscountPercent = $hasGroupDiscount ? $userPricing['discount_percent'] : 0;
+
+// گروه فعلی (برای نمایش نام)
+$userGroupData = PricingService::getGroup(db(), $userGroup);
 
 /* ═══════════════ همه عکس‌ها ═══════════════ */
 
@@ -118,13 +176,7 @@ $stmt = db()->prepare("
         p.name,
         p.slug,
         p.code,
-        (
-            SELECT pp.price FROM product_prices pp
-            WHERE pp.product_id = p.id
-              AND pp.customer_group = 'wholesale'
-              AND pp.min_qty = 1
-            ORDER BY pp.id DESC LIMIT 1
-        ) AS price,
+        p.base_price AS price,
         (
             SELECT pi.image_path FROM product_images pi
             WHERE pi.product_id = p.id
@@ -138,6 +190,7 @@ $stmt = db()->prepare("
     ORDER BY p.id DESC
     LIMIT 4
 ");
+
 $stmt->execute([(int)$product['category_id'], $productId]);
 $related = $stmt->fetchAll();
 
@@ -159,10 +212,17 @@ $pageDescription = mb_substr(
 $productUrl = SITE_URL . '/product/' . rawurlencode($product['slug']);
 
 /* قیمت‌ها به تومان ذخیره شده‌اند؛ schema.org کد ISO می‌خواهد → ریال (×۱۰) */
-$irrPrices = array_values(array_filter(
-    array_map(static fn($r) => (float)$r['price'] * 10, $prices),
-    static fn($p) => $p > 0
-));
+/* قیمت‌ها به تومان ذخیره شده‌اند؛ schema.org کد ISO می‌خواهد → ریال (×۱۰) */
+$irrPrices = [];
+if ($basePrice > 0) {
+    $irrPrices[] = $basePrice * 10;
+}
+foreach ($tiers as $t) {
+    if ($t['price'] > 0) {
+        $irrPrices[] = $t['price'] * 10;
+    }
+}
+$irrPrices = array_values(array_unique(array_filter($irrPrices, static fn($p) => $p > 0)));
 
 $productLd = [
     '@context' => 'https://schema.org',
@@ -231,12 +291,7 @@ $jsonLd = [
 
 ob_start();
 ?>
-
 <link rel="stylesheet" href="/assets/css/product-premium.css">
-<?php if (!empty($productImages)): ?>
-    <link rel="stylesheet" href="/assets/css/product-gallery.css">
-<?php endif; ?>
-
 
 <!-- ═══ Breadcrumb ═══ -->
 
@@ -268,44 +323,30 @@ ob_start();
 
 <!-- ═══ Product Detail ═══ -->
 
+<!-- ═══ Product Detail ═══ -->
 <section class="pd-wrap">
 
-
     <!-- ─── ستون راست: گالری + Trust ─── -->
-
     <div class="pd-gallery-col">
 
         <?php if (!empty($productImages)): ?>
-
             <div class="pdg-wrap">
-
                 <!-- عکس اصلی -->
                 <div class="pdg-main" id="pdgMain">
-
                     <div class="pdg-slides">
                         <?php foreach ($productImages as $i => $img): ?>
-                            <div class="pdg-slide <?= $i === 0 ? 'is-active' : '' ?>"
-                                data-src="<?= $h($img['image_path']) ?>">
-
-                                <img src="<?= $h($img['image_path']) ?>"
-                                    alt="<?= $h($img['alt_text'] ?: $product['name']) ?>"
-                                    <?= $i === 0 ? 'loading="eager"' : 'loading="lazy"' ?>
-                                    draggable="false">
-
+                            <div class="pdg-slide <?= $i === 0 ? 'is-active' : '' ?>" data-src="<?= $h($img['image_path']) ?>">
+                                <img src="<?= $h($img['image_path']) ?>" alt="<?= $h($img['alt_text'] ?: $product['name']) ?>" <?= $i === 0 ? 'loading="eager"' : 'loading="lazy"' ?> draggable="false">
                             </div>
                         <?php endforeach; ?>
                     </div>
 
                     <div class="pdg-shine"></div>
 
-                    <!-- شمارنده -->
                     <?php if (count($productImages) > 1): ?>
-                        <span class="pdg-counter" id="pdgCounter">
-                            ۱ / <?= number_format(count($productImages)) ?>
-                        </span>
+                        <span class="pdg-counter" id="pdgCounter">۱ / <?= $moneyFa(count($productImages)) ?></span>
                     <?php endif; ?>
 
-                    <!-- بج موجودی -->
                     <?php if ($lowStock): ?>
                         <span class="pdg-stock-badge warn">موجودی محدود</span>
                     <?php elseif ($inStock): ?>
@@ -314,170 +355,141 @@ ob_start();
                         <span class="pdg-stock-badge out">ناموجود</span>
                     <?php endif; ?>
 
-                    <!-- راهنمای بزرگنمایی -->
                     <div class="pdg-zoom-hint">
-                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor"
-                            stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                             <circle cx="11" cy="11" r="7" />
                             <path d="M21 21l-4.35-4.35M11 8v6M8 11h6" />
                         </svg>
                         برای بزرگ‌نمایی کلیک کنید
                     </div>
 
-                    <!-- فلش‌های موبایل -->
                     <?php if (count($productImages) > 1): ?>
-                        <button type="button" class="pdg-nav prev" aria-label="قبلی">
-                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor"
-                                stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+                        <button type="button" class="pdg-nav prev" aria-label="قبلی"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2">
                                 <path d="M15 18l-6-6 6-6" />
-                            </svg>
-                        </button>
-
-                        <button type="button" class="pdg-nav next" aria-label="بعدی">
-                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor"
-                                stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+                            </svg></button>
+                        <button type="button" class="pdg-nav next" aria-label="بعدی"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2">
                                 <path d="M9 18l6-6-6-6" />
-                            </svg>
-                        </button>
+                            </svg></button>
                     <?php endif; ?>
-
                 </div>
 
-                <!-- تامنیل‌ها (دسکتاپ) -->
+                <!-- تامنیل‌ها -->
                 <?php if (count($productImages) > 1): ?>
                     <div class="pdg-thumbs">
                         <?php foreach ($productImages as $i => $img): ?>
-                            <button type="button"
-                                class="pdg-thumb <?= $i === 0 ? 'is-active' : '' ?>"
-                                aria-label="عکس <?= number_format($i + 1) ?>">
-                                <img src="<?= $h($img['image_path']) ?>"
-                                    alt=""
-                                    loading="lazy"
-                                    draggable="false">
+                            <button type="button" class="pdg-thumb <?= $i === 0 ? 'is-active' : '' ?>" aria-label="عکس <?= $moneyFa($i + 1) ?>">
+                                <img src="<?= $h($img['image_path']) ?>" alt="" loading="lazy" draggable="false">
                             </button>
                         <?php endforeach; ?>
                     </div>
                 <?php endif; ?>
-
             </div>
 
             <!-- نقطه‌ها (موبایل) -->
             <?php if (count($productImages) > 1): ?>
                 <div class="pdg-dots">
                     <?php foreach ($productImages as $i => $img): ?>
-                        <button type="button"
-                            class="pdg-dot <?= $i === 0 ? 'is-active' : '' ?>"
-                            aria-label="عکس <?= number_format($i + 1) ?>"></button>
+                        <button type="button" class="pdg-dot <?= $i === 0 ? 'is-active' : '' ?>" aria-label="عکس <?= $moneyFa($i + 1) ?>"></button>
                     <?php endforeach; ?>
                 </div>
             <?php endif; ?>
-
         <?php else: ?>
-
-            <!-- حالت خالی -->
             <div class="pdg-empty">
-                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor"
-                    stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.4">
                     <rect x="3" y="3" width="18" height="18" rx="3" />
                     <circle cx="8.5" cy="8.5" r="1.5" />
                     <path d="M21 15l-5-5L5 21" />
                 </svg>
                 <span>عکس واقعی به‌زودی</span>
             </div>
-
         <?php endif; ?>
 
-        <!-- Trust Row -->
-        <div class="pd-trust">
-
-            <div class="pd-trust-item">
-                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7">
-                    <path d="M1 5h13v11H1zM14 8h4l3 3v5h-7" />
-                    <circle cx="5.5" cy="17" r="2" />
-                    <circle cx="16.5" cy="17" r="2" />
-                </svg>
-                <span>ارسال سریع</span>
-            </div>
-
-            <div class="pd-trust-item">
-                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7">
-                    <path d="M12 2l8 4v6c0 5-3.5 8.5-8 10-4.5-1.5-8-5-8-10V6z" />
-                    <path d="M9 12l2 2 4-4" />
-                </svg>
-                <span>ضمانت کیفیت</span>
-            </div>
-
-            <div class="pd-trust-item">
-                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7">
-                    <path d="M20.6 13.4L11 3.8A2 2 0 009.6 3.2H4a1 1 0 00-1 1v5.6c0 .5.2 1 .6 1.4l9.6 9.6a2 2 0 002.8 0l4.6-4.6a2 2 0 000-2.8z" />
-                    <circle cx="7.5" cy="7" r="1" />
-                </svg>
-                <span>قیمت همکاری</span>
-            </div>
-
-        </div>
+        <!-- ⭐ Trust Row (این باید بعد از دکمه‌ها باشد، ولی در صفحه فعلی اینجاست. ما در کد اصلی در جای درست قرارش دادیم، اینجا فقط برای رفرنس است) -->
+        <!-- اگر در کد قبلی Trust را به داخل pd-info-col بردید، اینجا کاری نکنید. -->
 
     </div>
 
-
     <!-- ─── ستون چپ: اطلاعات ─── -->
-
     <div class="pd-info-col">
 
         <div class="pd-meta">
-
             <span class="pd-code">کد <?= $h($product['code']) ?></span>
-
             <span class="pd-meta-dot"></span>
-
-            <span class="pd-stock <?= $inStock ? 'ok' : 'no' ?>">
-                ● <?= $inStock ? 'موجود در انبار' : 'ناموجود' ?>
-            </span>
-
+            <?php if ($inStock): ?>
+                <span class="pd-stock ok">● موجود در انبار (<?= $numFa($stock) ?> <?= $h($unitLabel) ?>)</span>
+            <?php else: ?>
+                <span class="pd-stock no">● ناموجود</span>
+            <?php endif; ?>
         </div>
-
         <h1 class="pd-title"><?= $h($product['name']) ?></h1>
 
         <?php if (!empty($product['description'])): ?>
-            <div class="pd-desc">
-                <?= nl2br($h($product['description'])) ?>
-            </div>
+            <div class="pd-desc"><?= nl2br($h($product['description'])) ?></div>
         <?php endif; ?>
 
-
         <!-- ─── قیمت ─── -->
-
-        <?php if ($basePrice !== null): ?>
-
+        <?php if ($basePrice !== null && $basePrice > 0): ?>
             <div class="pd-price-block">
 
-                <div class="pd-price-main">
+                <?php if ($hasGroupDiscount && $userGroupData): ?>
+                    <?php
+                    // رنگ بج بر اساس کد ثابت گروه؛ مستقل از عنوان نمایشی گروه
+                    $groupCode = strtolower((string)($userGroupData['code'] ?? $userGroup));
+                    $badgeClass = match ($groupCode) {
+                        'gold'   => 'pd-badge-gold',
+                        'silver' => 'pd-badge-silver',
+                        'bronze' => 'pd-badge-bronze',
+                        default  => 'pd-badge-default',
+                    };
+                    ?>
 
-                    <span class="pd-price-label">قیمت همکاری از</span>
-
-                    <div class="pd-price-value">
-                        <b><?= number_format($basePrice) ?></b>
-                        <small>تومان</small>
+                    <!-- بج تخفیف داینامیک -->
+                    <div class="pd-price-badge <?= $badgeClass ?>">
+                        <span class="pd-price-badge-pct"><?= $numFa($userPricing['discount_percent'], 0) ?>٪</span>
+                        <span class="pd-price-badge-label">تخفیف سطح <?= $h($userGroupData['name']) ?></span>
                     </div>
 
-                </div>
+                    <!-- قیمت اصلی -->
+                    <div class="pd-price-main">
+                        <div class="pd-price-value">
+                            <b><?= $moneyFa($userPricing['unit_price']) ?></b>
+                            <small>/ <?= $h($unitLabel) ?></small>
+                        </div>
+                    </div>
 
-                <?php if ($tiers): ?>
+                    <!-- قیمت پایه و سود -->
+                    <div class="pd-price-meta">
+                        <span class="pd-price-base">قیمت پایه: <span class="pd-price-strike"><?= $moneyFa($basePrice) ?></span></span>
+                        <span class="pd-price-save">✅ <b><?= $moneyFa($basePrice - $userPricing['unit_price']) ?></b> سود شما</span>
+                    </div>
+                <?php else: ?>
+                    <div class="pd-price-main">
+                        <div class="pd-price-value">
+                            <b><?= $moneyFa($basePrice) ?></b>
+                            <small>/ <?= $h($unitLabel) ?></small>
+                        </div>
+                    </div>
+                    <div class="pd-price-meta">
+                        <span class="pd-price-label">قیمت همکاری (عمده)</span>
+                    </div>
+                <?php endif; ?>
+                <!-- پله‌ها -->
+                <?php if ($tiers && !$hasGroupDiscount): ?>
 
-                    <div class="pd-tiers">
+                    <div class="pd-tier">
+
 
                         <?php foreach ($tiers as $t): ?>
 
-                            <div class="pd-tier">
+                            <div class="pd-tier-note">
 
                                 <span class="pd-tier-qty">
-                                    از <?= number_format($t['min_qty']) ?> جفت
+                                    بالای <?= $numFa($t['min_qty']) ?> <?= $h($unitLabel) ?>
                                 </span>
 
-                                <b class="pd-tier-price">
-                                    <?= number_format($t['price']) ?>
-                                    <small>تومان</small>
-                                </b>
+                                <span class="pd-tier-discount">
+                                    <?= $numFa($t['discount_percent'], 0) ?>٪ تخفیف
+                                </span>
 
                             </div>
 
@@ -485,54 +497,35 @@ ob_start();
 
                     </div>
 
-                <?php endif; ?>
+                <?php elseif ($tiers && $hasGroupDiscount): ?>
 
-            </div>
-
-        <?php else: ?>
-
-            <div class="pd-no-price">
-                💬 قیمت به‌زودی — تماس بگیرید
-            </div>
-
-        <?php endif; ?>
-
-
-        <!-- ─── سفارش ─── -->
-
-        <?php if ($inStock && $basePrice !== null): ?>
-
-            <div class="pd-order-block">
-
-                <div class="pd-qty-row">
-
-                    <label class="pd-qty-label">تعداد:</label>
-
-                    <div class="pd-stepper"
-                        data-min="<?= $moq ?>"
-                        data-max="<?= $stock ?>">
-
-                        <button type="button" class="pd-step pd-minus" aria-label="کمتر">−</button>
-
-                        <input type="text"
-                            inputmode="numeric"
-                            class="pd-qty-input"
-                            value="<?= $moq ?>">
-
-                        <button type="button" class="pd-step pd-plus" aria-label="بیشتر">+</button>
-
+                    <div class="pd-tier-note">
+                        ✓ تخفیف سطح شما بالاتر از تخفیف پله‌ای است و خودکار اعمال شد.
                     </div>
 
-                    <span class="pd-qty-hint">حداقل <?= number_format($moq) ?> جفت</span>
+                <?php endif; ?>
+            </div>
+        <?php elseif ($basePrice === 0): ?>
+            <div class="pd-no-price">💬 قیمت به‌زودی — تماس بگیرید</div>
+        <?php else: ?>
+            <div class="pd-no-price">💬 استعلام قیمت</div>
+        <?php endif; ?>
 
+        <!-- ─── سفارش (تعداد + دکمه‌ها) ─── -->
+        <?php if ($inStock && $basePrice !== null): ?>
+            <div class="pd-order-block">
+                <div class="pd-qty-row">
+                    <label class="pd-qty-label">تعداد:</label>
+                    <div class="pd-stepper" data-min="<?= $moq ?>" data-max="<?= $stock ?>">
+                        <button type="button" class="pd-step pd-minus" aria-label="کمتر">−</button>
+                        <input type="text" inputmode="numeric" class="pd-qty-input" value="<?= $moq ?>">
+                        <button type="button" class="pd-step pd-plus" aria-label="بیشتر">+</button>
+                    </div>
+                    <span class="pd-qty-hint"> حداقل سفارش <?= $numFa($moq) ?> <?= htmlspecialchars($unitLabel) ?></span>
                 </div>
 
                 <div class="pd-actions-row">
-
-                    <button type="button"
-                        class="pd-btn pd-btn-cart"
-                        data-product-id="<?= $productId ?>"
-                        data-action="cart">
+                    <button type="button" class="pd-btn pd-btn-cart" data-product-id="<?= $productId ?>" data-action="cart">
                         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                             <circle cx="9" cy="20" r="1.5" />
                             <circle cx="18" cy="20" r="1.5" />
@@ -540,49 +533,59 @@ ob_start();
                         </svg>
                         <span>افزودن به سبد</span>
                     </button>
-
-                    <button type="button"
-                        class="pd-btn pd-btn-buy"
-                        data-product-id="<?= $productId ?>"
-                        data-action="buy">
+                    <button type="button" class="pd-btn pd-btn-buy" data-product-id="<?= $productId ?>" data-action="buy">
                         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2">
                             <path d="M5 12h14M12 5l7 7-7 7" />
                         </svg>
                         <span>سفارش فوری</span>
                     </button>
-
                 </div>
 
                 <p class="pd-hint">
-                    <b>سفارش فوری</b> = یک کلیک تا پرداخت — سبد رو دور می‌زنه و مستقیم می‌ره به تکمیل سفارش.
+                    <span class="pd-hint-icon">ⓘ</span>
+                    پرداخت مستقیم، بدون سبد خرید
                 </p>
-
             </div>
-
         <?php elseif (!$inStock): ?>
-
             <div class="pd-out-block">
                 <p>این محصول فعلاً ناموجود است.</p>
-                <a href="/custom-order" class="pd-btn pd-btn-outline">
-                    درخواست تولید اختصاصی ←
-                </a>
+                <a href="/custom-order?ref=<?= $productId ?>" class="pd-btn pd-btn-outline">درخواست تولید اختصاصی ←</a>
             </div>
-
         <?php else: ?>
-
             <div class="pd-out-block">
                 <p>قیمت این محصول به‌زودی اعلام می‌شود.</p>
-                <a href="/custom-order" class="pd-btn pd-btn-outline">
-                    استعلام قیمت ←
-                </a>
+                <a href="/custom-order?ref=<?= $productId ?>" class="pd-btn pd-btn-outline">استعلام قیمت ←</a>
             </div>
-
         <?php endif; ?>
 
+        <!-- ⭐ Trust Row (اینجا، بعد از دکمه‌ها) -->
+        <div class="pd-trust">
+            <div class="pd-trust-item">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <path d="M1 5h13v11H1zM14 8h4l3 3v5h-7" />
+                    <circle cx="5.5" cy="17" r="2" />
+                    <circle cx="16.5" cy="17" r="2" />
+                </svg>
+                <span>ارسال سریع</span>
+            </div>
+            <div class="pd-trust-item">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <path d="M12 2l8 4v6c0 5-3.5 8.5-8 10-4.5-1.5-8-5-8-10V6z" />
+                    <path d="M9 12l2 2 4-4" />
+                </svg>
+                <span>ضمانت کیفیت</span>
+            </div>
+            <div class="pd-trust-item">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <path d="M20.6 13.4L11 3.8A2 2 0 009.6 3.2H4a1 1 0 00-1 1v5.6c0 .5.2 1 .6 1.4l9.6 9.6a2 2 0 002.8 0l4.6-4.6a2 2 0 000-2.8z" />
+                    <circle cx="7.5" cy="7" r="1" />
+                </svg>
+                <span>قیمت همکاری</span>
+            </div>
+        </div>
 
-        <!-- ─── سفارش اختصاصی ─── -->
-
-        <a href="/custom-order" class="pd-custom-link">
+        <!-- سفارش اختصاصی -->
+        <a href="/custom-order?ref=<?= $productId ?>" class="pd-custom-link">
             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8">
                 <path d="M12 2l3 6 6 1-4.5 4.5L18 20l-6-3-6 3 1.5-6.5L3 9l6-1z" />
             </svg>
@@ -593,8 +596,6 @@ ob_start();
     </div>
 
 </section>
-
-
 <!-- ═══ مشخصات فنی ═══ -->
 
 <?php if ($specs): ?>
@@ -649,7 +650,7 @@ ob_start();
 
                         <b>
                             <?= $r['price'] !== null
-                                ? number_format((float)$r['price']) . ' تومان'
+                                ? $moneyFa((float)$r['price']) . ''
                                 : 'استعلام' ?>
                         </b>
 
@@ -696,7 +697,7 @@ ob_start();
         <img class="pdg-lb-img" id="pdgLbImg" src="" alt="">
 
         <div class="pdg-lb-counter" id="pdgLbCounter">
-            ۱ / <?= number_format(count($productImages)) ?>
+            ۱ / <?= $moneyFa(count($productImages)) ?>
         </div>
 
     </div>

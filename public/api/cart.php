@@ -4,7 +4,12 @@ $__bp = [
     __DIR__ . '/../../sock-b2b/config/bootstrap.php',
     __DIR__ . '/../../config/bootstrap.php',
 ];
-foreach ($__bp as $__b) { if (is_file($__b)) { require_once $__b; break; } }
+foreach ($__bp as $__b) {
+    if (is_file($__b)) {
+        require_once $__b;
+        break;
+    }
+}
 unset($__bp, $__b);
 require_once ROOT_PATH . '/config/database.php';
 require_once ROOT_PATH . '/config/auth.php';
@@ -18,14 +23,12 @@ if (!is_logged_in()) {
     exit;
 }
 
- $userId = $_SESSION['admin_id'] ?? $_SESSION['customer_id'];
- $db = db();
-
-
+$userId = (int)($_SESSION['admin_id'] ?? $_SESSION['customer_id'] ?? 0);
+$db = db();
 
 /* helper: سبد فعال کاربر را بگیر یا بساز */
-/* helper: سبد فعال کاربر — بازیافت سبد تبدیل‌شده یا ساخت جدید */
-function getOrCreateCart(PDO $db, int $userId): int {
+function getOrCreateCart(PDO $db, int $userId): int
+{
     $stmt = $db->prepare("SELECT id FROM carts WHERE user_id = ? AND status='active' LIMIT 1");
     $stmt->execute([$userId]);
     $id = $stmt->fetchColumn();
@@ -45,17 +48,20 @@ function getOrCreateCart(PDO $db, int $userId): int {
 }
 
 /* helper: تعداد اقلام سبد */
-function cartCount(PDO $db, int $cartId): int {
+function cartCount(PDO $db, int $cartId): int
+{
     $stmt = $db->prepare("SELECT COALESCE(SUM(qty),0) FROM cart_items WHERE cart_id = ?");
     $stmt->execute([$cartId]);
     return (int)$stmt->fetchColumn();
 }
 
- $method = $_SERVER['REQUEST_METHOD'];
- $action = $_GET['action'] ?? '';
+$method = $_SERVER['REQUEST_METHOD'];
+$action = $_GET['action'] ?? '';
 
+/* ═══════════════════════════════════════════════════════════
+ * POST — افزودن به سبد
+ * ═══════════════════════════════════════════════════════════ */
 if ($method === 'POST') {
-
     verify_csrf();
 
     $productId = (int)($_POST['product_id'] ?? 0);
@@ -67,9 +73,9 @@ if ($method === 'POST') {
         exit;
     }
 
-    /* محصول فعال و موجود؟ (اعتبارسنجی سرور — نه فقط فرانت) */
+    /* محصول فعال و موجود؟ */
     $stmt = $db->prepare("
-        SELECT p.id, p.base_moq, COALESCE(inv.qty_available,0) AS stock
+        SELECT p.id, p.base_moq, GREATEST(0, COALESCE(inv.qty_physical, 0) - COALESCE(inv.reserved, 0) - COALESCE(inv.unsellable, 0)) AS stock
         FROM products p
         LEFT JOIN inventory inv ON inv.product_id = p.id
         WHERE p.id = ? AND p.is_active = 1 LIMIT 1
@@ -98,20 +104,47 @@ if ($method === 'POST') {
     ")->execute([$cartId, $productId, $qty]);
 
     echo json_encode([
-        'ok'   => true,
+        'ok'    => true,
         'count' => cartCount($db, $cartId),
-        'msg'  => '✓ به سبد اضافه شد'
+        'msg'   => '✓ به سبد اضافه شد'
     ], JSON_UNESCAPED_UNICODE);
     exit;
 }
 
-if ($method === 'GET' && $action === 'count') {
+/* ═══════════════════════════════════════════════════════════
+ * GET — گرفتن لیست اقلام سبد (برای همگام‌سازی آیکون‌ها)
+ * ═══════════════════════════════════════════════════════════ */
+if ($method === 'GET') {
+    $cartId = 0;
     $stmt = $db->prepare("SELECT id FROM carts WHERE user_id = ? AND status='active' LIMIT 1");
     $stmt->execute([$userId]);
     $cartId = (int)($stmt->fetchColumn() ?: 0);
-    echo json_encode(['ok' => true, 'count' => $cartId ? cartCount($db, $cartId) : 0]);
+
+    // اگر سبد فعال وجود نداشت، لیست خالی برگردان
+    if ($cartId === 0) {
+        echo json_encode(['ok' => true, 'items' => [], 'count' => 0]);
+        exit;
+    }
+
+    // گرفتن تمام اقلام سبد
+    $stmt = $db->prepare("SELECT product_id, qty FROM cart_items WHERE cart_id = ?");
+    $stmt->execute([$cartId]);
+
+    $items = [];
+    while ($row = $stmt->fetch(PDO::FETCH_ASSOC)) {
+        $items[(string)$row['product_id']] = (int)$row['qty'];
+    }
+
+    echo json_encode([
+        'ok'    => true,
+        'items' => $items,
+        'count' => cartCount($db, $cartId)
+    ], JSON_UNESCAPED_UNICODE);
     exit;
 }
 
+/* ═══════════════════════════════════════════════════════════
+ * درخواست نامعتبر
+ * ═══════════════════════════════════════════════════════════ */
 http_response_code(400);
 echo json_encode(['ok' => false, 'error' => 'درخواست نامعتبر'], JSON_UNESCAPED_UNICODE);

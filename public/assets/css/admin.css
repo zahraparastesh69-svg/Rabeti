@@ -1,4 +1,4 @@
-﻿/* =========================================================
+/* =========================================================
    ADMIN DESIGN SYSTEM
    ========================================================= */
 
@@ -32,6 +32,15 @@
 
   --admin-info: #3f7fa1;
   --admin-info-soft: #eaf4f9;
+
+  /* ── متغیرهای سازگاری (تکمیل شده) ── */
+  /* قبلاً در برخی صفحات استفاده می‌شدند ولی در :root تعریف نشده بودند. */
+  --card-border: var(--admin-border);
+  --card-border-strong: var(--admin-border-strong);
+  --teal-100: var(--admin-primary-soft);
+  --teal-700: var(--admin-primary);
+  --teal-800: var(--admin-primary-dark);
+  --muted: var(--admin-text-muted);
 
   --admin-sidebar-width: 270px;
   --admin-topbar-height: 76px;
@@ -76,6 +85,22 @@
 .admin-body select,
 .admin-body textarea {
   font-family: inherit;
+}
+
+/* =========================================================
+   BODY LOCK — هنگام باز بودن منوی موبایل، اسکرول بدنه قفل می‌شود
+   ========================================================= */
+
+.admin-body.admin-menu-open {
+  overflow: hidden;
+  /* بدنه را در جای خود ثابت می‌کند تا پشت منوی باز اسکرول نخورد.
+     مقدار scrollY در JS ذخیره و هنگام بستن بازگردانده می‌شود. */
+}
+
+.admin-body.admin-menu-open.admin-menu-fixed {
+  position: fixed;
+  inset: 0;
+  width: 100%;
 }
 
 /* =========================================================
@@ -252,6 +277,155 @@
 }
 
 /* =========================================================
+   NAV SECTION (آکاردئون)
+   ========================================================= */
+
+.admin-nav-section {
+  margin-bottom: 6px;
+}
+
+.admin-nav-section:last-child {
+  margin-bottom: 0;
+}
+
+.admin-nav-section-head {
+  width: 100%;
+
+  display: flex;
+  align-items: center;
+  gap: 11px;
+
+  min-height: 42px;
+  margin: 0;
+  padding: 0 11px;
+
+  border: 1px solid transparent;
+  border-radius: 10px;
+
+  background: transparent;
+  color: rgba(255, 255, 255, 0.62);
+
+  font-family: inherit;
+  font-size: 12.5px;
+  font-weight: 700;
+
+  cursor: pointer;
+  text-align: right;
+
+  transition:
+    background var(--admin-transition),
+    color var(--admin-transition);
+}
+
+.admin-nav-section-head:hover {
+  color: #fff;
+  background: rgba(255, 255, 255, 0.05);
+}
+
+.admin-nav-section.is-open > .admin-nav-section-head {
+  color: #fff;
+  background: rgba(255, 255, 255, 0.04);
+}
+
+.admin-nav-section-title {
+  flex: 1;
+  min-width: 0;
+
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.admin-nav-section-badge {
+  min-width: 22px;
+  height: 19px;
+
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+
+  padding: 0 6px;
+
+  border-radius: 999px;
+
+  background: var(--admin-accent);
+  color: #fff;
+
+  font-size: 10px;
+  font-weight: 800;
+  line-height: 1;
+}
+
+.admin-nav-chevron {
+  width: 18px;
+  height: 18px;
+  flex: 0 0 18px;
+
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+
+  color: rgba(255, 255, 255, 0.45);
+
+  transition: transform var(--admin-transition);
+}
+
+.admin-nav-chevron svg {
+  width: 16px;
+  height: 16px;
+
+  fill: none;
+  stroke: currentColor;
+  stroke-width: 2;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+
+.admin-nav-section.is-open > .admin-nav-section-head .admin-nav-chevron {
+  transform: rotate(180deg);
+}
+
+/* بدنهٔ تاشو — با grid-template-rows انیمیشن نرم */
+.admin-nav-section-body {
+  display: grid;
+  grid-template-rows: 0fr;
+  transition: grid-template-rows var(--admin-transition);
+
+  overflow: hidden;
+}
+
+.admin-nav-section.is-open > .admin-nav-section-body {
+  grid-template-rows: 1fr;
+}
+
+.admin-nav-section-inner {
+  min-height: 0;
+  overflow: hidden;
+
+  padding-top: 0;
+  transition: padding-top var(--admin-transition);
+}
+
+.admin-nav-section.is-open > .admin-nav-section-body .admin-nav-section-inner {
+  padding-top: 4px;
+}
+
+/* لینک‌های داخل بخش، کمی فشرده‌تر و تورفته */
+.admin-nav-section .admin-nav-link {
+  min-height: 38px;
+  margin: 1px 0;
+  padding-right: 14px;
+
+  font-size: 12.5px;
+  font-weight: 500;
+}
+
+/* لینک تک‌خطی (داشبورد) */
+.admin-nav-link--single {
+  margin-bottom: 8px;
+}
+
+/* =========================================================
    NAV LINK
    ========================================================= */
 
@@ -350,6 +524,58 @@
 
 .admin-nav-link.is-active .admin-nav-badge {
   background: rgba(255, 255, 255, 0.2);
+}
+
+/* =========================================================
+   CARD / GRID — کلاس‌های کمکی برای جایگزینی inline style
+   ========================================================= */
+
+.admin-card {
+  background: var(--admin-surface);
+  border: 1px solid var(--admin-border);
+  border-radius: var(--admin-radius-lg);
+  padding: 18px;
+  box-shadow: var(--admin-shadow-sm);
+}
+
+.admin-card + .admin-card {
+  margin-top: 16px;
+}
+
+.admin-card h3 {
+  margin: 0 0 12px;
+
+  color: var(--admin-text);
+
+  font-size: 0.95rem;
+  font-weight: 800;
+}
+
+.admin-card .admin-table {
+  font-size: 0.78rem;
+}
+
+/* گرید واکنش‌گرا دو‌ستونه — در موبایل تک‌ستونه می‌شود */
+.admin-grid-2col {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 16px;
+  margin-top: 24px;
+}
+
+/* آیتم‌های گرید نباید با محتوایشان ستون‌ها را نابرابر کنند (رفع overflow افقی) */
+.admin-grid-2col > * {
+  min-width: 0;
+}
+
+/* جدول فشردهٔ داشبورد */
+.admin-table.admin-table--compact {
+  min-width: 0;
+}
+
+.admin-table--compact th,
+.admin-table--compact td {
+  padding: 0 10px;
 }
 
 /* =========================================================
@@ -965,6 +1191,41 @@
   color: var(--admin-text-muted) !important;
 }
 
+/* ردیف هشدار (مثلاً موجودی کم) */
+.admin-table tbody tr.row-danger {
+  background: #fff5f5;
+}
+
+.admin-table tbody tr.row-danger:hover {
+  background: #ffeaea;
+}
+
+/* سلول LTR که در متن RTL راست‌چین دیده شود (شماره سفارش، موبایل) */
+.admin-table td.td-rtl {
+  text-align: right;
+}
+
+/* متن خالی در کارت‌ها */
+.admin-empty-text {
+  margin: 0;
+
+  color: var(--admin-text-muted);
+
+  font-size: 0.82rem;
+}
+
+/* لینک داخل جداول و کارت‌ها */
+.admin-link {
+  color: var(--admin-primary);
+  font-size: 0.82rem;
+  font-weight: 600;
+}
+
+.admin-link:hover {
+  color: var(--admin-accent);
+  text-decoration: underline;
+}
+
 /* =========================================================
    STATUS BADGES
    ========================================================= */
@@ -1027,7 +1288,7 @@
 
 .admin-overlay {
   position: fixed;
-  z-index: 250;
+  z-index: 290;
   inset: 0;
 
   display: none;
@@ -1090,6 +1351,12 @@
 
   .admin-content {
     padding: 24px 18px;
+  }
+
+  /* گرید دو‌ستونهٔ داشبورد در تبلت/موبایل تک‌ستونه می‌شود */
+  .admin-grid-2col {
+    grid-template-columns: 1fr;
+    gap: 12px;
   }
 }
 
@@ -1598,4 +1865,893 @@
   .finc-grid {
     grid-template-columns: 1fr 1fr;
   }
+}
+/* =========================================================
+   BUTTONS — Admin System
+   ========================================================= */
+
+/* ─── دکمه‌ی پایه ─── */
+
+.btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  padding: 10px 20px;
+  min-height: 40px;
+  border: 1.5px solid var(--admin-border);
+  border-radius: 10px;
+  background: #fff;
+  color: var(--admin-text);
+  font-family: inherit;
+  font-size: 0.82rem;
+  font-weight: 700;
+  line-height: 1;
+  cursor: pointer;
+  text-decoration: none;
+  white-space: nowrap;
+  transition:
+    background var(--admin-transition),
+    border-color var(--admin-transition),
+    color var(--admin-transition),
+    box-shadow var(--admin-transition),
+    transform var(--admin-transition);
+}
+
+.btn:hover {
+  background: var(--admin-surface-soft);
+  border-color: var(--admin-border-strong);
+}
+
+.btn:active {
+  transform: translateY(1px);
+}
+
+.btn:focus-visible {
+  outline: 3px solid rgba(23, 62, 74, 0.2);
+  outline-offset: 2px;
+}
+
+.btn:disabled {
+  opacity: 0.55;
+  cursor: not-allowed;
+  pointer-events: none;
+}
+
+/* ─── دکمه‌ی اصلی (نارنجی) ─── */
+
+.btn-orange {
+  background: var(--admin-accent);
+  border-color: var(--admin-accent);
+  color: #fff;
+  box-shadow: 0 4px 12px rgba(226, 138, 67, 0.22);
+}
+
+.btn-orange:hover {
+  background: #d17a30;
+  border-color: #d17a30;
+  box-shadow: 0 6px 16px rgba(226, 138, 67, 0.32);
+  transform: translateY(-1px);
+}
+
+.btn-orange:active {
+  transform: translateY(0);
+  box-shadow: 0 2px 6px rgba(226, 138, 67, 0.22);
+}
+
+/* ─── دکمه‌ی سبز (تأیید) ─── */
+
+.btn-green,
+.btn-success {
+  background: var(--admin-success);
+  border-color: var(--admin-success);
+  color: #fff;
+  box-shadow: 0 4px 12px rgba(47, 143, 104, 0.22);
+}
+
+.btn-green:hover,
+.btn-success:hover {
+  background: #267a58;
+  border-color: #267a58;
+  box-shadow: 0 6px 16px rgba(47, 143, 104, 0.32);
+  transform: translateY(-1px);
+}
+
+/* ─── دکمه‌ی خطر (حذف) ─── */
+
+.btn-red,
+.btn-danger {
+  background: var(--admin-danger);
+  border-color: var(--admin-danger);
+  color: #fff;
+  box-shadow: 0 4px 12px rgba(198, 83, 83, 0.22);
+}
+
+.btn-red:hover,
+.btn-danger:hover {
+  background: #b04444;
+  border-color: #b04444;
+  box-shadow: 0 6px 16px rgba(198, 83, 83, 0.32);
+  transform: translateY(-1px);
+}
+
+/* ─── دکمهٔ هشدار (عملیات با احتیاط — مثل بازگردانی پشتیبان) ─── */
+
+.btn-warn {
+  background: #fff4e0;
+  border: 1px solid #f0d9b5;
+  color: #a06010;
+  box-shadow: none;
+}
+
+.btn-warn:hover {
+  background: #ffe9c7;
+  border-color: #e8c893;
+}
+
+/* ─── دکمه‌ی کوچیک ─── */
+
+.btn-sm {
+  min-height: 32px;
+  padding: 7px 14px;
+  font-size: 0.74rem;
+  border-radius: 8px;
+  gap: 5px;
+}
+
+/* ─── دکمه‌ی بزرگ ─── */
+
+.btn-lg {
+  min-height: 46px;
+  padding: 13px 28px;
+  font-size: 0.88rem;
+  border-radius: 12px;
+}
+
+/* ─── دکمه‌ی آیکون ─── */
+
+.btn-icon {
+  width: 38px;
+  height: 38px;
+  min-height: 38px;
+  padding: 0;
+  border-radius: 10px;
+}
+
+.btn-icon.btn-sm {
+  width: 30px;
+  height: 30px;
+  min-height: 30px;
+  border-radius: 8px;
+}
+
+/* ─── گروه دکمه ─── */
+
+.btn-group {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+  align-items: center;
+}
+
+.btn-group-end {
+  justify-content: flex-end;
+}
+
+.btn-group-center {
+  justify-content: center;
+}
+
+/* ─── دکمه‌ی بلوکی (تمام عرض) ─── */
+
+.btn-block {
+  width: 100%;
+}
+
+/* ─── override استایل inline قدیمی ─── */
+
+.btn[style*="padding"],
+.btn-orange[style*="padding"] {
+  /* inline style رو بی‌اثر نکن، ولی min-height رو حفظ کن */
+}
+
+/* =========================================================
+   کلاس‌های صفحه‌بندی و فرم وضعیت (orders.php و صفحات مشابه)
+   ========================================================= */
+
+/* ── تب‌های فیلتر (به‌جای st-badge با inline padding) ── */
+.filter-tabs {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-bottom: 18px;
+}
+
+.filter-tab {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+
+  padding: 8px 16px;
+
+  border-radius: 999px;
+  background: var(--admin-surface);
+  border: 1px solid var(--admin-border);
+  color: var(--admin-text-soft);
+
+  font-size: 13px;
+  font-weight: 600;
+  text-decoration: none;
+
+  transition: background var(--admin-transition), color var(--admin-transition), border-color var(--admin-transition);
+}
+
+.filter-tab:hover {
+  background: var(--admin-surface-soft);
+  color: var(--admin-text);
+}
+
+.filter-tab.is-active {
+  background: var(--admin-primary);
+  border-color: var(--admin-primary);
+  color: #fff;
+}
+
+.filter-tab--accent.is-active {
+  background: var(--admin-accent);
+  border-color: var(--admin-accent);
+}
+
+.filter-tab-count {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+
+  min-width: 20px;
+  height: 18px;
+  padding: 0 6px;
+
+  border-radius: 999px;
+  background: rgba(0, 0, 0, 0.08);
+
+  font-size: 11px;
+  font-weight: 700;
+  line-height: 1;
+}
+
+.filter-tab.is-active .filter-tab-count {
+  background: rgba(255, 255, 255, 0.25);
+}
+
+/* ── دکمه لغو ── */
+.btn-cancel {
+  background: var(--admin-danger-soft);
+  color: var(--admin-danger);
+  border: 1px solid #f3c9c9;
+}
+
+.btn-cancel:hover {
+  background: #fbe0e0;
+}
+
+/* ── حالت خالی (empty state) ── */
+.empty-state {
+  text-align: center;
+  padding: 60px 24px;
+
+  color: var(--admin-text-muted);
+}
+
+.empty-state h2 {
+  margin: 0 0 8px;
+
+  font-size: 18px;
+  font-weight: 800;
+  color: var(--admin-text-soft);
+}
+
+.empty-state p {
+  margin: 0;
+  font-size: 13px;
+}
+
+/* ── هشدار فرم ── */
+.form-alert {
+  padding: 14px 18px;
+  margin-bottom: 18px;
+  border-radius: var(--admin-radius-md);
+  font-size: 13px;
+  font-weight: 600;
+}
+
+.form-alert.error {
+  background: var(--admin-danger-soft);
+  color: var(--admin-danger);
+  border: 1px solid #f3c9c9;
+}
+
+/* ── سلول‌های جدول کمکی ── */
+.admin-table td.td-muted {
+  color: var(--admin-text-muted);
+}
+
+.admin-table td.td-muted,
+.admin-table td.td-nowrap {
+  font-size: 0.75rem;
+}
+
+.admin-table td.td-nowrap {
+  white-space: nowrap;
+}
+
+.admin-table td.td-amount {
+  color: var(--admin-primary-dark);
+  font-weight: 700;
+}
+
+/* ── ردیف هشدار (پندینگ) ── */
+.admin-table tbody tr.row-warn {
+  background: #fffbea;
+}
+
+.admin-table tbody tr.row-warn:hover {
+  background: #fff6d6;
+}
+
+/* ── ستون وضعیت + فرم تغییر وضعیت ── */
+.admin-table .col-status {
+  min-width: 200px;
+  font-size: 0.72rem;
+  color: var(--admin-text-muted);
+}
+
+.status-form {
+  display: flex;
+  gap: 6px;
+  align-items: center;
+  margin-top: 6px;
+}
+
+.status-form.cancel-form {
+  justify-content: flex-start;
+}
+
+.status-select {
+  font-size: 0.75rem;
+  padding: 6px 8px;
+  border: 1px solid var(--admin-border-strong);
+  border-radius: 8px;
+  background: var(--admin-surface);
+  color: var(--admin-text);
+}
+
+.status-select.is-disabled,
+.btn.is-disabled,
+.btn-orange.is-disabled {
+  opacity: 0.55;
+  cursor: not-allowed;
+}
+
+.status-lock {
+  color: var(--admin-danger);
+  font-size: 0.7rem;
+  margin-top: 6px;
+  line-height: 1.5;
+}
+
+/* ── موبایل ── */
+
+@media (max-width: 640px) {
+  .btn {
+    padding: 10px 16px;
+    font-size: 0.8rem;
+    min-height: 40px;
+  }
+
+  .btn-lg {
+    padding: 12px 22px;
+    font-size: 0.84rem;
+  }
+
+  .btn-sm {
+    padding: 6px 12px;
+    font-size: 0.72rem;
+    min-height: 30px;
+  }
+
+  .btn-group {
+    gap: 6px;
+  }
+}
+/* =========================================================
+   ADMIN MODAL
+   ========================================================= */
+
+.admin-modal-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 9999;
+  background: rgba(10, 28, 34, 0.55);
+  backdrop-filter: blur(4px);
+  -webkit-backdrop-filter: blur(4px);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 20px;
+  animation: adminModalFadeIn 0.2s ease;
+}
+
+@keyframes adminModalFadeIn {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+
+.admin-modal {
+  width: 100%;
+  max-width: 520px;
+  max-height: 90vh;
+  background: #fff;
+  border-radius: 16px;
+  box-shadow: 0 20px 60px rgba(10, 28, 34, 0.25);
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  animation: adminModalSlideIn 0.3s cubic-bezier(0.34, 1.4, 0.64, 1);
+}
+
+@keyframes adminModalSlideIn {
+  from {
+    opacity: 0;
+    transform: translateY(20px) scale(0.96);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+}
+
+.admin-modal-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 18px 22px;
+  border-bottom: 1px solid var(--admin-border);
+}
+
+.admin-modal-head h3 {
+  margin: 0;
+  font-size: 1rem;
+  font-weight: 800;
+  color: var(--admin-text);
+}
+
+.admin-modal-close {
+  width: 34px;
+  height: 34px;
+  display: grid;
+  place-items: center;
+  border: 1px solid var(--admin-border);
+  border-radius: 9px;
+  background: #fff;
+  color: var(--admin-text-soft);
+  cursor: pointer;
+  transition: all 0.2s ease;
+  flex-shrink: 0;
+}
+
+.admin-modal-close:hover {
+  background: var(--admin-danger-soft);
+  border-color: var(--admin-danger-soft);
+  color: var(--admin-danger);
+}
+
+.admin-modal-close svg {
+  width: 16px;
+  height: 16px;
+}
+
+.admin-modal-body {
+  padding: 22px;
+  overflow-y: auto;
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.admin-modal-field {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.admin-modal-field label {
+  font-size: 0.78rem;
+  font-weight: 700;
+  color: var(--admin-text);
+}
+
+.admin-modal-field input[type="text"],
+.admin-modal-field input[type="number"],
+.admin-modal-field select {
+  width: 100%;
+  box-sizing: border-box;
+  padding: 10px 14px;
+  border: 1.5px solid var(--admin-border);
+  border-radius: 9px;
+  background: #fff;
+  font-family: inherit;
+  font-size: 0.86rem;
+  color: var(--admin-text);
+  transition: all 0.2s ease;
+}
+
+.admin-modal-field input:focus,
+.admin-modal-field select:focus {
+  outline: none;
+  border-color: var(--admin-primary);
+  box-shadow: 0 0 0 3px rgba(23, 62, 74, 0.08);
+}
+
+.admin-modal-hint {
+  font-size: 0.7rem;
+  color: var(--admin-text-muted);
+  line-height: 1.5;
+}
+
+.admin-modal-row {
+  display: grid;
+  grid-template-columns: 1fr 110px;
+  gap: 12px;
+}
+
+.admin-modal-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 8px;
+  padding-top: 6px;
+}
+
+/* ─── موبایل ─── */
+
+@media (max-width: 640px) {
+  .admin-modal-overlay {
+    padding: 12px;
+  }
+
+  .admin-modal {
+    max-height: 95vh;
+    border-radius: 14px;
+  }
+
+  .admin-modal-head {
+    padding: 14px 16px;
+  }
+
+  .admin-modal-body {
+    padding: 16px;
+  }
+
+  .admin-modal-row {
+    grid-template-columns: 1fr 90px;
+  }
+
+  .admin-modal-actions {
+    flex-direction: column-reverse;
+  }
+
+  .admin-modal-actions .btn {
+    width: 100%;
+  }
+}
+/* =========================================================
+   CUSTOM FILE INPUT
+   ========================================================= */
+
+.admin-file {
+  position: relative;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 8px 12px;
+  background: var(--admin-surface-soft);
+  border: 1.5px dashed var(--admin-border-strong);
+  border-radius: 10px;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  font-size: 0.82rem;
+  min-height: 44px;
+}
+
+.admin-file:hover {
+  border-color: var(--admin-primary);
+  background: var(--admin-primary-soft);
+}
+
+.admin-file input[type="file"] {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  opacity: 0;
+  cursor: pointer;
+  font-size: 0;
+}
+
+.admin-file-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 7px 14px;
+  background: var(--admin-primary);
+  color: #fff;
+  border-radius: 7px;
+  font-size: 0.76rem;
+  font-weight: 700;
+  white-space: nowrap;
+  flex-shrink: 0;
+  pointer-events: none;
+}
+
+.admin-file-btn svg {
+  width: 14px;
+  height: 14px;
+}
+
+.admin-file-name {
+  flex: 1;
+  min-width: 0;
+  color: var(--admin-text-soft);
+  font-size: 0.78rem;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  pointer-events: none;
+}
+
+.admin-file-name.is-selected {
+  color: var(--admin-primary);
+  font-weight: 600;
+}
+
+/* ─── file-box: جایگزین خودکارِ فایل‌آپلود خام مرورگر («No file chosen») ───
+   admin.js هر input[type=file] بدون رابط سفارشی را با این کامپوننت می‌پوشاند. */
+
+.file-box {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  gap: 10px;
+
+  padding: 8px 12px;
+
+  background: var(--admin-surface-soft);
+  border: 1.5px dashed var(--admin-border-strong);
+  border-radius: 10px;
+
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.file-box:hover {
+  border-color: var(--admin-primary);
+  background: var(--admin-primary-soft);
+}
+
+.file-box-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+
+  padding: 7px 14px;
+
+  background: var(--admin-primary);
+  color: #fff;
+  border-radius: 7px;
+
+  font-size: 0.76rem;
+  font-weight: 700;
+  white-space: nowrap;
+  flex-shrink: 0;
+
+  pointer-events: none;
+}
+
+.file-box-btn::before {
+  content: '📎';
+  font-size: 0.8rem;
+}
+
+.file-box:hover .file-box-btn {
+  background: var(--admin-primary-dark);
+}
+
+.file-box-name {
+  flex: 1;
+  min-width: 0;
+
+  color: var(--admin-text-muted);
+  font-size: 0.78rem;
+
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+
+  pointer-events: none;
+}
+
+.file-box-name.has-file {
+  color: var(--admin-primary);
+  font-weight: 600;
+}
+
+/* خودِ input داخل file-box پنهان می‌شود (کلیک روی لیبل کافی است) */
+.file-box input[type="file"] {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  opacity: 0;
+  overflow: hidden;
+  clip: rect(0 0 0 0);
+  white-space: nowrap;
+}
+
+
+/* ═══════════════════════════════════════════════════════════════════
+   MOBILE FIXES v2 — رفع کامل به‌هم‌ریختگی موبایل (نوشتهٔ نو در انتهای فایل
+   تا قاعده‌های قبلی را override کند)
+   ═══════════════════════════════════════════════════════════════════ */
+
+/* ۱) هیچ عنصری نباید عرض صفحه را در موبایل زیاد کند */
+@media (max-width: 900px) {
+  html,
+  body.admin-body {
+    overflow-x: hidden;
+    width: 100%;
+    max-width: 100%;
+  }
+
+  .admin-shell {
+    width: 100%;
+    max-width: 100%;
+  }
+
+  /* جدول داخل کارت داشبورد: کانتینر اسکرول افقی + سایهٔ راهنما */
+  .admin-table-wrap--in-card {
+    margin: 0 -6px;
+    padding: 0 6px;
+    border: none;
+    box-shadow: none;
+    background: transparent;
+  }
+
+  .admin-table-wrap--in-card .admin-table {
+    background: var(--admin-surface);
+    box-shadow: var(--admin-shadow-sm);
+  }
+
+  /* تاپ‌بار: تک‌خطی و بدون سرریز */
+  .admin-topbar {
+    height: var(--admin-topbar-height);
+    gap: 8px;
+  }
+
+  .admin-topbar-right {
+    min-width: 0;
+    flex: 1;
+  }
+
+  .admin-topbar-title {
+    min-width: 0;
+    overflow: hidden;
+  }
+
+  .admin-topbar-current {
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+
+  .admin-user {
+    flex-shrink: 0;
+  }
+
+  /* آواتار کوچک‌تر تا جا شود */
+  .admin-user-avatar {
+    width: 34px;
+    height: 34px;
+    font-size: 14px;
+  }
+}
+
+/* ۲) موبایل باریک — KPI دو ستونه (به‌جای تک‌ستونهٔ قدیمی که جا هدر می‌داد) */
+@media (max-width: 620px) {
+  .stat-cards {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 10px;
+  }
+
+  .stat-card {
+    min-height: 0;
+    padding: 14px;
+  }
+
+  .stat-card .num {
+    font-size: 22px;
+  }
+
+  .stat-card-note {
+    font-size: 10.5px;
+  }
+
+  /* سرصفحه‌های بخش داشبورد */
+  .admin-section-head h2 {
+    font-size: 15px;
+  }
+}
+
+/* ۳) گوشی‌های خیلی باریک */
+@media (max-width: 380px) {
+  .stat-cards {
+    grid-template-columns: 1fr;
+  }
+
+  .stat-card .num {
+    font-size: 20px;
+  }
+}
+
+/* ۴) حالت خالی و متن‌های خالی داشبورد در موبایل */
+@media (max-width: 620px) {
+  .admin-empty-text {
+    font-size: 0.78rem;
+    padding: 14px 4px;
+  }
+
+  .admin-card {
+    padding: 12px;
+  }
+
+  .admin-card h3 {
+    font-size: 0.86rem;
+  }
+}
+
+/* ۵) فیلترها و فرم‌های صفحات لیست در موبایل */
+@media (max-width: 620px) {
+  .admin-filter-bar,
+  .filter-bar,
+  .admin-list-filters {
+    flex-direction: column;
+    align-items: stretch;
+  }
+
+  .admin-filter-bar input,
+  .admin-filter-bar select,
+  .filter-bar input,
+  .filter-bar select {
+    width: 100%;
+  }
+}
+
+/* ۶) body-lock هنگام منوی باز موبایل (با admin.js هماهنگ) */
+body.admin-menu-fixed {
+  position: fixed;
+  left: 0;
+  right: 0;
+  overflow: hidden;
+}
+
+/* ۷) اسکرول‌بار نازک برای جدول‌های داخل کارت (در همهٔ عرض‌ها) */
+.admin-table-wrap--in-card::-webkit-scrollbar {
+  height: 6px;
+}
+
+.admin-table-wrap--in-card::-webkit-scrollbar-thumb {
+  background: var(--admin-border-strong);
+  border-radius: 3px;
 }

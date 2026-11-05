@@ -7,13 +7,20 @@ $__bp = [
     __DIR__ . '/../sock-b2b/config/bootstrap.php',
     __DIR__ . '/../config/bootstrap.php',
 ];
-foreach ($__bp as $__b) { if (is_file($__b)) { require_once $__b; break; } }
+foreach ($__bp as $__b) {
+    if (is_file($__b)) {
+        require_once $__b;
+        break;
+    }
+}
 unset($__bp, $__b);
 require_once ROOT_PATH . '/config/database.php';
 require_once ROOT_PATH . '/config/auth.php';
 require_once ROOT_PATH . '/app/services/AddressService.php';
 require_once ROOT_PATH . '/app/services/ShippingService.php';
 require_once ROOT_PATH . '/app/services/PricingService.php';
+require_once ROOT_PATH . '/app/services/OrderService.php';
+
 /* ═══ نمایش شمسی و بازه فارسی ═══ */
 
 /* میلادی → جلالی */
@@ -352,51 +359,45 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
             $transactionStarted = true;
 
+            $userGroup = current_user_group();
+
             /*
             |--------------------------------------------------------------------------
             | قفل سبد خرید
             |--------------------------------------------------------------------------
             */
-
             $stmt = $db->prepare("
-                SELECT
-                    ci.qty,
-                    p.id AS product_id,
-                    p.code,
-                    p.name,
-                    p.base_moq,
-                    p.is_active,
-                    pr.price,
-                    COALESCE(
-                        inv.qty_available,
-                        0
-                    ) AS stock
+    SELECT
+        ci.qty,
+        p.id AS product_id,
+        p.code,
+        p.name,
+        p.base_moq,
+        p.is_active,
+        p.base_price,
+        COALESCE(inv.qty_physical, 0) AS qty_physical,
+        COALESCE(inv.reserved, 0) AS qty_reserved,
+        COALESCE(inv.unsellable, 0) AS qty_unsellable,
+        GREATEST(0, COALESCE(inv.qty_physical, 0) - COALESCE(inv.reserved, 0) - COALESCE(inv.unsellable, 0)) AS available_for_sale
 
-                FROM cart_items ci
+    FROM cart_items ci
 
-                JOIN carts c
-                    ON c.id = ci.cart_id
+    JOIN carts c
+        ON c.id = ci.cart_id
 
-                JOIN products p
-                    ON p.id = ci.product_id
+    JOIN products p
+        ON p.id = ci.product_id
 
-                LEFT JOIN product_prices pr
-                    ON pr.product_id = p.id
-                    AND pr.customer_group = 'wholesale'
-                    AND pr.min_qty = 1
+    LEFT JOIN inventory inv
+        ON inv.product_id = p.id
 
-                LEFT JOIN inventory inv
-                    ON inv.product_id = p.id
+    WHERE c.user_id = ?
+      AND c.status = 'active'
 
-                WHERE c.user_id = ?
-                  AND c.status = 'active'
+    FOR UPDATE
+");
 
-                FOR UPDATE
-            ");
-
-            $stmt->execute([
-                $userId
-            ]);
+            $stmt->execute([$userId]);
 
             $items = $stmt->fetchAll();
 
@@ -415,60 +416,52 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
             $subtotal = 0;
             $discountTotal = 0;
-
             foreach ($items as &$it) {
 
                 $qty = (int)$it['qty'];
 
-                $basePrice = (int)($it['price'] ?? 0);
+                if ($qty <= 0) {
+                    continue;
+                }
 
-                if ($basePrice <= 0) {
+                $pricing = PricingService::calculate(
+                    $db,
+                    (int)$it['product_id'],
+                    $qty,
+                    $userGroup
+                );
+
+                if ($pricing['base_price'] <= 0) {
                     throw new RuntimeException(
-                        'قیمت یکی از محصولات معتبر نیست.'
+                        'قیمت محصول «' . $it['name'] . '» مشخص نشده است. لطفاً با پشتیبانی تماس بگیرید.'
                     );
                 }
 
-                $pricing =
-                    PricingService::calculateForProduct(
-                        $db,
-                        (int)$it['product_id'],
-                        $basePrice,
-                        $qty
-                    );
+                $it['base_unit_price']        = $pricing['base_price'];
+                $it['unit_price']             = $pricing['unit_price'];
+                $it['discount_percent']       = $pricing['discount_percent'];
+                $it['discount_amount']        = $pricing['discount_amount'];
+                $it['base_line_total']        = $pricing['base_line_total'];
+                $it['line_total']             = $pricing['line_total'];
+                $it['discount_source']        = $pricing['discount_source'];
+                $it['group_discount_percent'] = $pricing['discount_source'] === 'group'
+                    ? $pricing['discount_percent']
+                    : 0;
+                $it['tier_discount_percent']  = $pricing['discount_source'] === 'tier'
+                    ? $pricing['discount_percent']
+                    : 0;
 
-                $it['base_unit_price'] =
-                    $pricing['base_unit_price'];
+                $qtyAvailable = (int)$it['available_for_sale'];
+                $qtyReserved  = min($qty, max(0, $qtyAvailable));
+                $qtyToProduce = max(0, $qty - $qtyReserved);
 
-                $it['unit_price'] =
-                    $pricing['unit_price'];
+                $it['qty_reserved']   = $qtyReserved;
+                $it['qty_to_produce'] = $qtyToProduce;
 
-                $it['discount_percent'] =
-                    $pricing['discount_percent'];
-
-                $it['discount_amount'] =
-                    $pricing['discount_amount'];
-
-                $it['base_line_total'] =
-                    $pricing['base_line_total'];
-
-                $it['line_total'] =
-                    $pricing['line_total'];
-
-                /*
-     * subtotal = مبلغ کالاها قبل از تخفیف
-     */
-                $subtotal +=
-                    $pricing['base_line_total'];
-
-                /*
-     * مجموع تخفیف کالاها
-     */
-                $discountTotal +=
-                    $pricing['discount_amount'];
+                $subtotal      += $pricing['base_line_total'];
+                $discountTotal += $pricing['discount_amount'];
             }
-
             unset($it);
-
             /*
             |--------------------------------------------------------------------------
             | دریافت مجدد آدرس
@@ -847,19 +840,30 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         product_code,
         product_name,
         qty,
+        qty_reserved,
+        qty_to_produce,
         base_unit_price,
+        group_discount_percent,
+        tier_discount_percent,
         discount_percent,
+        discount_source,
         discount_amount,
         unit_price,
         line_total
     )
-    VALUES (?,?,?,?,?,?,?,?,?,?)
+    VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)
 ");
 
             foreach ($items as $it) {
 
                 $qty =
                     (int)$it['qty'];
+
+                $qtyReserved =
+                    (int)$it['qty_reserved'];
+
+                $qtyToProduce =
+                    (int)$it['qty_to_produce'];
 
                 $baseUnitPrice =
                     (int)$it['base_unit_price'];
@@ -875,29 +879,22 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
                 $lineTotal =
                     (int)$it['line_total'];
-
                 $insItem->execute([
-
                     $orderId,
-
                     (int)$it['product_id'],
-
                     $it['code'],
-
                     $it['name'],
-
-                    $qty,
-
-                    $baseUnitPrice,
-
-                    $discountPercent,
-
-                    $discountAmount,
-
-                    $unitPrice,
-
-                    $lineTotal
-
+                    (int)$it['qty'],
+                    (int)$it['qty_reserved'],
+                    (int)$it['qty_to_produce'],
+                    (int)$it['base_unit_price'],
+                    (float)$it['group_discount_percent'],
+                    (float)$it['tier_discount_percent'],
+                    (float)$it['discount_percent'],
+                    (string)$it['discount_source'],
+                    (int)$it['discount_amount'],
+                    (int)$it['unit_price'],
+                    (int)$it['line_total'],
                 ]);
             }
 
@@ -908,57 +905,66 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 |--------------------------------------------------------------------------
 */
 
-            $cutStock = $db->prepare("
-    UPDATE inventory
+            /*
+             * رزرو موجودی: به‌جای کاهش qty_available،
+             * مقدار qty_reserved را افزایش می‌دهیم.
+             * این حفظ invariant available_for_sale = qty_physical - reserved - unsellable
+             * را تضمین می‌کند و امکان تفکیک رزرو/تولید را در order_items می‌دهد.
+             *
+             * اگر qty_to_produce > 0، آن بخش از موجودی رزرو نمی‌شود
+             * (قلم در پنل ادمین به‌عنوان نیازمند تولید شناخته می‌شود).
+             */
+            $reserveStock = $db->prepare("
+                UPDATE inventory
+                SET reserved = reserved + ?
+                WHERE product_id = ?
+            ");
 
-    SET qty_available =
-        qty_available - ?
+            $logMovement = $db->prepare("
+                INSERT INTO stock_movements
+                (product_id, movement_type, quantity, reference_type, reference_id,
+                 order_id, order_item_id, reason, created_by, ip)
+                VALUES (?, 'reserve', ?, 'order', ?, ?, ?, ?, ?, ?)
+            ");
 
-    WHERE product_id = ?
-
-      AND qty_available >= ?
-");
-
+            $adminUser = $_SESSION['admin_id'] ?? $_SESSION['customer_id'] ?? $userId;
 
             foreach ($items as $it) {
 
-                $qty =
-                    (int)$it['qty'];
+                $qty         = (int)$it['qty'];
+                $qtyReserved = (int)$it['qty_reserved'];
+                $productId   = (int)$it['product_id'];
 
                 /*
-     * قیمت‌ها قبلاً توسط PricingService
-     * محاسبه و داخل $items ذخیره شده‌اند.
-     */
+                 * ثبت رزرو در inventory
+                 */
+                if ($qtyReserved > 0) {
+                    $reserveStock->execute([
+                        $qtyReserved,
+                        $productId
+                    ]);
 
+                    if ($reserveStock->rowCount() !== 1) {
+                        throw new RuntimeException(
+                            'رزرو موجودی برای محصول «'
+                                . $it['name']
+                                . '» در لحظه ثبت سفارش شکست خورد. لطفاً دوباره تلاش کنید.'
+                        );
+                    }
 
-                /*
-     * کاهش موجودی
-     */
-                $cutStock->execute([
-
-                    $qty,
-
-                    (int)$it['product_id'],
-
-                    $qty
-
-                ]);
-
-
-                /*
-     * اگر موجودی کافی نباشد،
-     * کل Transaction باید Rollback شود.
-     */
-                if (
-                    $cutStock->rowCount()
-                    !== 1
-                ) {
-
-                    throw new RuntimeException(
-                        'موجودی محصول «'
-                            . $it['name']
-                            . '» در لحظه ثبت سفارش تغییر کرده است. لطفاً دوباره تلاش کنید.'
-                    );
+                    /*
+                     * ثبت گردش موجودی
+                     */
+                    $logMovement->execute([
+                        $productId,
+                        $qtyReserved,
+                        null,
+                        $orderId,
+                        null,
+                        'رزرو برای سفارش جدید',
+                        $adminUser,
+                        $_SERVER['REMOTE_ADDR'] ?? '0.0.0.0'
+                    ]);
                 }
             }
             /*
@@ -1126,6 +1132,28 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
             $transactionStarted = false;
 
+            /* ─── ارتقای خودکار سطح مشتری/شرکت ─── */
+            try {
+                if ($companyId !== null && $companyId > 0) {
+                    OrderService::maybeUpgradeCompanyGroup($db, $companyId);
+                }
+                OrderService::maybeUpgradeCustomerGroup($db, $userId);
+            } catch (Throwable $e) {
+                error_log('AUTO UPGRADE ERROR: ' . $e->getMessage());
+            }
+
+            unset(
+                $_SESSION['checkout_address_id'],
+                $_SESSION['checkout_shipping']
+            );
+
+            header(
+                'Location: /payment?order='
+                    . urlencode($orderNumber)
+            );
+
+            exit;
+
             /*
             |--------------------------------------------------------------------------
             | پاک کردن Session Checkout
@@ -1188,14 +1216,14 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 |--------------------------------------------------------------------------
 */
 
+$userGroup = current_user_group();
 $stmt = $db->prepare("
     SELECT
-       
-    ci.qty,
-    p.id AS product_id,
-    p.code,
-    p.name,
-    pr.price
+        ci.qty,
+        p.id AS product_id,
+        p.code,
+        p.name,
+        p.base_price
 
     FROM cart_items ci
 
@@ -1205,18 +1233,11 @@ $stmt = $db->prepare("
     JOIN products p
         ON p.id = ci.product_id
 
-    LEFT JOIN product_prices pr
-        ON pr.product_id = p.id
-        AND pr.customer_group = 'wholesale'
-        AND pr.min_qty = 1
-
     WHERE c.user_id = ?
       AND c.status = 'active'
 ");
 
-$stmt->execute([
-    $userId
-]);
+$stmt->execute([$userId]);
 
 $items = $stmt->fetchAll();
 
@@ -1240,53 +1261,33 @@ $discountTotal = 0;
 
 foreach ($items as &$it) {
 
-    $qty =
-        (int)$it['qty'];
+    $qty = (int)$it['qty'];
 
-    $basePrice =
-        (int)($it['price'] ?? 0);
-
-    if ($basePrice <= 0) {
+    if ($qty <= 0) {
         continue;
     }
 
-    $pricing =
-        PricingService::calculateForProduct(
-            $db,
-            (int)$it['product_id'],
-            $basePrice,
-            $qty
-        );
+    $pricing = PricingService::calculate(
+        $db,
+        (int)$it['product_id'],
+        $qty,
+        $userGroup
+    );
 
-    $it['base_unit_price'] =
-        $pricing['base_unit_price'];
+    if ($pricing['base_price'] <= 0) {
+        continue;
+    }
 
-    $it['unit_price'] =
-        $pricing['unit_price'];
+    $it['base_unit_price'] = $pricing['base_price'];
+    $it['unit_price']      = $pricing['unit_price'];
+    $it['discount_percent'] = $pricing['discount_percent'];
+    $it['discount_amount']  = $pricing['discount_amount'];
+    $it['base_line_total']  = $pricing['base_line_total'];
+    $it['line_total']       = $pricing['line_total'];
+    $it['discount_source']  = $pricing['discount_source'];
 
-    $it['discount_percent'] =
-        $pricing['discount_percent'];
-
-    $it['discount_amount'] =
-        $pricing['discount_amount'];
-
-    $it['base_line_total'] =
-        $pricing['base_line_total'];
-
-    $it['line_total'] =
-        $pricing['line_total'];
-
-    /*
-     * جمع کالاها قبل از تخفیف
-     */
-    $subtotal +=
-        $pricing['base_line_total'];
-
-    /*
-     * مجموع تخفیف
-     */
-    $discountTotal +=
-        $pricing['discount_amount'];
+    $subtotal      += $pricing['base_line_total'];
+    $discountTotal += $pricing['discount_amount'];
 }
 
 unset($it);
@@ -1456,37 +1457,21 @@ ob_start();
             </div>
 
             <?php foreach ($items as $it): ?>
-
                 <div class="cs-row">
-
                     <span>
-
                         <?= $h($it['name']) ?>
+                        <small>× <?= number_format((int)$it['qty']) ?></small>
 
-                        <small>
-                            ×
-                            <?= number_format(
-                                (int)$it['qty']
-                            ) ?>
-                        </small>
-
+                        <?php if (!empty($it['discount_percent']) && $it['discount_percent'] > 0): ?>
+                            <small style="color:#27ae60;display:block;">
+                                <?= $it['discount_source'] === 'group' ? 'تخفیف سطح' : 'تخفیف پلکانی' ?>
+                                <?= number_format((float)$it['discount_percent'], 2) ?>٪
+                            </small>
+                        <?php endif; ?>
                     </span>
-
-                    <b>
-
-                        <?=
-                        $it['price'] !== null
-                            ? number_format(
-                                (int)$it['price']
-                                    *
-                                    (int)$it['qty']
-                            )
-                            : '—'
-                        ?>
-
-                    </b>
-
+                    <b><?= number_format((int)$it['line_total']) ?></b>
                 </div>
+
 
             <?php endforeach; ?>
 

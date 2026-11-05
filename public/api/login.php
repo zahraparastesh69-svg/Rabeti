@@ -4,7 +4,12 @@ $__bp = [
     __DIR__ . '/../../sock-b2b/config/bootstrap.php',
     __DIR__ . '/../../config/bootstrap.php',
 ];
-foreach ($__bp as $__b) { if (is_file($__b)) { require_once $__b; break; } }
+foreach ($__bp as $__b) {
+    if (is_file($__b)) {
+        require_once $__b;
+        break;
+    }
+}
 unset($__bp, $__b);
 // api/login.php
 
@@ -30,14 +35,14 @@ $mobile   = trim($_POST['mobile'] ?? '');
 $password = $_POST['password'] ?? '';
 
 if (
-    !preg_match('/^09\d{9}$/', $mobile) ||
+    (!preg_match('/^09\d{9}$/', $mobile) && !preg_match('/^\d{10}$/', $mobile)) ||
     $password === ''
 ) {
     http_response_code(422);
 
     echo json_encode([
         'ok'    => false,
-        'error' => 'شماره موبایل یا رمز عبور نامعتبر است'
+        'error' => 'نام کاربری یا رمز عبور نامعتبر است'
     ], JSON_UNESCAPED_UNICODE);
 
     exit;
@@ -89,13 +94,12 @@ if (attempt_admin_login($mobile, $password)) {
 $stmt = db()->prepare("
     SELECT *
     FROM users
-    WHERE mobile = ?
+    WHERE (mobile = ? OR national_code = ?)
       AND role = 'customer'
       AND is_active = 1
     LIMIT 1
 ");
-
-$stmt->execute([$mobile]);
+$stmt->execute([$mobile, $mobile]);
 
 $customer = $stmt->fetch();
 

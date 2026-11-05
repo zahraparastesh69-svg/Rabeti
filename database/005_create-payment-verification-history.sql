@@ -1,4 +1,4 @@
-CREATE TABLE IF NOT EXISTS payment_verification_history (
+﻿CREATE TABLE IF NOT EXISTS payment_verification_history (
     id INT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
 
     payment_id INT UNSIGNED NOT NULL,
@@ -21,11 +21,6 @@ CREATE TABLE IF NOT EXISTS payment_verification_history (
     KEY idx_pvh_invoice (invoice_id),
     KEY idx_pvh_changed_by (changed_by),
     KEY idx_pvh_changed_at (changed_at),
-
-    CONSTRAINT fk_pvh_payment
-        FOREIGN KEY (payment_id)
-        REFERENCES payments(id)
-        ON DELETE CASCADE,
 
     CONSTRAINT fk_pvh_invoice
         FOREIGN KEY (invoice_id)

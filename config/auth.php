@@ -359,7 +359,6 @@ function attempt_customer_login(
     ];
 }
 
-
 /* ═══════════════════════════════════════════════════════════════
    ثبت‌نام مشتری + شرکت در انتظار تأیید
 ═══════════════════════════════════════════════════════════════ */
@@ -368,7 +367,8 @@ function register_customer(
     string $fullName,
     string $companyName,
     string $mobile,
-    string $password
+    string $password,
+    string $nationalCode = ''
 ): array {
 
     $pdo = db();
@@ -376,6 +376,30 @@ function register_customer(
     $fullName    = trim($fullName);
     $companyName = trim($companyName);
     $mobile      = trim($mobile);
+
+    /* ⭐ تبدیل ارقام فارسی/عربی → انگلیسی برای کد ملی */
+    $nationalCode = strtr(trim($nationalCode), [
+        '۰' => '0',
+        '۱' => '1',
+        '۲' => '2',
+        '۳' => '3',
+        '۴' => '4',
+        '۵' => '5',
+        '۶' => '6',
+        '۷' => '7',
+        '۸' => '8',
+        '۹' => '9',
+        '٠' => '0',
+        '١' => '1',
+        '٢' => '2',
+        '٣' => '3',
+        '٤' => '4',
+        '٥' => '5',
+        '٦' => '6',
+        '٧' => '7',
+        '٨' => '8',
+        '٩' => '9',
+    ]);
 
     if ($fullName === '') {
         return [
@@ -391,6 +415,33 @@ function register_customer(
         ];
     }
 
+    /* ⭐ اعتبارسنجی کد ملی (الگوریتم چک‌سام) */
+    if (
+        strlen($nationalCode) !== 10
+        || !ctype_digit($nationalCode)
+        || preg_match('/^(\d)\1{9}$/', $nationalCode)
+    ) {
+        return [
+            'ok' => false,
+            'error' => 'کد ملی ۱۰ رقمی معتبر وارد کنید.'
+        ];
+    }
+
+    /* چک‌سام کد ملی */
+    $check = (int)$nationalCode[9];
+    $sum   = 0;
+    for ($i = 0; $i < 9; $i++) {
+        $sum += (int)$nationalCode[$i] * (10 - $i);
+    }
+    $r = $sum % 11;
+    $validCheck = ($r < 2 && $check === $r) || ($r >= 2 && $check === 11 - $r);
+    if (!$validCheck) {
+        return [
+            'ok' => false,
+            'error' => 'کد ملی معتبر نیست.'
+        ];
+    }
+
     if (strlen($password) < 8) {
         return [
             'ok' => false,
@@ -398,14 +449,29 @@ function register_customer(
         ];
     }
 
-    // موبایل تکراری
+    /* ⭐ چک تکراری بودن کد ملی */
+    $stmt = $pdo->prepare("
+        SELECT id
+        FROM users
+        WHERE national_code = ?
+        LIMIT 1
+    ");
+    $stmt->execute([$nationalCode]);
+
+    if ($stmt->fetch()) {
+        return [
+            'ok' => false,
+            'error' => 'این کد ملی قبلاً ثبت شده است.'
+        ];
+    }
+
+    /* چک موبایل تکراری */
     $stmt = $pdo->prepare("
         SELECT id
         FROM users
         WHERE mobile = ?
         LIMIT 1
     ");
-
     $stmt->execute([$mobile]);
 
     if ($stmt->fetch()) {
@@ -415,16 +481,13 @@ function register_customer(
         ];
     }
 
-    $passwordHash = password_hash(
-        $password,
-        PASSWORD_DEFAULT
-    );
+    $passwordHash = password_hash($password, PASSWORD_DEFAULT);
 
     $pdo->beginTransaction();
 
     try {
 
-        // ۱. کاربر مشتری
+        /* ۱. کاربر مشتری — با کد ملی */
         $stmt = $pdo->prepare("
             INSERT INTO users
                 (
@@ -432,23 +495,25 @@ function register_customer(
                     company_name,
                     mobile,
                     password_hash,
+                    national_code,
                     role,
                     is_active
                 )
             VALUES
-                (?, ?, ?, ?, 'customer', 1)
+                (?, ?, ?, ?, ?, 'customer', 1)
         ");
 
         $stmt->execute([
             $fullName,
             $companyName !== '' ? $companyName : null,
             $mobile,
-            $passwordHash
+            $passwordHash,
+            $nationalCode,
         ]);
 
         $customerId = (int)$pdo->lastInsertId();
 
-        // ۲. شرکت در وضعیت pending
+        /* ۲. شرکت در وضعیت pending */
         $stmt = $pdo->prepare("
             INSERT INTO companies
                 (name, status)
@@ -464,7 +529,7 @@ function register_customer(
 
         $companyId = (int)$pdo->lastInsertId();
 
-        // ۳. ارتباط کاربر و شرکت با نقش owner
+        /* ۳. ارتباط کاربر و شرکت */
         $pdo->prepare("
             INSERT INTO company_users
                 (company_id, user_id, role)
@@ -475,24 +540,12 @@ function register_customer(
             $customerId
         ]);
 
-        // ۴. Audit
+        /* ۴. Audit */
         $pdo->prepare("
             INSERT INTO audit_logs
-                (
-                    user_id,
-                    action,
-                    entity,
-                    entity_id,
-                    ip
-                )
+                (user_id, action, entity, entity_id, ip)
             VALUES
-                (
-                    ?,
-                    'customer.register',
-                    'user',
-                    ?,
-                    ?
-                )
+                (?, 'customer.register', 'user', ?, ?)
         ")->execute([
             $customerId,
             $customerId,
@@ -506,32 +559,30 @@ function register_customer(
             $pdo->rollBack();
         }
 
-        // اگر جدول‌های شرکت هنوز آماده نباشند،
-        // ثبت کاربر به‌تنهایی انجام می‌شود.
+        /* fallback — بدون شرکت (اگر جدول companies آماده نبود) */
         $stmt = $pdo->prepare("
             INSERT INTO users
                 (
                     full_name,
                     mobile,
                     password_hash,
+                    national_code,
                     role,
                     is_active
                 )
             VALUES
-                (?, ?, ?, 'customer', 1)
+                (?, ?, ?, ?, 'customer', 1)
         ");
 
         try {
-
             $stmt->execute([
                 $fullName,
                 $mobile,
-                $passwordHash
+                $passwordHash,
+                $nationalCode,
             ]);
-
             $customerId = (int)$pdo->lastInsertId();
         } catch (Throwable $e2) {
-
             return [
                 'ok' => false,
                 'error' => 'خطا در ثبت اطلاعات. دوباره تلاش کنید.'
@@ -542,10 +593,9 @@ function register_customer(
     return [
         'ok'   => true,
         'id'   => $customerId,
-        'name' => $fullName
+        'name' => $fullName,
     ];
 }
-
 
 /* ═══════════════════════════════════════════════════════════════
    گاردها

@@ -54,3 +54,6 @@ date_default_timezone_set(APP_TIMEZONE);
 if (!defined('SITE_URL')) {
     define('SITE_URL', 'https://jorabrabeti.ir');
 }
+
+/* توابع کمکی مشترک (current_user_group, inventory_state, log_stock_movement, record_audit, ...) */
+require_once ROOT_PATH . '/config/helpers.php';

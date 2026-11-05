@@ -6,7 +6,12 @@ $__bp = [
     __DIR__ . '/../../sock-b2b/config/bootstrap.php',
     __DIR__ . '/../../config/bootstrap.php',
 ];
-foreach ($__bp as $__b) { if (is_file($__b)) { require_once $__b; break; } }
+foreach ($__bp as $__b) {
+    if (is_file($__b)) {
+        require_once $__b;
+        break;
+    }
+}
 unset($__bp, $__b);
 require_once ROOT_PATH . '/config/database.php';
 require_once ROOT_PATH . '/config/auth.php';
@@ -48,14 +53,12 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && ($_POST['do'] ?? '') === 'preview')
         $roundFactor = (int)pow(10, $round);
 
         $sql = "
-            SELECT pp.id, pp.product_id, pp.price,
-                   p.code, p.name, c.name AS cat_name
-            FROM product_prices pp
-            INNER JOIN products p ON p.id = pp.product_id
-            INNER JOIN categories c ON c.id = p.category_id
-            WHERE pp.customer_group = 'wholesale' AND pp.min_qty = 1
-              AND pp.price > 0
-        ";
+    SELECT p.id, p.base_price, p.code, p.name, c.name AS cat_name
+    FROM products p
+    INNER JOIN categories c ON c.id = p.category_id
+    WHERE p.base_price > 0
+      AND p.is_active = 1
+";
         $params = [];
         if ($scope === 'category') {
             $sql .= " AND p.category_id = ? ";
@@ -67,8 +70,10 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && ($_POST['do'] ?? '') === 'preview')
         $items = $stmt->fetchAll();
 
         $list = [];
+        $roundFactor = (int)pow(10, $round);
+
         foreach ($items as $it) {
-            $old = (int)$it['price'];
+            $old = (int)$it['base_price'];
 
             if ($mode === 'percent') {
                 $raw = $old + ($sign * (int)round($old * $value / 100));
@@ -76,22 +81,21 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && ($_POST['do'] ?? '') === 'preview')
                 $raw = $old + ($sign * $value);
             }
 
-            if ($raw < 1000) $raw = 1000;   /* کف قیمت */
+            if ($raw < 1000) $raw = 1000;
 
-            /* گرد کردن به مضرب ۱۰^n */
             $new = (int)(round($raw / $roundFactor) * $roundFactor);
             if ($new < $roundFactor) $new = $roundFactor;
 
             if ($new !== $old) {
                 $list[] = [
-                    'id' => (int)$it['id'],
-                    'product_id' => (int)$it['product_id'],
-                    'code' => $it['code'],
-                    'name' => $it['name'],
-                    'cat' => $it['cat_name'],
-                    'old' => $old,
-                    'new' => $new,
-                    'diff' => $new - $old,
+                    'id'         => (int)$it['id'],         // ← product_id (نه pp.id)
+                    'product_id' => (int)$it['id'],
+                    'code'       => $it['code'],
+                    'name'       => $it['name'],
+                    'cat'        => $it['cat_name'],
+                    'old'        => $old,
+                    'new'        => $new,
+                    'diff'       => $new - $old,
                 ];
             }
         }
@@ -112,7 +116,6 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && ($_POST['do'] ?? '') === 'preview')
 if ($_SERVER['REQUEST_METHOD'] === 'POST' && ($_POST['do'] ?? '') === 'apply') {
     verify_csrf();
 
-
     $changes = json_decode((string)($_POST['changes'] ?? '[]'), true);
 
     if (!is_array($changes) || !$changes) {
@@ -123,19 +126,34 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && ($_POST['do'] ?? '') === 'apply') {
     try {
         $db->beginTransaction();
 
-        $upd = $db->prepare("UPDATE product_prices SET price = ? WHERE id = ?");
+        /* ۱. آپدیت products.base_price */
+        $updProduct = $db->prepare("UPDATE products SET base_price = ? WHERE id = ?");
+
+        /* ۲. آپدیت legacy product_prices (wholesale min_qty=1) */
+        $updLegacy = $db->prepare("
+            UPDATE product_prices 
+            SET price = ? 
+            WHERE product_id = ? AND customer_group = 'wholesale' AND min_qty = 1
+        ");
+
         $applied = 0;
 
         foreach ($changes as $c) {
-            $upd->execute([(int)$c['new'], (int)$c['id']]);
-            $applied += $upd->rowCount();
+            $productId = (int)$c['product_id'];
+            $newPrice  = (int)$c['new'];
+
+            $updProduct->execute([$newPrice, $productId]);
+            $applied += $updProduct->rowCount();
+
+            /* legacy — فقط اگر رکورد وجود داشت */
+            $updLegacy->execute([$newPrice, $productId]);
         }
 
-        /* نتیجه مالی همه فاکتورها را به‌روز نکنیم — قیمت‌های قدیمی snapshot هستند ✅ */
-
-        $db->prepare("INSERT INTO audit_logs (user_id, action, entity, entity_id, ip)
-                      VALUES (?, 'prices.bulk_update', 'product_prices', NULL, ?)")
-            ->execute([$_SESSION['admin_id'], $_SERVER['REMOTE_ADDR'] ?? null]);
+        /* ۳. لاگ */
+        $db->prepare("
+            INSERT INTO audit_logs (user_id, action, entity, entity_id, ip)
+            VALUES (?, 'prices.bulk_update', 'products', NULL, ?)
+        ")->execute([$_SESSION['admin_id'], $_SERVER['REMOTE_ADDR'] ?? null]);
 
         $db->commit();
 
@@ -145,7 +163,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && ($_POST['do'] ?? '') === 'apply') {
         exit;
     } catch (Throwable $e) {
         if ($db->inTransaction()) $db->rollBack();
-        header('Location: /admin/price-update?error=' . urlencode($e->getMessage()));
+        error_log('PRICE UPDATE ERROR: ' . $e->getMessage());
+        header('Location: /admin/price-update?error=' . urlencode('خطا در به‌روزرسانی قیمت‌ها.'));
         exit;
     }
 }
@@ -279,6 +298,7 @@ ob_start();
                                 <?= $it['diff'] > 0 ? '+' : '' ?><?= number_format($it['diff']) ?>
                             </td>
                         </tr>
+
                     <?php endforeach; ?>
                 </tbody>
             </table>

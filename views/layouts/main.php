@@ -1,7 +1,10 @@
 <?php
+/* ════ RABETI-LAYOUT-FIX | نسخه: v4 | 2026-11-01 | جدیدترین نسخه (LATEST) ════ */
+/* تغییر این نسخه: لود PricingService برای نمایش سطح مشتری در هدر */
 require_once __DIR__ . '/../../config/database.php';
 require_once __DIR__ . '/../../config/auth.php';
 require_once ROOT_PATH . '/config/settings.php';
+require_once ROOT_PATH . '/app/services/PricingService.php'; // ⭐ اضافه شد
 
 $isAdmin    = is_admin_logged_in();
 $isCustomer = is_customer_logged_in();
@@ -11,7 +14,7 @@ $isLoggedIn = $isAdmin || $isCustomer;
 $siteLogo         = Setting::get('site_logo', '/Image/logo3.jpg');
 $siteFavicon      = Setting::get('site_favicon', '/Image/logo3.jpg');
 $ogDefaultImage   = Setting::get('og_default_image', '/Image/logo3.jpg');
-$siteUrl          = 'https://jorabrabeti.ir';
+$siteUrl          = 'https://joorabrabeti.ir';
 
 $userName = $isAdmin
     ? ($_SESSION['admin_name'] ?? 'مدیر')
@@ -19,8 +22,7 @@ $userName = $isAdmin
 ?>
 <?php
 $cartCount = 0;
-
-if (is_logged_in()) {
+if ($isLoggedIn) {
     try {
         $uid = (int)($_SESSION['admin_id'] ?? $_SESSION['customer_id'] ?? 0);
         $stmt = db()->prepare("
@@ -52,7 +54,7 @@ if (is_logged_in()) {
     <meta name="description" content="<?= htmlspecialchars($pageDescription ?? 'فروشگاه تخصصی خرید عمده جوراب رابطی — تولید مستقیم، قیمت همکاری، موجودی واقعی و سفارش سریع', ENT_QUOTES, 'UTF-8') ?>">
     <meta name="author" content="RABETI">
     <meta name="theme-color" content="#004f53">
-    <link rel="canonical" href="https://jorabrabeti.ir<?= htmlspecialchars($_SERVER['REQUEST_URI'] ?? '/', ENT_QUOTES, 'UTF-8') ?>">
+    <link rel="canonical" href="https://joorabrabeti.ir<?= htmlspecialchars($_SERVER['REQUEST_URI'] ?? '/', ENT_QUOTES, 'UTF-8') ?>">
 
     <!-- ═══ Open Graph ═══ -->
     <meta property="og:type" content="website">
@@ -60,7 +62,7 @@ if (is_logged_in()) {
     <meta property="og:title" content="<?= htmlspecialchars($pageTitle ?? 'رابطی | فروش عمده جوراب', ENT_QUOTES, 'UTF-8') ?>">
     <meta property="og:description" content="<?= htmlspecialchars($pageDescription ?? 'فروشگاه تخصصی خرید عمده جوراب رابطی', ENT_QUOTES, 'UTF-8') ?>">
     <meta property="og:locale" content="fa_IR">
-    <meta property="og:url" content="https://jorabrabeti.ir<?= htmlspecialchars($_SERVER['REQUEST_URI'] ?? '/', ENT_QUOTES, 'UTF-8') ?>">
+    <meta property="og:url" content="https://joorabrabeti.ir<?= htmlspecialchars($_SERVER['REQUEST_URI'] ?? '/', ENT_QUOTES, 'UTF-8') ?>">
 
     <meta property="og:image" content="<?= htmlspecialchars($siteUrl . $ogDefaultImage, ENT_QUOTES, 'UTF-8') ?>">
     <meta property="og:image:width" content="512">
@@ -77,7 +79,11 @@ if (is_logged_in()) {
     <link rel="apple-touch-icon" href="<?= htmlspecialchars($siteFavicon, ENT_QUOTES, 'UTF-8') ?>">
     <link rel="mask-icon" href="<?= htmlspecialchars($siteFavicon, ENT_QUOTES, 'UTF-8') ?>" color="#004f53">
 
-    <link rel="stylesheet" href="/assets/css/app.css?v=1001">
+
+    <link rel="stylesheet" href="/assets/css/app.css?v=1009">
+    <?php foreach (($pageCss ?? []) as $pc): ?>
+        <link rel="stylesheet" href="<?= htmlspecialchars($pc, ENT_QUOTES, 'UTF-8') ?>">
+    <?php endforeach; ?>
 </head>
 
 <body class="app-body">
@@ -137,48 +143,37 @@ if (is_logged_in()) {
                 </a>
 
                 <div class="header-account">
-
                     <?php if ($isAdmin): ?>
-
-                        <a
-                            href="/admin"
-                            class="header-account-btn">
-                            پنل مدیریت
-                        </a>
-
-                        <a
-                            href="/admin/logout"
-                            class="header-account-logout">
-                            خروج
-                        </a>
-
+                        <a href="/admin" class="header-account-btn">پنل مدیریت</a>
+                        <a href="/admin/logout" class="header-account-logout">خروج</a>
                     <?php elseif ($isCustomer): ?>
+                        <?php
+                        // ⭐ دریافت اطلاعات گروه مشتری برای نمایش در هدر
+                        $headerUserGroupCode = strtolower((string)current_user_group());
+                        $headerGroupName = 'مشتری';
+                        $headerGroupColor = '#8b7355';
 
-                        <span class="header-account-name">
-                            <?= htmlspecialchars(
-                                $userName,
-                                ENT_QUOTES,
-                                'UTF-8'
-                            ) ?>
-                        </span>
+                        if (class_exists('PricingService')) {
+                            $groupData = PricingService::getGroup(db(), current_user_group());
+                            if ($groupData) {
+                                $headerGroupName = $groupData['name'];
+                                if ($headerUserGroupCode === 'gold') $headerGroupColor = '#d4a017';
+                                elseif ($headerUserGroupCode === 'silver') $headerGroupColor = '#9ca3af';
+                                elseif ($headerUserGroupCode === 'bronze') $headerGroupColor = '#b87333';
+                            }
+                        }
+                        ?>
+                        <div class="header-user-vip" style="display: flex; align-items: center; gap: 8px;">
+                            <span class="header-account-name"><?= htmlspecialchars($userName, ENT_QUOTES, 'UTF-8') ?></span>
 
-                        <a
-                            href="/api/logout"
-                            class="header-account-logout">
-                            خروج
-                        </a>
 
+                        </div>
+                        <a href="/api/logout" class="header-account-logout">خروج</a>
                     <?php else: ?>
-
-                        <button
-                            type="button"
-                            class="r-btn r-btn-outline auth-trigger"
-                            data-auth-open="login">
+                        <button type="button" class="r-btn r-btn-outline auth-trigger" data-auth-open="login">
                             ورود / ثبت‌نام
                         </button>
-
                     <?php endif; ?>
-
                 </div>
 
             </div>
@@ -187,18 +182,115 @@ if (is_logged_in()) {
 
     </header>
 
-    <!-- ══════════ کشوی موبایل ══════════ -->
 
-    <div
-        class="overlay"
-        id="overlay"></div>
+    <!-- ══════════ طراحی جدید کشوی موبایل رابطی ══════════ -->
 
-    <aside
-        class="drawer r6-drawer"
-        id="drawer">
 
-        <div class="drawer-head">
+    <div class="overlay" id="overlay"></div>
 
+    <aside class="drawer r6-drawer" id="drawer">
+
+        <?php if ($isLoggedIn): ?>
+
+            <?php
+            // اطلاعات سطح مشتری
+            $drawerGroupName = 'مشتری';
+            $drawerGroupColor = '#d5a34e';
+
+            if ($isCustomer) {
+
+                $drawerGroupCode = strtolower(
+                    (string) current_user_group()
+                );
+
+                if (class_exists('PricingService')) {
+                    $drawerGroupData = PricingService::getGroup(
+                        db(),
+                        current_user_group()
+                    );
+
+                    if ($drawerGroupData) {
+                        $drawerGroupName = $drawerGroupData['name'];
+                    }
+                }
+
+                if ($drawerGroupCode === 'gold') {
+                    $drawerGroupColor = '#d4a017';
+                } elseif ($drawerGroupCode === 'silver') {
+                    $drawerGroupColor = '#9ca3af';
+                } elseif ($drawerGroupCode === 'bronze') {
+                    $drawerGroupColor = '#b87333';
+                }
+            }
+            ?>
+
+            <!-- کارت پروفایل -->
+            <div class="drawer-user-box <?= $isAdmin ? 'r6-admin-box' : '' ?>">
+
+                <!-- آواتار سمت راست -->
+                <div class="r6-avatar">
+                    <svg viewBox="0 0 100 100" aria-hidden="true">
+                        <defs>
+                            <linearGradient id="r6AvatarGradient"
+                                x1="0" y1="0" x2="1" y2="1">
+                                <stop offset="0%" stop-color="#9a6638" />
+                                <stop offset="100%" stop-color="#68401f" />
+                            </linearGradient>
+                        </defs>
+
+                        <circle cx="50" cy="34" r="18"
+                            fill="url(#r6AvatarGradient)" />
+
+                        <path
+                            d="M12 88 C17 64 34 54 50 54
+                   C66 54 83 64 88 88
+                   C68 101 32 101 12 88Z"
+                            fill="url(#r6AvatarGradient)" />
+                    </svg>
+                </div>
+
+                <!-- اطلاعات کاربر -->
+                <div class="r6-user-info">
+
+                    <span class="r6-user-label">
+                        <?= $isAdmin ? 'حساب مدیریت' : 'حساب شما' ?>
+                    </span>
+                    <!-- دکمه بستن در سمت چپ -->
+
+                    <strong class="r6-user-name">
+                        <?= htmlspecialchars(
+                            $userName,
+                            ENT_QUOTES,
+                            'UTF-8'
+                        ) ?>
+                    </strong>
+
+                    <?php if ($isCustomer): ?>
+                        <span
+                            class="r6-user-badge"
+                            style="background: <?= htmlspecialchars($drawerGroupColor, ENT_QUOTES, 'UTF-8') ?>;">
+
+                            <svg width="16" height="16"
+                                viewBox="0 0 24 24"
+                                fill="currentColor"
+                                aria-hidden="true">
+                                <path d="M5 19h14v2H5zM3 7l5 5 4-8 4 8 5-5-2 11H5L3 7z" />
+                            </svg>
+
+                            مشتری سطح <?= htmlspecialchars(
+                                            $drawerGroupName,
+                                            ENT_QUOTES,
+                                            'UTF-8'
+                                        ) ?>
+                        </span>
+                    <?php endif; ?>
+
+                </div>
+
+            </div>
+
+        <?php else: ?>
+            <!-- دکمه بستن در سمت چپ -->
             <button
                 type="button"
                 class="drawer-close"
@@ -206,88 +298,94 @@ if (is_logged_in()) {
                 aria-label="بستن">
                 ×
             </button>
-
-            <a
-                href="/"
-                class="brand r6-brand">
-                <span class="r6-logo">رابطی</span>
-                <span class="r6-logo-en">RABETI</span>
-            </a>
-
-        </div>
-
-        <?php if ($isLoggedIn): ?>
-
-            <div class="drawer-user-box">
-
-                <span>
-                    <?= $isAdmin
-                        ? 'حساب مدیریت'
-                        : 'حساب شما' ?>
-                </span>
-
-                <strong>
-                    <?= htmlspecialchars(
-                        $userName,
-                        ENT_QUOTES,
-                        'UTF-8'
-                    ) ?>
-                </strong>
-
-            </div>
-            <?php if ($isCustomer): ?>
-                <a href="/account-orders" class="r6-drawer-link">سفارش‌های من</a>
-            <?php endif; ?>
-
         <?php endif; ?>
 
+        <!-- لینک‌های منو -->
         <nav class="drawer-nav">
 
             <?php if ($isAdmin): ?>
 
-                <a
-                    href="/admin"
-                    class="r6-drawer-link">
-                    پنل مدیریت
+                <a href="/admin" class="r6-drawer-link">
+
+                    <span class="r6-link-icon">
+                        <svg viewBox="0 0 24 24">
+                            <rect x="3" y="4" width="18" height="16" rx="2" />
+                            <path d="M8 9h8M8 13h5" />
+                        </svg>
+                    </span>
+
+                    <span class="r6-link-text">پنل مدیریت</span>
+
+                    <span class="r6-chevron"></span>
+
                 </a>
 
             <?php endif; ?>
 
-            <a
-                href="/products"
-                class="r6-drawer-link">
-                محصولات
+            <a href="/account-orders" class="r6-drawer-link">
+
+                <span class="r6-link-icon">
+                    <svg viewBox="0 0 24 24">
+                        <path d="M5 8h14l2 13H3L5 8z" />
+                        <path d="M9 9V6a3 3 0 0 1 6 0v3" />
+                    </svg>
+                </span>
+
+                <span class="r6-link-text">سفارش‌های من</span>
+
+                <span class="r6-chevron"></span>
+
             </a>
 
-            <a
-                href="/products"
-                class="r6-drawer-link">
-                پرفروش‌ها
+            <a href="/custom-order-track" class="r6-drawer-link">
+
+                <span class="r6-link-icon">
+                    <svg viewBox="0 0 24 24">
+                        <path d="M3 7l9-4 9 4-9 4-9-4z" />
+                        <path d="M3 7v11l9 4 9-4V7" />
+                        <path d="M12 11v11" />
+                        <circle cx="18" cy="15" r="3" />
+                        <path d="m20.2 17.2 2 2" />
+                    </svg>
+                </span>
+
+                <span class="r6-link-text">پیگیری سفارش اختصاصی</span>
+
+                <span class="r6-chevron"></span>
+
             </a>
 
-            <a
-                href="/products"
-                class="r6-drawer-link">
-                جدیدها
+            <a href="/products" class="r6-drawer-link">
+
+                <span class="r6-link-icon">
+                    <svg viewBox="0 0 24 24">
+                        <rect x="3" y="3" width="7" height="7" rx="1" />
+                        <rect x="14" y="3" width="7" height="7" rx="1" />
+                        <rect x="3" y="14" width="7" height="7" rx="1" />
+                        <rect x="14" y="14" width="7" height="7" rx="1" />
+                    </svg>
+                </span>
+
+                <span class="r6-link-text">محصولات</span>
+
+                <span class="r6-chevron"></span>
+
             </a>
 
-            <a
-                href="/custom-order"
-                class="r6-drawer-link">
-                سفارش اختصاصی
-            </a>
+            <a href="/about" class="r6-drawer-link">
 
+                <span class="r6-link-icon">
+                    <svg viewBox="0 0 24 24">
+                        <circle cx="12" cy="12" r="10" />
+                        <path d="M12 11v6" />
+                        <path d="M12 7h.01" />
+                    </svg>
+                </span>
 
-            <a
-                href="/contact"
-                class="r6-drawer-link">
-                راهنمای سفارش
-            </a>
+                <span class="r6-link-text">درباره رابطی</span>
 
-            <a
-                href="/about"
-                class="r6-drawer-link">
-                درباره رابطی
+                <span class="r6-chevron"></span>
+
             </a>
 
             <?php if ($isLoggedIn): ?>
@@ -296,15 +394,37 @@ if (is_logged_in()) {
                     href="<?= $isAdmin
                                 ? '/admin/logout'
                                 : '/api/logout' ?>"
-                    class="r6-drawer-link">
-                    خروج از حساب
+                    class="r6-logout-link">
+
+                    <span>خروج از حساب</span>
+
+                    <svg viewBox="0 0 24 24">
+                        <path d="M10 17l5-5-5-5" />
+                        <path d="M15 12H3" />
+                        <path d="M12 3h6a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2h-6" />
+                    </svg>
+
                 </a>
 
             <?php endif; ?>
 
         </nav>
 
+        <!-- موج قهوه‌ای پایین -->
+        <div class="r6-bottom-wave">
+            <svg viewBox="0 0 340 55"
+                preserveAspectRatio="none"
+                aria-hidden="true">
+                <path
+                    d="M0 22 C65 45 115 17 180 25
+                   C245 35 285 12 340 0
+                   L340 55 L0 55 Z"
+                    fill="#58351f" />
+            </svg>
+        </div>
+
     </aside>
+
 
     <!-- ══════════ محتوا ══════════ -->
 
@@ -366,39 +486,73 @@ if (is_logged_in()) {
 
                 </div>
 
-                <!-- ═══ اطلاعات تماس — دکمه‌ای، بدون اکشن ═══ -->
-                <div class="r6-footer-contact">
+                <!-- ═══ اطلاعات تماس — کارخانه، دفتر، فروشگاه ═══ -->
+                <div class="r6-footer-contact" style="display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: 16px; margin-top: 24px;">
 
-                    <div class="r6-footer-contact-item">
-                        <span class="r6-footer-contact-icon">
-                            <svg width="20" height="20" fill="none" stroke="currentColor"
-                                stroke-width="1.6" viewBox="0 0 24 24">
-                                <path stroke-linecap="round" stroke-linejoin="round"
-                                    d="M15 10.5a3 3 0 1 1-6 0 3 3 0 0 1 6 0Z" />
-                                <path stroke-linecap="round" stroke-linejoin="round"
-                                    d="M19.5 10.5c0 7.142-7.5 11.25-7.5 11.25S4.5 17.642 4.5 10.5a7.5 7.5 0 1 1 15 0Z" />
-                            </svg>
-                        </span>
-
-                        <span class="r6-footer-contact-body">
-                            <small>آدرس فروشگاه</small>
-                            <span>بازار بزرگ تهران — بازار عباس‌آباد، سرای لطفی‌پور، پلاک ۲۲</span>
-                        </span>
+                    <!-- 🏭 کارخانه -->
+                    <div class="r6-contact-card">
+                        <div class="r6-contact-header">
+                            <span class="r6-contact-icon" style="background: #e8f5e9; color: #2e7d32;">
+                                <svg width="20" height="20" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" d="M2 20h20M4 20V8l6 4V8l6 4V4h4v16" />
+                                    <path stroke-linecap="round" stroke-linejoin="round" d="M9 20v-4h2v4M15 20v-4h2v4" />
+                                </svg>
+                            </span>
+                            <h4>کارخانه</h4>
+                        </div>
+                        <div class="r6-contact-body">
+                            <p><strong>آدرس:</strong> بازار حاج قاسم، کوچه علیرضا زمان، پلاک ۱۸</p>
+                            <p><strong>تلفن ثابت:</strong> <span dir="ltr">۰۲۱-۵۵۸۹۰۹۱۵</span></p>
+                            <br>
+                            <a href="https://www.google.com/maps/place/%D8%A7%D8%B3%D8%AA%D8%A7%D9%86+%D8%AA%D9%87%D8%B1%D8%A7%D9%86%D8%8C+%D8%AA%D9%87%D8%B1%D8%A7%D9%86%D8%8C+%D9%85%D9%86%D8%B7%D9%82%D9%87+%DB%B1%DB%B2%D8%8C+%D8%A8%D8%A7%D8%B2%D8%A7%D8%B1+%D8%AD%D8%A7%D8%AC+%D9%82%D8%A7%D8%B3%D9%85%D8%8C+%D8%A7%DB%8C%D8%B1%D8%A7%D9%86%E2%80%AD/@35.6693571,51.4209725,21z/data=!4m6!3m5!1s0x3f8e01e496fecf09:0x8c6a3376da2b18d6!8m2!3d35.6686879!4d51.4189461!16s%2Fg%2F11jp6w0d_y?entry=ttu&g_ep=EgoyMDI2MTAyOC4wIKXMDSoASAFQAw%3D%3D" target="_blank">رفتن به آدرس</a>
+                        </div>
+                        <br>
+                        <br>
+                        <iframe src="https://www.google.com/maps/embed?pb=!1m18!1m12!1m3!1d202.58190305413368!2d51.4209725133567!3d35.6693571052259!2m3!1f0!2f0!3f0!3m2!1i1024!2i768!4f13.1!3m3!1m2!1s0x3f8e01e496fecf09%3A0x8c6a3376da2b18d6!2z2KfYs9iq2KfZhiDYqtmH2LHYp9mG2Iwg2KrZh9ix2KfZhtiMINmF2YbYt9mC2Ycg27HbstiMINio2KfYstin2LEg2K3Yp9isINmC2KfYs9mF2Iwg2KfbjNix2KfZhg!5e0!3m2!1sfa!2s!4v1793642059841!5m2!1sfa!2s" style="border:0;  border-radius: 10px !important;" referrerpolicy="strict-origin-when-cross-origin"></iframe>
                     </div>
 
-                    <div class="r6-footer-contact-item">
-                        <span class="r6-footer-contact-icon">
-                            <svg width="20" height="20" fill="none" stroke="currentColor"
-                                stroke-width="1.6" viewBox="0 0 24 24">
-                                <path stroke-linecap="round" stroke-linejoin="round"
-                                    d="M10.5 1.5H8.25A2.25 2.25 0 0 0 6 3.75v16.5a2.25 2.25 0 0 0 2.25 2.25h7.5A2.25 2.25 0 0 0 18 20.25V3.75a2.25 2.25 0 0 0-2.25-2.25H13.5m-3 0V3h3V1.5m-3 0h3m-3 18.75h3" />
-                            </svg>
-                        </span>
+                    <!-- 🏢 دفتر فروش -->
+                    <div class="r6-contact-card">
+                        <div class="r6-contact-header">
+                            <span class="r6-contact-icon" style="background: #e3f2fd; color: #1565c0;">
+                                <svg width="20" height="20" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" d="M3 21h18M5 21V7l7-4 7 4v14M9 9h.01M9 13h.01M9 17h.01M15 9h.01M15 13h.01M15 17h.01" />
+                                </svg>
+                            </span>
+                            <h4>دفتر فروش</h4>
+                        </div>
+                        <div class="r6-contact-body">
+                            <p><strong>آدرس:</strong> بازار حاج قاسم، کوچه چراغ برق، کوچه حلم زاده، پلاک ۱۶، واحد ۱</p>
+                            <p><strong>موبایل / واتساپ:</strong> <span dir="ltr">۰۹۱۲۰۳۸۰۹۷۴</span></p>
+                            <br>
 
-                        <span class="r6-footer-contact-body">
-                            <small>موبایل / واتساپ</small>
-                            <span dir="ltr" class="r6-footer-contact-num">۰۹۱۹ ۷۶۹ ۳۱۴۹</span>
-                        </span>
+                            <a target="_blank" href="https://www.google.com/maps/place/%D8%A7%D8%B3%D8%AA%D8%A7%D9%86+%D8%AA%D9%87%D8%B1%D8%A7%D9%86%D8%8C+%D8%AA%D9%87%D8%B1%D8%A7%D9%86%D8%8C+%D9%85%D9%86%D8%B7%D9%82%D9%87+%DB%B1%DB%B2%D8%8C+%D8%A8%D8%A7%D8%B2%D8%A7%D8%B1+%D8%AD%D8%A7%D8%AC+%D9%82%D8%A7%D8%B3%D9%85%D8%8C+%D8%A7%DB%8C%D8%B1%D8%A7%D9%86%E2%80%AD/@35.6689646,51.4183909,20z/data=!4m6!3m5!1s0x3f8e01e496fecf09:0x8c6a3376da2b18d6!8m2!3d35.6686879!4d51.4189461!16s%2Fg%2F11jp6w0d_y?entry=ttu&g_ep=EgoyMDI2MTAyOC4wIKXMDSoASAFQAw%3D%3D">رفتن به آدرس</a>
+                        </div>
+                        <br>
+                        <iframe src="https://www.google.com/maps/embed?pb=!1m18!1m12!1m3!1d405.16579825678156!2d51.41839088714251!3d35.66896460928466!2m3!1f0!2f0!3f0!3m2!1i1024!2i768!4f13.1!3m3!1m2!1s0x3f8e01e496fecf09%3A0x8c6a3376da2b18d6!2z2KfYs9iq2KfZhiDYqtmH2LHYp9mG2Iwg2KrZh9ix2KfZhtiMINmF2YbYt9mC2Ycg27HbstiMINio2KfYstin2LEg2K3Yp9isINmC2KfYs9mF2Iwg2KfbjNix2KfZhg!5e0!3m2!1sfa!2s!4v1793640627225!5m2!1sfa!2s" style="border:0;
+  border-radius: 10px !important;" allowfullscreen="" referrerpolicy="strict-origin-when-cross-origin"
+                            class="iframe-1"></iframe>
+                    </div>
+
+                    <!-- 🛍️ فروشگاه -->
+                    <div class="r6-contact-card">
+                        <div class="r6-contact-header">
+                            <span class="r6-contact-icon" style="background: #fff3e0; color: #e65100;">
+                                <svg width="20" height="20" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" d="M3 9l9-7 9 7v11a2 2 0 01-2 2H5a2 2 0 01-2-2z" />
+                                    <path stroke-linecap="round" stroke-linejoin="round" d="M9 22V12h6v10" />
+                                </svg>
+                            </span>
+                            <h4>فروشگاه</h4>
+                        </div>
+                        <div class="r6-contact-body">
+                            <p><strong>آدرس:</strong> بازار بزرگ تهران — بازار عباس‌آباد، سرای لطفی‌پور، پلاک ۲۲</p>
+                            <p><strong>موبایل / واتساپ:</strong> <span dir="ltr">۰۹۱۹۷۶۹۳۱۴۹</span></p>
+                            <br>
+                            <a href="https://www.google.com/maps/search/%D8%A8%D8%A7%D8%B2%D8%A7%D8%B1+%D8%B9%D8%A8%D8%A7%D8%B3+%D8%A2%D8%A8%D8%A7%D8%AF+%D8%AA%D9%87%D8%B1%D8%A7%D9%86+%D8%AC%D9%88%D8%B1%D8%A7%D8%A8%E2%80%AD/@35.6708649,51.4196369,20z?entry=ttu&g_ep=EgoyMDI2MTAyOC4wIKXMDSoASAFQAw%3D%3D" target="_blank">رفتن به آدرس</a>
+                        </div>
+                        <br>
+                        <iframe src="https://www.google.com/maps/embed?pb=!1m16!1m12!1m3!1d405.15615301410713!2d51.41963694909274!3d35.67086489391551!2m3!1f0!2f0!3f0!3m2!1i1024!2i768!4f13.1!2m1!1z2KjYp9iy2KfYsSDYudio2KfYsyDYotio2KfYryDYqtmH2LHYp9mGINis2YjYsdin2Kg!5e0!3m2!1sfa!2s!4v1793643075483!5m2!1sfa!2s" style="border:0;  border-radius: 10px !important;"></iframe>
                     </div>
 
                 </div>
@@ -413,70 +567,6 @@ if (is_logged_in()) {
         </div>
     </footer>
 
-    <!-- ══════════ ابزارها ══════════ -->
-
-    <!-- <button
-        class="back-to-top"
-        id="backToTop"
-        aria-label="بازگشت به بالا">
-        ↑
-    </button>
-
-    <div
-        class="toast"
-        id="toast"></div> -->
-
-    <!-- ══════════ نوار پایین موبایل ══════════ -->
-    <!-- 
-    <nav
-        class="bottom-nav"
-        aria-label="ناوبری اصلی">
-
-        <a href="/" class="bn-item">
-            <span>خانه</span>
-        </a>
-
-        <a href="/products" class="bn-item">
-            <span>دسته‌بندی</span>
-        </a>
-
-        <a href="/products" class="bn-item">
-            <span>جستجو</span>
-        </a>
-
-        <a href="/custom-order" class="bn-item">
-            <span>سفارش</span>
-        </a>
-
-        <?php if ($isAdmin): ?>
-
-            <a
-                href="/admin"
-                class="bn-item">
-                <span>پنل</span>
-            </a>
-
-        <?php elseif ($isCustomer): ?>
-
-            <a
-                href="/api/logout"
-                class="bn-item">
-                <span>خروج</span>
-            </a>
-
-        <?php else: ?>
-
-            <button
-                type="button"
-                class="bn-item"
-                data-auth-open="login">
-                <span>حساب</span>
-            </button>
-
-        <?php endif; ?>
-
-    </nav> -->
-    <!-- ═══ Modal ورود / ثبت‌نام / فراموشی رمز ═══ -->
     <!-- ═══ Modal ورود / ثبت‌نام / فراموشی رمز ═══ -->
     <div class="auth-modal-overlay" id="authModalOverlay">
         <div class="auth-modal" role="dialog" aria-modal="true">
@@ -497,13 +587,13 @@ if (is_logged_in()) {
                     <div class="form-error" id="loginError" style="display:none;"></div>
 
                     <div class="form-field">
-                        <label for="loginMobile">شماره موبایل</label>
+                        <label for="loginMobile">کدملی / شماره موبایل (EN)</label>
                         <input type="tel" name="mobile" id="loginMobile" dir="ltr"
                             inputmode="numeric" autocomplete="tel"
                             placeholder="09121234567" required>
                     </div>
                     <div class="form-field">
-                        <label for="loginPassword">رمز عبور</label>
+                        <label for="loginPassword">رمز عبور (EN)</label>
                         <input type="password" name="password" id="loginPassword" dir="ltr"
                             autocomplete="current-password" required>
                     </div>
@@ -689,55 +779,98 @@ if (is_logged_in()) {
         </div>
     </div>
 
-    <!-- ══════════ دکمهٔ شناور سبد خرید ══════════ -->
-    <a href="/cart" class="cart-fix" aria-label="سبد خرید">
-        <svg width="22" height="22" fill="none" stroke="currentColor"
-            stroke-width="1.8" viewBox="0 0 24 24">
-            <path stroke-linecap="round" stroke-linejoin="round"
-                d="M2.25 3h1.386c.51 0 .955.343 1.087.835l.383 1.437M7.5 14.25a3 3 0 0 0-3 3h15.75m-12.75-3h11.218c1.121-2.3 2.1-4.684 2.924-7.138a60.114 60.114 0 0 0-16.536-1.84M7.5 14.25 5.106 5.272M6 20.25a.75.75 0 1 1-1.5 0 .75.75 0 0 1 1.5 0Zm12.75 0a.75.75 0 1 1-1.5 0 .75.75 0 0 1 1.5 0Z" />
-        </svg>
-        <span class="badge" id="cartBadgeFloat" <?= $cartCount ? '' : 'style="display:none;"' ?>><?= $cartCount ?></span>
-    </a>
+    <!-- ═══ نوار پایین موبایل (مثل دیجی‌کالا) ═══ -->
 
-    <!-- ══════════ ویجت ارتباط سریع ══════════ -->
-    <ul class="social-fix" id="socialFix">
+    <nav class="mobile-bottom-nav" aria-label="دسترسی سریع">
 
-        <li>
-            <a href="https://wa.me/989197693149"
-                target="_blank" rel="noopener"
-                class="social-fix-btn whatsapp"
-                aria-label="واتساپ">
-                <svg viewBox="0 0 24 24" width="24" height="24" fill="currentColor">
-                    <path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347m-5.421 7.403h-.004a9.87 9.87 0 0 1-5.031-1.378l-.361-.214-3.741.982.998-3.648-.235-.374a9.86 9.86 0 0 1-1.51-5.26c.001-5.45 4.436-9.884 9.888-9.884 2.64 0 5.122 1.03 6.988 2.898a9.825 9.825 0 0 1 2.893 6.994c-.003 5.45-4.437 9.884-9.885 9.884m8.413-18.297A11.815 11.815 0 0 0 12.05 0C5.495 0 .16 5.335.157 11.892c0 2.096.547 4.142 1.588 5.945L.057 24l6.305-1.654a11.882 11.882 0 0 0 5.683 1.448h.005c6.554 0 11.89-5.335 11.893-11.893a11.821 11.821 0 0 0-3.48-8.413Z" />
+        <a href="/" class="mbn-item <?= (basename($_SERVER['PHP_SELF']) === 'index.php' ? 'is-active' : '') ?>">
+            <span class="mbn-icon">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+                    <path d="M3 9.5L12 3l9 6.5V20a1 1 0 0 1-1 1h-5v-6H9v6H4a1 1 0 0 1-1-1V9.5z" />
                 </svg>
-            </a>
-        </li>
+            </span>
+            <span class="mbn-label">خانه</span>
+        </a>
 
-        <li>
-            <a href="https://t.me/+989197693149"
-                target="_blank" rel="noopener"
-                class="social-fix-btn telegram"
-                aria-label="تلگرام">
-                <svg viewBox="0 0 24 24" width="24" height="24" fill="currentColor">
-                    <path d="M11.944 0A12 12 0 0 0 0 12a12 12 0 0 0 12 12 12 12 0 0 0 12-12A12 12 0 0 0 12 0a12 12 0 0 0-.056 0zm4.962 7.224c.1-.002.321.023.465.14a.506.506 0 0 1 .171.325c.016.093.036.306.02.472-.18 1.898-.962 6.502-1.36 8.627-.168.9-.499 1.201-.82 1.23-.696.065-1.225-.46-1.9-.902-1.056-.693-1.653-1.124-2.678-1.8-1.185-.78-.417-1.21.258-1.91.177-.184 3.247-2.977 3.307-3.23.007-.032.014-.15-.056-.212s-.174-.041-.249-.024c-.106.024-1.793 1.14-5.061 3.345-.48.33-.913.49-1.302.48-.428-.008-1.252-.241-1.865-.44-.752-.245-1.349-.374-1.297-.789.027-.216.325-.437.893-.663 3.498-1.524 5.83-2.529 6.998-3.014 3.332-1.386 4.025-1.627 4.476-1.635z" />
+
+        <a href="/cart" class="mbn-item <?= (basename($_SERVER['PHP_SELF']) === 'cart.php' ? 'is-active' : '') ?>">
+            <span class="mbn-icon">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+                    <circle cx="9" cy="20" r="1.5" />
+                    <circle cx="18" cy="20" r="1.5" />
+                    <path d="M3 3h2l2.7 12.4a2 2 0 0 0 2 1.6h7.7a2 2 0 0 0 2-1.6L21 8H6" />
                 </svg>
-            </a>
-        </li>
+                <span class="badge" id="cartBadgeBottom" <?= $cartCount ? '' : 'style="display:none;"' ?>><?= $cartCount ?></span>
+            </span>
+            <span class="mbn-label">سبد خرید</span>
+        </a>
 
-        <li>
-            <a href="https://ble.ir/09197693149"
-                target="_blank" rel="noopener"
-                class="social-fix-btn bale"
-                aria-label="بله">
-                <svg viewBox="0 0 24 24" width="24" height="24" fill="currentColor">
-                    <path d="M12 2C6.477 2 2 6.145 2 11.259c0 2.898 1.478 5.479 3.786 7.16V22l3.464-1.898c.87.24 1.79.37 2.75.37 5.523 0 10-4.146 10-9.259C22 6.145 17.523 2 12 2Zm4.794 7.137-3.878 6.156c-.229.363-.712.45-1.053.187l-2.847-2.204-2.027 1.558c-.302.232-.71.013-.71-.354V9.813c0-.41.474-.637.79-.376l4.086 3.372 2.213-3.513c.244-.387.83-.35 1.023.06l.003.008c.087.185.086.397-.007.573Z" />
+
+        <a href="/products" class="mbn-item <?= (basename($_SERVER['PHP_SELF']) === 'products.php' ? 'is-active' : '') ?>">
+            <span class="mbn-icon">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+                    <rect x="3" y="3" width="7" height="7" rx="1" />
+                    <rect x="14" y="3" width="7" height="7" rx="1" />
+                    <rect x="3" y="14" width="7" height="7" rx="1" />
+                    <rect x="14" y="14" width="7" height="7" rx="1" />
                 </svg>
-            </a>
-        </li>
+            </span>
+            <span class="mbn-label">دسته‌بندی</span>
+        </a>
 
-    </ul>
 
-    <script src="/assets/js/app.js?v=26"></script>
+        <a href="/account-orders" class="mbn-item <?= (basename($_SERVER['PHP_SELF']) === 'account-orders.php' ? 'is-active' : '') ?>">
+            <span class="mbn-icon">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+                    <circle cx="12" cy="8" r="4" />
+                    <path d="M4 21c0-4.4 3.6-8 8-8s8 3.6 8 8" />
+                </svg>
+            </span>
+            <span class="mbn-label"> سفارشات من</span>
+        </a>
+
+        <!-- دکمه کانال‌های ارتباطی -->
+        <a href="javascript:void(0)"
+            class="mbn-item mbn-item-contact"
+            id="socialToggle"
+            role="button"
+            aria-expanded="false"
+            aria-label="کانال‌های ارتباطی">
+            <span class="mbn-icon">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+                    <path d="M21 11.5a8.4 8.4 0 0 1-.9 3.8 8.5 8.5 0 0 1-7.6 4.7 8.4 8.4 0 0 1-3.8-.9L3 21l1.9-5.7a8.4 8.4 0 0 1-.9-3.8 8.5 8.5 0 0 1 4.7-7.6 8.4 8.4 0 0 1 3.8-.9h.5a8.5 8.5 0 0 1 8 8v.5z" />
+                </svg>
+            </span>
+            <span class="mbn-label">کانال‌های ارتباطی</span>
+        </a>
+
+    </nav>
+
+    <!-- منوی شبکه‌های اجتماعی (بالای نوار) -->
+    <div class="social-popup" id="socialPopup" aria-hidden="true" inert>
+        <a href="https://wa.me/989197693149" target="_blank" rel="noopener" class="social-popup-btn whatsapp" aria-label="واتساپ">
+            <svg viewBox="0 0 24 24" width="22" height="22" fill="currentColor">
+                <path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347m-5.421 7.403h-.004a9.87 9.87 0 0 1-5.031-1.378l-.361-.214-3.741.982.998-3.648-.235-.374a9.86 9.86 0 0 1-1.51-5.26c.001-5.45 4.436-9.884 9.888-9.884 2.64 0 5.122 1.03 6.988 2.898a9.825 9.825 0 0 1 2.893 6.994c-.003 5.45-4.437 9.884-9.885 9.884m8.413-18.297A11.815 11.815 0 0 0 12.05 0C5.495 0 .16 5.335.157 11.892c0 2.096.547 4.142 1.588 5.945L.057 24l6.305-1.654a11.882 11.882 0 0 0 5.683 1.448h.005c6.554 0 11.89-5.335 11.893-11.893a11.821 11.821 0 0 0-3.48-8.413Z" />
+            </svg>
+        </a>
+
+        <a href="https://t.me/+989197693149" target="_blank" rel="noopener" class="social-popup-btn telegram" aria-label="تلگرام">
+            <svg viewBox="0 0 24 24" width="22" height="22" fill="currentColor">
+                <path d="M11.944 0A12 12 0 0 0 0 12a12 12 0 0 0 12 12 12 12 0 0 0 12-12A12 12 0 0 0 12 0a12 12 0 0 0-.056 0zm4.962 7.224c.1-.002.321.023.465.14a.506.506 0 0 1 .171.325c.016.093.036.306.02.472-.18 1.898-.962 6.502-1.36 8.627-.168.9-.499 1.201-.82 1.23-.696.065-1.225-.46-1.9-.902-1.056-.693-1.653-1.124-2.678-1.8-1.185-.78-.417-1.21.258-1.91.177-.184 3.247-2.977 3.307-3.23.007-.032.014-.15-.056-.212s-.174-.041-.249-.024c-.106.024-1.793 1.14-5.061 3.345-.48.33-.913.49-1.302.48-.428-.008-1.252-.241-1.865-.44-.752-.245-1.349-.374-1.297-.789.027-.216.325-.437.893-.663 3.498-1.524 5.83-2.529 6.998-3.014 3.332-1.386 4.025-1.627 4.476-1.635z" />
+            </svg>
+        </a>
+
+        <a href="https://ble.ir/09197693149" target="_blank" rel="noopener" class="social-popup-btn bale" aria-label="بله">
+            <svg viewBox="0 0 24 24" width="22" height="22" fill="currentColor">
+                <path d="M12 2C6.477 2 2 6.145 2 11.259c0 2.898 1.478 5.479 3.786 7.16V22l3.464-1.898c.87.24 1.79.37 2.75.37 5.523 0 10-4.146 10-9.259C22 6.145 17.523 2 12 2Zm4.794 7.137-3.878 6.156c-.229.363-.712.45-1.053.187l-2.847-2.204-2.027 1.558c-.302.232-.71.013-.71-.354V9.813c0-.41.474-.637.79-.376l4.086 3.372 2.213-3.513c.244-.387.83-.35 1.023.06l.003.008c.087.185.086.397-.007.573Z" />
+            </svg>
+        </a>
+    </div>
+
+    <script src="/assets/js/jalali.js" defer></script>
+
+    <!-- ⭐ defer → اجرا بعد از پارس HTML (TBT کمتر) | v1008 = لود PricingService + سطح مشتری در هدر -->
+    <script src="/assets/js/app.js?v=1008" defer></script>
 
 </body>
 

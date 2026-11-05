@@ -1,0 +1,804 @@
+/* ═══════════════════════════════════════════════════════════════
+   RABETI-CUSTOM-ORDER | custom-order.css | v5 | 2026-10-30
+   استایل ماژول سفارش اختصاصی (فرم ثبت + پیگیری) — RTL
+   محل نصب: /assets/css/custom-order.css
+═══════════════════════════════════════════════════════════════ */
+
+:root {
+    --co-orange: #ea7a1f;
+    --co-orange-dark: #c95f0a;
+    --co-orange-soft: #fff7ed;
+    --co-ink: #1f2937;
+    --co-muted: #6b7280;
+    --co-line: #e5e7eb;
+    --co-bg: #f8fafc;
+    --co-ok: #16a34a;
+    --co-ok-bg: #f0fdf4;
+    --co-ok-line: #86efac;
+    --co-bad: #dc2626;
+    --co-bad-bg: #fef2f2;
+    --co-bad-line: #fca5a5;
+    --co-radius: 12px;
+}
+
+/* ───────── سربرگ صفحه ───────── */
+.co-form, .coi-summary, .coi-timeline, .coi-action-box,
+.coi-myorders, .coi-claim-box, .coi-hint-box, .coi-userbar,
+.empty-state, .co-debug { font-size: 13.5px; }
+
+/* ───────── دکمه‌ها (اسکوپ‌شده به کانتینرهای ماژول تا با استایل سایت تداخل نکند) ───────── */
+.co-form .btn, .coi-action-box .btn, .empty-state .btn,
+.coi-claim-row .btn, .coi-hint-box .btn {
+    display: inline-block;
+    border: 0;
+    border-radius: 10px;
+    padding: 11px 26px;
+    font-family: inherit;
+    font-size: 13.5px;
+    font-weight: 700;
+    cursor: pointer;
+    text-decoration: none;
+    line-height: 1.8;
+    transition: filter .15s ease, transform .05s ease;
+}
+.co-form .btn:active, .coi-action-box .btn:active, .empty-state .btn:active { transform: translateY(1px); }
+.co-form .btn-orange, .coi-action-box .btn-orange, .empty-state .btn-orange {
+    background: var(--co-orange);
+    color: #fff;
+}
+.co-form .btn-orange:hover, .coi-action-box .btn-orange:hover, .empty-state .btn-orange:hover {
+    background: var(--co-orange-dark);
+}
+.co-form .btn-ghost, .coi-action-box .btn-ghost, .empty-state .btn-ghost, .coi-claim-row .btn-ghost {
+    background: #fff;
+    color: var(--co-ink);
+    border: 1px solid var(--co-line);
+}
+.co-form .btn-ghost:hover, .coi-action-box .btn-ghost:hover, .empty-state .btn-ghost:hover {
+    background: var(--co-bg);
+}
+
+/* ───────── هشدارها ───────── */
+.form-alert {
+    background: var(--co-bad-bg);
+    border: 1px solid var(--co-bad-line);
+    color: #991b1b;
+    border-radius: var(--co-radius);
+    padding: 12px 16px;
+    margin: 0 0 16px;
+    font-weight: 600;
+}
+.form-alert.ok {
+    background: var(--co-ok-bg);
+    border-color: var(--co-ok-line);
+    color: #166534;
+}
+
+/* ───────── نوار حساب کاربری ───────── */
+.coi-userbar {
+    display: flex;
+    align-items: center;
+    flex-wrap: wrap;
+    gap: 8px;
+    background: var(--co-orange-soft);
+    border: 1px solid #fed7aa;
+    border-radius: var(--co-radius);
+    padding: 10px 16px;
+    margin-bottom: 16px;
+}
+.coi-userbar-ico { font-size: 16px; }
+.coi-userbar a { margin-right: auto; color: var(--co-orange-dark); font-weight: 700; text-decoration: none; }
+.coi-userbar a:hover { text-decoration: underline; }
+
+/* ───────── کارت عضویت (مهمان) ───────── */
+.co-auth-card { text-align: center; }
+.co-auth-benefits {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+    max-width: 560px;
+    margin: 0 auto 18px;
+    text-align: right;
+    color: #166534;
+    font-weight: 600;
+}
+
+/* ───────── ارجاع محصول ───────── */
+.coi-ref {
+    display: flex;
+    align-items: center;
+    gap: 14px;
+    background: var(--co-bg);
+    border: 1px solid var(--co-line);
+    border-radius: var(--co-radius);
+    padding: 12px 14px;
+    margin-bottom: 18px;
+    position: relative;
+}
+.coi-ref-img {
+    width: 64px; height: 64px;
+    border-radius: 10px;
+    background: #fff;
+    border: 1px solid var(--co-line);
+    display: flex; align-items: center; justify-content: center;
+    font-size: 26px;
+    overflow: hidden;
+    flex: none;
+}
+.coi-ref-img img { width: 100%; height: 100%; object-fit: cover; }
+.coi-ref-info { display: flex; flex-direction: column; gap: 2px; }
+.coi-ref-info span { color: var(--co-ink); font-weight: 600; }
+.coi-ref-info small { color: var(--co-muted); }
+.coi-ref-remove {
+    position: absolute;
+    top: 8px; left: 8px;
+    width: 26px; height: 26px;
+    border-radius: 50%;
+    border: 1px solid var(--co-line);
+    background: #fff;
+    color: var(--co-muted);
+    font-size: 15px;
+    line-height: 1;
+    cursor: pointer;
+}
+.coi-ref-remove:hover { background: var(--co-bad-bg); color: var(--co-bad); border-color: var(--co-bad-line); }
+
+/* ───────── ردیف‌های آیتم سفارش ───────── */
+.coi-section-title { font-weight: 800; margin: 6px 0 10px; font-size: 14px; }
+.coi-section-title i { color: var(--co-bad); font-style: normal; }
+#coiRows { display: flex; flex-direction: column; gap: 10px; }
+.coi-row {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 10px;
+    align-items: flex-end;
+    background: var(--co-bg);
+    border: 1px solid var(--co-line);
+    border-radius: var(--co-radius);
+    padding: 12px;
+    position: relative;
+}
+.coi-cell { flex: 1 1 160px; display: flex; flex-direction: column; gap: 5px; }
+.coi-cell-type { flex: 0 1 150px; }
+.coi-cell-qty { flex: 0 1 130px; }
+.coi-cell label { font-size: 11.5px; color: var(--co-muted); font-weight: 700; }
+.coi-cell input, .coi-cell select,
+.form-field input, .form-field select, .form-field textarea {
+    width: 100%;
+    border: 1px solid #d1d5db;
+    border-radius: 8px;
+    padding: 9px 12px;
+    font-family: inherit;
+    font-size: 13px;
+    background: #fff;
+    color: var(--co-ink);
+}
+.coi-cell input:focus, .coi-cell select:focus,
+.form-field input:focus, .form-field select:focus, .form-field textarea:focus {
+    outline: none;
+    border-color: var(--co-orange);
+    box-shadow: 0 0 0 3px rgba(234, 122, 31, .12);
+}
+.coi-del {
+    flex: none;
+    width: 34px; height: 38px;
+    border: 1px solid var(--co-line);
+    background: #fff;
+    border-radius: 8px;
+    color: var(--co-muted);
+    font-size: 16px;
+    cursor: pointer;
+}
+.coi-del:hover { background: var(--co-bad-bg); color: var(--co-bad); border-color: var(--co-bad-line); }
+.coi-row-actions {
+    display: flex;
+    align-items: center;
+    flex-wrap: wrap;
+    gap: 14px;
+    margin-top: 12px;
+}
+.coi-total { color: var(--co-ink); font-weight: 700; }
+.coi-total b { color: var(--co-orange-dark); font-size: 15px; }
+
+/* ───────── فرم عمومی ───────── */
+.co-form { display: block; }
+.form-row { display: flex; flex-wrap: wrap; gap: 14px; }
+.form-row .form-field { flex: 1 1 220px; }
+.form-field { display: flex; flex-direction: column; gap: 6px; margin-bottom: 16px; }
+.form-field label { font-weight: 700; font-size: 13px; color: var(--co-ink); }
+.form-field label i { color: var(--co-bad); font-style: normal; }
+.field-hint { font-size: 11.5px; color: var(--co-muted); }
+.co-optional { color: var(--co-muted); font-weight: 400; font-size: 11.5px; }
+.field-error { color: var(--co-bad); font-size: 12px; font-weight: 600; }
+.co-submit { width: 100%; margin-top: 6px; }
+.form-privacy {
+    margin-top: 16px;
+    font-size: 11.5px;
+    color: var(--co-muted);
+    line-height: 2;
+    background: var(--co-bg);
+    border-radius: 10px;
+    padding: 10px 14px;
+}
+
+/* ───────── دراپ‌زون آپلود ───────── */
+.co-drop { position: relative; }
+.co-file-input { position: absolute; width: 1px; height: 1px; opacity: 0; overflow: hidden; }
+.co-dropzone {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 4px;
+    border: 2px dashed #cbd5e1;
+    border-radius: var(--co-radius);
+    background: var(--co-bg);
+    padding: 22px 16px;
+    cursor: pointer;
+    text-align: center;
+    transition: border-color .15s, background .15s;
+}
+.co-dropzone:hover, .co-dropzone.drag {
+    border-color: var(--co-orange);
+    background: var(--co-orange-soft);
+}
+.co-drop-ico { font-size: 26px; }
+.co-dropzone b { font-size: 13px; color: var(--co-ink); }
+.co-drop-or { font-size: 12px; color: var(--co-muted); }
+.co-dropzone small { font-size: 10.5px; color: #9ca3af; }
+.co-file-chip {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    margin-top: 10px;
+    background: #fff;
+    border: 1px solid var(--co-ok-line);
+    border-radius: 10px;
+    padding: 8px 12px;
+    font-size: 12px;
+}
+.co-chip-ico { font-size: 15px; }
+.co-chip-name { font-weight: 700; color: var(--co-ink); word-break: break-all; }
+.co-chip-size { color: var(--co-muted); flex: none; }
+.co-chip-clear {
+    margin-right: auto;
+    border: 0;
+    background: transparent;
+    color: var(--co-muted);
+    font-size: 15px;
+    cursor: pointer;
+}
+.co-chip-clear:hover { color: var(--co-bad); }
+.co-file-error {
+    margin-top: 8px;
+    background: var(--co-bad-bg);
+    border: 1px solid var(--co-bad-line);
+    color: #991b1b;
+    border-radius: 8px;
+    padding: 8px 12px;
+    font-size: 12px;
+    font-weight: 600;
+}
+
+/* ───────── فهرست سفارش‌های حساب ───────── */
+.coi-myorders, .coi-claim-box, .coi-hint-box {
+    background: #fff;
+    border: 1px solid var(--co-line);
+    border-radius: var(--co-radius);
+    padding: 16px 18px;
+    margin-bottom: 16px;
+}
+.coi-myorders-title { display: block; margin-bottom: 12px; font-size: 13.5px; }
+.coi-order-card {
+    display: flex;
+    align-items: center;
+    flex-wrap: wrap;
+    gap: 8px 14px;
+    border: 1px solid var(--co-line);
+    border-radius: 10px;
+    padding: 10px 14px;
+    margin-bottom: 8px;
+    text-decoration: none;
+    color: var(--co-ink);
+    transition: border-color .15s, box-shadow .15s;
+}
+.coi-order-card:hover { border-color: var(--co-orange); box-shadow: 0 2px 10px rgba(234,122,31,.12); }
+.coi-order-code { font-family: monospace; font-weight: 800; color: var(--co-orange-dark); }
+.coi-order-status { font-size: 12px; font-weight: 700; color: var(--co-muted); }
+.coi-order-status.todo { color: var(--co-orange-dark); }
+.coi-order-date { color: var(--co-muted); font-size: 11.5px; }
+.coi-order-go { margin-right: auto; font-size: 12px; color: var(--co-orange-dark); font-weight: 700; }
+.coi-claim-row {
+    display: flex;
+    align-items: center;
+    flex-wrap: wrap;
+    gap: 8px 14px;
+    border: 1px dashed #fcd34d;
+    background: #fffbeb;
+    border-radius: 10px;
+    padding: 10px 14px;
+    margin: 10px 0;
+}
+.coi-hint-box { background: #eff6ff; border-color: #bfdbfe; color: #1e40af; }
+
+/* ───────── خلاصه سفارش ───────── */
+.coi-summary {
+    background: #fff;
+    border: 1px solid var(--co-line);
+    border-radius: var(--co-radius);
+    padding: 18px 20px;
+    margin-bottom: 16px;
+}
+.coi-summary-head {
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-start;
+    flex-wrap: wrap;
+    gap: 10px;
+    margin-bottom: 12px;
+}
+.coi-track {
+    font-family: monospace;
+    font-size: 16px;
+    color: var(--co-orange-dark);
+    margin-left: 8px;
+}
+.coi-chip {
+    display: inline-block;
+    border-radius: 999px;
+    padding: 3px 12px;
+    font-size: 11.5px;
+    font-weight: 700;
+    background: var(--co-bg);
+    border: 1px solid var(--co-line);
+    color: var(--co-muted);
+    vertical-align: middle;
+}
+.coi-chip.bad { background: var(--co-bad-bg); border-color: var(--co-bad-line); color: #991b1b; }
+.coi-chip.todo { background: var(--co-orange-soft); border-color: #fdba74; color: var(--co-orange-dark); }
+.coi-summary-date { color: var(--co-muted); font-size: 11.5px; }
+.coi-ref-line { font-size: 12.5px; color: var(--co-ink); margin-bottom: 6px; }
+.coi-ref-line a { color: var(--co-orange-dark); }
+.coi-items { width: 100%; border-collapse: collapse; margin-top: 8px; }
+.coi-items th, .coi-items td {
+    border: 1px solid var(--co-line);
+    padding: 7px 10px;
+    text-align: center;
+    font-size: 12.5px;
+}
+.coi-items th { background: var(--co-bg); color: #374151; }
+.coi-items-total td { background: var(--co-orange-soft); font-weight: 800; color: var(--co-orange-dark); }
+
+/* ───────── تایم‌لاین مراحل ───────── */
+.coi-timeline {
+    background: #fff;
+    border: 1px solid var(--co-line);
+    border-radius: var(--co-radius);
+    padding: 18px 20px;
+    margin-bottom: 16px;
+}
+.coi-tl-step {
+    display: flex;
+    gap: 12px;
+    position: relative;
+    padding-bottom: 18px;
+}
+.coi-tl-step:last-child { padding-bottom: 0; }
+.coi-tl-step::before {
+    content: '';
+    position: absolute;
+    top: 22px; right: 9px; bottom: 0;
+    width: 2px;
+    background: var(--co-line);
+}
+.coi-tl-step:last-child::before { display: none; }
+.coi-tl-dot {
+    flex: none;
+    width: 20px; height: 20px;
+    border-radius: 50%;
+    border: 3px solid #cbd5e1;
+    background: #fff;
+    margin-top: 3px;
+    z-index: 1;
+}
+.coi-tl-step.done .coi-tl-dot { border-color: var(--co-ok); background: var(--co-ok); box-shadow: inset 0 0 0 3px #fff; }
+.coi-tl-step.current .coi-tl-dot { border-color: var(--co-orange); background: var(--co-orange); box-shadow: inset 0 0 0 3px #fff, 0 0 0 4px var(--co-orange-soft); }
+.coi-tl-body b { font-size: 13px; color: var(--co-ink); }
+.coi-tl-step.pending .coi-tl-body b { color: #9ca3af; }
+.coi-tl-step.current .coi-tl-body b { color: var(--co-orange-dark); }
+.coi-tl-body p { font-size: 12px; color: var(--co-muted); margin: 2px 0; }
+.coi-tl-body small { display: block; font-size: 11px; color: #059669; }
+
+/* ───────── کارت اقدام (مرحله جاری) ───────── */
+.coi-action-box {
+    background: #fff;
+    border: 1px solid #fdba74;
+    border-right: 4px solid var(--co-orange);
+    border-radius: var(--co-radius);
+    padding: 18px 20px;
+    margin-bottom: 16px;
+}
+.coi-action-box h2 { font-size: 15px; margin-bottom: 10px; color: var(--co-ink); }
+.coi-action-box .co-submit { width: auto; min-width: 220px; }
+.coi-agreement-text {
+    background: var(--co-bg);
+    border: 1px solid var(--co-line);
+    border-radius: 10px;
+    padding: 12px 16px;
+    margin-bottom: 14px;
+    font-size: 12.5px;
+}
+.coi-agreement-text ol { padding-right: 20px; }
+.coi-agreement-text li { margin-bottom: 6px; }
+.coi-check { display: flex; align-items: flex-start; gap: 8px; margin: 10px 0 14px; font-size: 12.5px; }
+.coi-check input { width: 17px; height: 17px; margin-top: 3px; }
+
+/* ⭐ کلاس‌های لغو سفارش — واضح و قرمز، زیر تایم‌لاین */
+.coi-cancel-box {
+    background: var(--co-bad-bg);
+    border: 1px solid var(--co-bad-line);
+    border-radius: var(--co-radius);
+    padding: 14px 18px;
+    margin: 20px 0 8px;
+    text-align: left;
+}
+.coi-cancel-btn {
+    background: #fff;
+    color: var(--co-bad);
+    border: 1px solid var(--co-bad-line);
+    border-radius: 10px;
+    padding: 9px 22px;
+    font-family: inherit;
+    font-size: 12.5px;
+    font-weight: 700;
+    cursor: pointer;
+    transition: background .15s, color .15s;
+}
+.coi-cancel-btn:hover { background: var(--co-bad); color: #fff; border-color: var(--co-bad); }
+
+/* ───────── باکس دیباگ ───────── */
+.co-debug {
+    background: #1f2937;
+    color: #e5e7eb;
+    border-radius: 10px;
+    padding: 10px 14px;
+    margin-bottom: 16px;
+    font-size: 12px;
+}
+.co-debug summary { cursor: pointer; color: #fbbf24; font-weight: 700; }
+.co-debug code { direction: ltr; display: block; margin-top: 8px; word-break: break-all; }
+
+/* ───────── حالت خالی ───────── */
+.empty-state {
+    background: #fff;
+    border: 1px solid var(--co-line);
+    border-radius: var(--co-radius);
+    padding: 34px 24px;
+    text-align: center;
+}
+.empty-icon { font-size: 40px; margin-bottom: 10px; }
+.empty-state h2 { font-size: 17px; margin-bottom: 8px; }
+
+/* ───────── واکنش‌گرا ───────── */
+@media (max-width: 640px) {
+    .coi-cell { flex: 1 1 45%; }
+    .coi-ref { flex-wrap: wrap; }
+    .co-form .btn, .coi-action-box .btn, .empty-state .btn { width: 100%; margin-bottom: 8px; }
+    .coi-order-go { margin-right: 0; }
+}
+/* ═══════════════════════════════════════════════════════
+   Accordion سفارش‌های حساب — v6 (2026-10-30)
+   هر سفارش = یک کارت مستقل با border و padding جدا
+   ═══════════════════════════════════════════════════════ */
+
+/* کانتینر اصلی — بدون پس‌زمینه، فقط فاصله */
+.coi-myorders {
+    margin: 20px 0;
+}
+
+.coi-myorders-title {
+    display: block;
+    margin-bottom: 14px;
+    font-size: 15px;
+    color: #374151;
+}
+
+/* ═══ هر سفارش = یک کارت مستقل ═══ */
+.coi-order-accordion {
+    display: block;
+    background: #ffffff;
+    border: 1.5px solid #e5e7eb;
+    border-radius: 12px;
+    margin-bottom: 12px;
+    overflow: hidden;
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.04);
+    transition: box-shadow 0.2s ease, border-color 0.2s ease;
+}
+
+.coi-order-accordion:hover {
+    border-color: #fdba74;
+    box-shadow: 0 2px 8px rgba(249, 115, 22, 0.08);
+}
+
+.coi-order-accordion[open] {
+    border-color: #f97316;
+    box-shadow: 0 4px 16px rgba(249, 115, 22, 0.12);
+}
+
+/* ═══ هدر کارت (summary) ═══ */
+.coi-order-accordion > summary {
+    list-style: none;
+    cursor: pointer;
+    padding: 14px 18px;
+    display: flex;
+    align-items: center;
+    gap: 14px;
+    flex-wrap: wrap;
+    background: #fafafa;
+    user-select: none;
+    transition: background 0.15s ease;
+}
+
+.coi-order-accordion > summary::-webkit-details-marker {
+    display: none;
+}
+.coi-order-accordion > summary::marker {
+    display: none;
+    content: '';
+}
+
+.coi-order-accordion > summary:hover {
+    background: #fff7ed;
+}
+
+.coi-order-accordion[open] > summary {
+    background: #fff7ed;
+    border-bottom: 1px solid #fed7aa;
+}
+
+/* ═══ اجزای داخل summary ═══ */
+.coi-order-accordion .coi-order-code {
+    font-family: 'Courier New', monospace;
+    font-weight: 700;
+    font-size: 14px;
+    color: #1f2937;
+    letter-spacing: 0.5px;
+    padding: 4px 10px;
+    background: #f3f4f6;
+    border-radius: 6px;
+}
+
+.coi-order-accordion .coi-order-status {
+    font-size: 13px;
+    font-weight: 600;
+    padding: 4px 10px;
+    border-radius: 20px;
+    background: #dbeafe;
+    color: #1e40af;
+    white-space: nowrap;
+}
+
+.coi-order-accordion .coi-order-status.bad {
+    background: #fee2e2;
+    color: #b91c1c;
+}
+
+.coi-order-accordion .coi-order-status.todo {
+    background: #fef3c7;
+    color: #92400e;
+    animation: coiPulse 1.8s ease-in-out infinite;
+}
+
+@keyframes coiPulse {
+    0%, 100% { box-shadow: 0 0 0 0 rgba(245, 158, 11, 0.4); }
+    50%      { box-shadow: 0 0 0 6px rgba(245, 158, 11, 0); }
+}
+
+.coi-order-accordion .coi-order-date {
+    font-size: 12px;
+    color: #6b7280;
+    margin-right: auto;
+}
+
+.coi-order-accordion .coi-order-go {
+    font-size: 12px;
+    color: #f97316;
+    font-weight: 600;
+    white-space: nowrap;
+}
+
+/* ═══ محتوای باز شده ═══ */
+.coi-order-accordion > .coi-order-body {
+    padding: 18px;
+    background: #ffffff;
+    animation: coiSlideDown 0.2s ease-out;
+    border-top: 1px solid #f3f4f6;
+}
+
+@keyframes coiSlideDown {
+    from { opacity: 0; transform: translateY(-6px); }
+    to   { opacity: 1; transform: translateY(0); }
+}
+
+/* وقتی بسته است، body نمایش داده نمی‌شود (پیش‌فرض مرورگر) */
+.coi-order-accordion:not([open]) > .coi-order-body {
+    display: none;
+}
+
+/* ═══ موبایل ═══ */
+@media (max-width: 640px) {
+    .coi-order-accordion > summary {
+        padding: 12px 14px;
+        gap: 8px;
+    }
+    .coi-order-accordion .coi-order-code {
+        font-size: 12px;
+        padding: 3px 8px;
+    }
+    .coi-order-accordion .coi-order-status {
+        font-size: 11px;
+        padding: 3px 8px;
+    }
+    .coi-order-accordion .coi-order-date {
+        width: 100%;
+        margin-right: 0;
+        margin-top: 4px;
+        order: 4;
+    }
+    .coi-order-accordion .coi-order-go {
+        order: 5;
+    }
+    .coi-order-accordion > .coi-order-body {
+        padding: 14px;
+    }
+}
+/* ═══════════════════════════════════════════════════════════════
+   ⭐ OVERRIDE نهایی — آکاردئون آکاردئون آکاردئون
+   این باید آخرین خط فایل باشد تا همه چیز را override کند
+   ═══════════════════════════════════════════════════════════════ */
+
+/* کانتینر آکاردئون — حذف باکس سفید قدیمی */
+.coi-myorders {
+    background: transparent !important;
+    border: none !important;
+    border-radius: 0 !important;
+    padding: 0 !important;
+    margin: 20px 0 !important;
+    box-shadow: none !important;
+}
+
+.coi-myorders-title {
+    display: block !important;
+    margin-bottom: 14px !important;
+    font-size: 15px !important;
+    color: #374151 !important;
+    padding: 0 !important;
+}
+
+/* ═══ هر سفارش — کارت مستقل با border واضح ═══ */
+.coi-order-accordion {
+    display: block !important;
+    background: #ffffff !important;
+    border: 2px solid #e5e7eb !important;
+    border-radius: 12px !important;
+    margin-bottom: 14px !important;
+    overflow: hidden !important;
+    box-shadow: 0 2px 6px rgba(0, 0, 0, 0.06) !important;
+    transition: box-shadow 0.2s, border-color 0.2s !important;
+}
+
+.coi-order-accordion[open] {
+    border-color: #f97316 !important;
+    box-shadow: 0 4px 16px rgba(249, 115, 22, 0.15) !important;
+}
+
+/* ═══ هدر کارت — flex با فاصله واضح ═══ */
+.coi-order-accordion > summary {
+    display: flex !important;
+    align-items: center !important;
+    flex-wrap: wrap !important;
+    gap: 10px 16px !important;
+    padding: 16px 20px !important;
+    background: #fafafa !important;
+    cursor: pointer !important;
+    list-style: none !important;
+    font-size: 14px !important;
+    transition: background 0.15s !important;
+}
+
+.coi-order-accordion > summary::-webkit-details-marker { display: none !important; }
+.coi-order-accordion > summary::marker { display: none !important; content: '' !important; }
+
+.coi-order-accordion > summary:hover {
+    background: #fff7ed !important;
+}
+
+.coi-order-accordion[open] > summary {
+    background: #fff7ed !important;
+    border-bottom: 1px solid #fed7aa !important;
+}
+
+/* کد پیگیری */
+.coi-order-accordion .coi-order-code {
+    font-family: 'Courier New', monospace !important;
+    font-weight: 700 !important;
+    font-size: 14px !important;
+    color: #1f2937 !important;
+    letter-spacing: 0.5px !important;
+    padding: 5px 12px !important;
+    background: #e5e7eb !important;
+    border-radius: 6px !important;
+    white-space: nowrap !important;
+}
+
+/* وضعیت */
+.coi-order-accordion .coi-order-status {
+    font-size: 13px !important;
+    font-weight: 600 !important;
+    padding: 5px 12px !important;
+    border-radius: 20px !important;
+    background: #dbeafe !important;
+    color: #1e40af !important;
+    white-space: nowrap !important;
+}
+
+.coi-order-accordion .coi-order-status.bad {
+    background: #fee2e2 !important;
+    color: #b91c1c !important;
+}
+
+.coi-order-accordion .coi-order-status.todo {
+    background: #fef3c7 !important;
+    color: #92400e !important;
+}
+
+/* تاریخ — سمت چپ */
+.coi-order-accordion .coi-order-date {
+    font-size: 12px !important;
+    color: #6b7280 !important;
+    margin-right: auto !important;
+    white-space: nowrap !important;
+}
+
+/* «مشاهده جزئیات» */
+.coi-order-accordion .coi-order-go {
+    font-size: 12px !important;
+    color: #f97316 !important;
+    font-weight: 700 !important;
+    white-space: nowrap !important;
+}
+
+/* ═══ محتوای باز شده ═══ */
+.coi-order-accordion > .coi-order-body {
+    padding: 20px !important;
+    background: #ffffff !important;
+    border-top: 1px solid #f3f4f6 !important;
+    animation: coiSlideDown 0.2s ease-out !important;
+}
+
+.coi-order-accordion:not([open]) > .coi-order-body {
+    display: none !important;
+}
+
+/* ═══ موبایل ═══ */
+@media (max-width: 640px) {
+    .coi-order-accordion > summary {
+        padding: 14px 16px !important;
+        gap: 8px !important;
+    }
+    .coi-order-accordion .coi-order-code {
+        font-size: 12px !important;
+        padding: 4px 10px !important;
+    }
+    .coi-order-accordion .coi-order-status {
+        font-size: 11px !important;
+        padding: 4px 10px !important;
+    }
+    .coi-order-accordion .coi-order-date {
+        width: 100% !important;
+        margin-right: 0 !important;
+        margin-top: 4px !important;
+    }
+    .coi-order-accordion > .coi-order-body {
+        padding: 16px !important;
+    }
+}

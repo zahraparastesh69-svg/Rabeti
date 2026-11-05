@@ -108,6 +108,7 @@ DirectoryIndex index.php index.html
     RewriteRule ^admin/report-shipping/?$ admin/report-shipping.php [L,QSA]
     RewriteRule ^admin/report-inventory/?$ admin/report-inventory.php [L,QSA]
     RewriteRule ^admin/price-update/?$  admin/price-update.php [L,QSA]
+    RewriteRule ^admin/custom-orders/?$  admin/custom-orders.php [L,QSA]
     RewriteRule ^admin/shipping-settings/?$ admin/shipping-settings.php [L,QSA]
     RewriteRule ^admin/?$               admin/index.php [L,QSA]
     RewriteRule ^admin/([a-z\-]+)/?$    admin/$1.php [L,QSA]
@@ -132,6 +133,7 @@ DirectoryIndex index.php index.html
     # Account
     RewriteRule ^account-orders/?$      account-orders.php [L,QSA]
     RewriteRule ^refund-request/?$      refund-request.php [L,QSA]
+    RewriteRule ^custom-order-track/?$      custom-order-track.php [L,QSA]
 
     # Static Pages
     RewriteRule ^custom-order/?$        custom-order.php [L,QSA]
@@ -139,4 +141,5 @@ DirectoryIndex index.php index.html
     RewriteRule ^contact/?$             contact.php [L,QSA]
     RewriteRule ^register/?$            register.php [L,QSA]
     RewriteRule ^api/reorder/?$         api/reorder.php [L,QSA]
+    RewriteRule ^preview-invoice/?$      preview-invoice.php [L,QSA]
 </IfModule>

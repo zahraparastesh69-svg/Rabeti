@@ -1,22 +1,24 @@
 <?php
 
 declare(strict_types=1);
-
 /* [FILE] public/admin/payments.php — Financial Center (ادمین) */
-
 /* Auto-detect bootstrap (local + host) */
 $__bp = [
     __DIR__ . '/../../sock-b2b/config/bootstrap.php',
     __DIR__ . '/../../config/bootstrap.php',
 ];
-foreach ($__bp as $__b) { if (is_file($__b)) { require_once $__b; break; } }
+foreach ($__bp as $__b) {
+    if (is_file($__b)) {
+        require_once $__b;
+        break;
+    }
+}
 unset($__bp, $__b);
 require_once ROOT_PATH . '/config/database.php';
 require_once ROOT_PATH . '/config/auth.php';
 require_once ROOT_PATH . '/config/settings.php';
 require_once ROOT_PATH . '/app/services/SmsService.php';
 require_once ROOT_PATH . '/app/services/OrderSmsService.php';
-
 require_admin();
 
 $db = db();
@@ -145,30 +147,18 @@ $invStatusLabel = static fn(string $s): string => match ($s) {
 };
 
 /* ═══ ارسال SMS تأیید سفارش — فقط بعد از COMMIT ═══ */
-
 $sendOrderApprovedSms = static function (array $fin): void {
-    if (
-        empty($fin['order_transitioned_to_processing'])
-        || empty($fin['order_id'])
-    ) {
+    if (empty($fin['order_id'])) {
         return;
     }
 
     try {
-        OrderSmsService::orderApproved(
-            (int)$fin['order_id']
-        );
+        OrderSmsService::orderApproved((int)$fin['order_id'], $fin);
     } catch (Throwable $e) {
-        /*
-         * SMS نباید باعث rollback عملیات مالی شود.
-         * سفارش و پرداخت قبلاً COMMIT شده‌اند.
-         */
-        error_log(
-            'ORDER APPROVED SMS FAILED: '
-                . $e->getMessage()
-        );
+        error_log('ORDER APPROVED SMS FAILED: ' . $e->getMessage());
     }
 };
+
 
 /* ═══ نتیجه مالی — COMPUTED از حقیقت (total / paid_total) ═══ */
 
@@ -286,16 +276,13 @@ $reconcile = static function (int $invoiceId) use ($db): array {
         && $orderId !== null
     ) {
         $stmt = $db->prepare("
-            UPDATE orders
-            SET status = 'processing'
-            WHERE id = ?
-              AND status = 'pending_review'
-        ");
-
+    UPDATE orders
+    SET status = 'processing'
+    WHERE id = ?
+      AND status = 'pending_review'
+");
         $stmt->execute([$orderId]);
-
-        $orderTransitionedToProcessing =
-            ($stmt->rowCount() === 1);
+        $orderTransitionedToProcessing = ($stmt->rowCount() === 1);
     }
 
     return [
@@ -401,15 +388,17 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 INSERT INTO payment_verifications
                 (
                     payment_submission_id,
+                    invoice_id,
                     verified_amount,
                     status,
                     note,
                     verified_by,
                     verified_at
                 )
-                VALUES (?,?,?,?,?,NOW())
+                VALUES (?,?,?,?,?,?,NOW())
             ")->execute([
                 $subId,
+                (int)$sub['invoice_id'],
                 $actual,
                 'verified',
                 $note !== '' ? $note : null,
@@ -436,10 +425,10 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             $db->prepare("
                 INSERT INTO payment_verification_history
                 (
-                    payment_submission_id,
+                    payment_id,
                     invoice_id,
-                    old_verified_amount,
-                    new_verified_amount,
+                    old_amount,
+                    new_amount,
                     old_status,
                     new_status,
                     reason,
@@ -629,10 +618,10 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             $db->prepare("
                 INSERT INTO payment_verification_history
                 (
-                    payment_submission_id,
+                    payment_id,
                     invoice_id,
-                    old_verified_amount,
-                    new_verified_amount,
+                    old_amount,
+                    new_amount,
                     old_status,
                     new_status,
                     reason,
@@ -749,15 +738,17 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 INSERT INTO payment_verifications
                 (
                     payment_submission_id,
+                    invoice_id,
                     verified_amount,
                     status,
                     note,
                     verified_by,
                     verified_at
                 )
-                VALUES (?,NULL,'rejected',?,?,NOW())
+                VALUES (?,?,NULL,'rejected',?,?,NOW())
             ")->execute([
                 $subId,
+                (int)$sub['invoice_id'],
                 $reason,
                 $adminId
             ]);
@@ -778,10 +769,10 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             $db->prepare("
                 INSERT INTO payment_verification_history
                 (
-                    payment_submission_id,
+                    payment_id,
                     invoice_id,
-                    old_verified_amount,
-                    new_verified_amount,
+                    old_amount,
+                    new_amount,
                     old_status,
                     new_status,
                     reason,
@@ -1410,7 +1401,7 @@ ob_start();
                 value="<?= $h($search) ?>"
                 placeholder="فاکتور / سفارش / مشتری / موبایل">
 
-            <button>جستجو</button>
+            <button type="submit" class="btn btn-orange btn-sm">جستجو</button>
 
         </form>
 
@@ -1961,11 +1952,22 @@ ob_start();
                             </label>
 
                             <input
-                                type="number"
+                                type="text"
                                 name="actual_amount"
-                                min="1"
+                                id="actualAmount"
+                                inputmode="numeric"
                                 required
                                 placeholder="مبلغ رسید بانکی">
+                            <script>
+                                document.getElementById('actualAmount').addEventListener('input', function(e) {
+                                    // فقط رقم نگه دار
+                                    let value = this.value.replace(/[^\d]/g, '');
+                                    // جداکننده هزارگان
+                                    if (value) {
+                                        this.value = Number(value).toLocaleString('en-US');
+                                    }
+                                });
+                            </script>
 
                             <input
                                 type="text"
@@ -2107,7 +2109,7 @@ ob_start();
 
                                 <?= number_format(
                                     (int)(
-                                        $hh['old_verified_amount']
+                                        $hh['old_amount']
                                         ?? 0
                                     )
                                 ) ?>
@@ -2116,7 +2118,7 @@ ob_start();
 
                                 <?= number_format(
                                     (int)(
-                                        $hh['new_verified_amount']
+                                        $hh['new_amount']
                                         ?? 0
                                     )
                                 ) ?>

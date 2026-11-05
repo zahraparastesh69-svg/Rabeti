@@ -5,7 +5,12 @@ $__bp = [
     __DIR__ . '/../sock-b2b/config/bootstrap.php',
     __DIR__ . '/../config/bootstrap.php',
 ];
-foreach ($__bp as $__b) { if (is_file($__b)) { require_once $__b; break; } }
+foreach ($__bp as $__b) {
+    if (is_file($__b)) {
+        require_once $__b;
+        break;
+    }
+}
 unset($__bp, $__b);
 require_once ROOT_PATH . '/config/database.php';
 require_once ROOT_PATH . '/config/auth.php';
@@ -241,21 +246,21 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 | tier صحیح را انتخاب می‌کند.
 |
 */
-
+$userGroup = current_user_group();
 $stmt = $db->prepare("
     SELECT
         ci.product_id,
         ci.qty,
-        pr.price AS base_price
+        p.base_price AS base_price,
+        (SELECT spec_value FROM product_specs 
+         WHERE product_id = p.id AND spec_key = 'واحد سفارش' LIMIT 1) AS unit_code
     FROM cart_items ci
 
     JOIN carts c
         ON c.id = ci.cart_id
 
-    LEFT JOIN product_prices pr
-        ON pr.product_id = ci.product_id
-       AND pr.customer_group = 'wholesale'
-       AND pr.min_qty = 1
+    JOIN products p
+        ON p.id = ci.product_id
 
     WHERE c.user_id = ?
       AND c.status = 'active'
@@ -263,9 +268,7 @@ $stmt = $db->prepare("
     ORDER BY ci.id ASC
 ");
 
-$stmt->execute([
-    $userId
-]);
+$stmt->execute([$userId]);
 
 $cartItems = $stmt->fetchAll();
 
@@ -284,48 +287,58 @@ foreach ($cartItems as $item) {
 
     $productId = (int)$item['product_id'];
     $qty = (int)$item['qty'];
-    $basePrice = (int)($item['base_price'] ?? 0);
 
     if ($qty <= 0) {
         continue;
     }
 
-    /*
-     * اگر قیمت پایه وجود نداشته باشد،
-     * فعلاً این قلم را از محاسبه حذف می‌کنیم.
-     * کنترل نهایی دوباره در checkout-review انجام می‌شود.
-     */
-    if ($basePrice <= 0) {
+    $pricing = PricingService::calculate(
+        $db,
+        $productId,
+        $qty,
+        $userGroup
+    );
+
+    // اگر قیمت پایه صفر بود، این قلم را نادیده بگیر
+    if ($pricing['base_price'] <= 0) {
         continue;
     }
 
-    $pricing = PricingService::calculateForProduct(
-        $db,
-        $productId,
-        $basePrice,
-        $qty
-    );
-
-    $subtotal += (int)$pricing['base_line_total'];
-
-    $discountTotal += (int)$pricing['discount_amount'];
-
-    $finalSubtotal += (int)$pricing['line_total'];
-
-    $totalQty += $qty;
+    $subtotal       += (int)$pricing['base_line_total'];
+    $discountTotal  += (int)$pricing['discount_amount'];
+    $finalSubtotal  += (int)$pricing['line_total'];
+    $totalQty       += $qty;
 }
-
 /*
 |--------------------------------------------------------------------------
 | سازگاری با ساختار قبلی $cart
 |--------------------------------------------------------------------------
 */
 
+/* شمارش بر اساس واحد (برای نمایش «۵ جین + ۳ بسته») */
+$unitCounts = [];
+
+// کوئری باید unit_code را برگرداند
+foreach ($cartItems as $item) {
+    $qty = (int)$item['qty'];
+    if ($qty <= 0) continue;
+    $unit = unit_label($item['unit_code'] ?? 'جفتی');
+    if (!isset($unitCounts[$unit])) $unitCounts[$unit] = 0;
+    $unitCounts[$unit] += $qty;
+}
+
+$qtyParts = [];
+foreach ($unitCounts as $unit => $count) {
+    $qtyParts[] = number_format($count) . ' ' . $unit;
+}
+$qtyDisplay = $qtyParts ? implode(' + ', $qtyParts) : '۰ جفت';
+
 $cart = [
-    'subtotal' => $subtotal,
-    'discount'  => $discountTotal,
-    'final'     => $finalSubtotal,
-    'total_qty' => $totalQty,
+    'subtotal'    => $subtotal,
+    'discount'    => $discountTotal,
+    'final'       => $finalSubtotal,
+    'total_qty'   => $totalQty,
+    'qty_display' => $qtyDisplay,
 ];
 
 /*
@@ -498,12 +511,11 @@ ob_start();
         style="margin-top:20px;">
 
         <!-- جمع قیمت پایه -->
-
         <div class="cart-summary-row">
 
             <span>
                 جمع کالاها
-                (<?= number_format((int)$cart['total_qty']) ?> جفت)
+                (<?= $h($cart['qty_display'] ?? number_format((int)$cart['total_qty']) . ' جفت') ?>)
             </span>
 
             <b>

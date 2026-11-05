@@ -121,6 +121,27 @@ foreach ($rows as &$r) {
 unset($r);
 $finalBalance = $totalDebit - $totalCredit;
 
+/* ═══ خروجی CSV ═══ */
+if (($_GET['export'] ?? '') === 'csv') {
+    require_once ROOT_PATH . '/app/services/CsvExporter.php';
+    $csv = new CsvExporter('ledger-' . date('Y-m-d'));
+    $csv->header(['تاریخ', 'شماره فاکتور', 'مشتری', 'نوع', 'بدهکار', 'بستانکار', 'جمع مانده']);
+    $bal = 0;
+    foreach ($rows as $r) {
+        $bal += (int)$r['debit'] - (int)$r['credit'];
+        $csv->row([
+            $r['date'],
+            $r['invoice'],
+            $r['customer'],
+            $r['type'],
+            (int)$r['debit'],
+            (int)$r['credit'],
+            $bal,
+        ]);
+    }
+    $csv->end();
+}
+
 $pageTitle  = 'دفتر مالی';
 $activeMenu = 'reports';
 
@@ -135,6 +156,10 @@ ob_start();
 </section>
 
 <?php fin_rangeForm('/admin/report-ledger'); ?>
+
+<div style="text-align:left;margin:8px 0 14px;">
+    <a href="?export=csv&from=<?= $h($from) ?>&to=<?= $h($to) ?>" class="btn btn-orange" style="padding:7px 16px;font-size:.78rem;">⬇ خروجی CSV</a>
+</div>
 
 <div class="stat-cards" style="grid-template-columns:repeat(3,minmax(0,1fr));">
     <div class="stat-card stat-card-accent">

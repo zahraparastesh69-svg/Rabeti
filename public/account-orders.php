@@ -21,6 +21,25 @@ if (!is_logged_in()) {
     exit;
 }
 
+$moneyFa = static function ($amount): string {
+    $formatted = number_format((int)$amount);
+    // تبدیل اعداد لاتین به فارسی
+    $formatted = strtr($formatted, [
+        '0' => '۰',
+        '1' => '۱',
+        '2' => '۲',
+        '3' => '۳',
+        '4' => '۴',
+        '5' => '۵',
+        '6' => '۶',
+        '7' => '۷',
+        '8' => '۸',
+        '9' => '۹',
+        ',' => '٬',  // جداکننده هزارگان فارسی
+    ]);
+    return $formatted . ' تومان';
+};
+
 $h = static fn($v): string => htmlspecialchars((string)$v, ENT_QUOTES, 'UTF-8');
 
 $jalali = static function (?string $mysqlDate, bool $withTime = false): string {
@@ -150,26 +169,26 @@ ob_start();
                 <div class="mo-body">
                     <div class="mo-row">
                         <span>مبلغ فاکتور</span>
-                        <b><?= number_format((float)$o['total']) ?> تومان</b>
+                        <b><?= $moneyFa((float)$o['total']) ?> </b>
                     </div>
                     <div class="mo-row">
                         <span>پرداخت تأییدشده</span>
-                        <b><?= number_format($fin['paid']) ?> تومان</b>
+                        <b><?= $moneyFa($fin['paid']) ?> </b>
                     </div>
 
                     <?php if ($hasPending): ?>
                         <div class="mo-row">
                             <span>در انتظار بررسی مالی</span>
-                            <b style="color:var(--cta-d);"><?= number_format($fin['pending']) ?> تومان</b>
+                            <b style="color:var(--cta-d);"><?= $moneyFa($fin['pending']) ?> </b>
                         </div>
                     <?php endif; ?>
 
                     <div class="mo-row">
                         <span>مانده بدهی</span>
                         <?php if ($remaining > 0): ?>
-                            <b class="stock out"><?= number_format($remaining) ?> تومان</b>
+                            <b class="stock out"><?= $moneyFa($remaining) ?> </b>
                         <?php elseif ($isCreditor): ?>
-                            <b class="stock in">بستانکار: <?= number_format(abs($remaining)) ?> تومان</b>
+                            <b class="stock in">بستانکار: <?= $moneyFa(abs($remaining)) ?> </b>
                         <?php else: ?>
                             <b class="stock in">تسویه کامل ✓</b>
                         <?php endif; ?>
@@ -179,7 +198,7 @@ ob_start();
                 <div class="mo-actions">
                     <?php if ($o['status'] !== 'cancelled' && $remaining > 0 && !$hasPending): ?>
                         <a href="/payment?order=<?= $h($o['order_number']) ?>" class="btn btn-primary">
-                            💳 پرداخت مانده بدهی (<?= number_format($remaining) ?> تومان)
+                            💳 پرداخت مانده بدهی (<?= $moneyFa($remaining) ?> )
                         </a>
                     <?php elseif ($hasPending): ?>
                         <a href="/payment?order=<?= $h($o['order_number']) ?>" class="btn btn-outline">

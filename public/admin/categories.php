@@ -7,7 +7,12 @@ $__bp = [
     __DIR__ . '/../../sock-b2b/config/bootstrap.php',
     __DIR__ . '/../../config/bootstrap.php',
 ];
-foreach ($__bp as $__b) { if (is_file($__b)) { require_once $__b; break; } }
+foreach ($__bp as $__b) {
+    if (is_file($__b)) {
+        require_once $__b;
+        break;
+    }
+}
 unset($__bp, $__b);
 require_once ROOT_PATH . '/config/database.php';
 require_once ROOT_PATH . '/config/auth.php';
@@ -538,24 +543,25 @@ ob_start();
                             </button>
 
                             <form method="post" style="display:inline;">
-                                <?= csrf_field() ?>
-                                <input type="hidden" name="do" value="toggle">
-                                <input type="hidden" name="id" value="<?= (int)$c['id'] ?>">
-                                <button class="btn" style="padding:6px 12px;font-size:.72rem;">
-                                    <?= $c['is_active'] ? 'غیرفعال' : 'فعال' ?>
-                                </button>
-                            </form>
+                                <form method="post" style="display:inline;">
+                                    <?= csrf_field() ?>
+                                    <input type="hidden" name="do" value="toggle">
+                                    <input type="hidden" name="id" value="<?= (int)$c['id'] ?>">
+                                    <button class="btn" style="padding:6px 12px;font-size:.72rem;">
+                                        <?= $c['is_active'] ? 'غیرفعال' : 'فعال' ?>
+                                    </button>
+                                </form>
 
-                            <form method="post" style="display:inline;"
-                                onsubmit="return confirm('حذف شود؟');">
-                                <?= csrf_field() ?>
-                                <input type="hidden" name="do" value="delete">
-                                <input type="hidden" name="id" value="<?= (int)$c['id'] ?>">
-                                <button class="btn"
-                                    style="padding:6px 12px;font-size:.72rem;background:#fff0f0;color:#c62828;">
-                                    🗑
-                                </button>
-                            </form>
+                                <form method="post" style="display:inline;"
+                                    onsubmit="return confirm('حذف شود؟');">
+                                    <?= csrf_field() ?>
+                                    <input type="hidden" name="do" value="delete">
+                                    <input type="hidden" name="id" value="<?= (int)$c['id'] ?>">
+                                    <button class="btn"
+                                        style="padding:6px 12px;font-size:.72rem;background:#fff0f0;color:#c62828;">
+                                        🗑
+                                    </button>
+                                </form>
                         </div>
                     </td>
                 </tr>
@@ -565,24 +571,29 @@ ob_start();
 </div>
 
 <!-- ═══ Modal ویرایش ═══ -->
-<div id="editCategoryModal"
-    style="display:none;position:fixed;inset:0;background:rgba(0,0,0,.45);z-index:9999;align-items:center;justify-content:center;padding:20px;">
+<div id="editCategoryModal" class="admin-modal-overlay" style="display:none;">
+    <div class="admin-modal">
 
-    <div style="width:min(500px,100%);background:#fff;border-radius:18px;padding:22px;box-shadow:0 20px 60px rgba(0,0,0,.2);max-height:90vh;overflow-y:auto;">
+        <div class="admin-modal-head">
+            <h3>ویرایش دسته‌بندی</h3>
+            <button type="button" class="admin-modal-close" onclick="closeEditCategory()" aria-label="بستن">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                    <path d="M18 6L6 18M6 6l12 12" />
+                </svg>
+            </button>
+        </div>
 
-        <h3 style="margin:0 0 18px;">ویرایش دسته‌بندی</h3>
-
-        <form method="post" enctype="multipart/form-data">
+        <form method="post" enctype="multipart/form-data" class="admin-modal-body">
             <?= csrf_field() ?>
             <input type="hidden" name="do" value="edit">
             <input type="hidden" name="id" id="edit_category_id">
 
-            <div class="form-field">
+            <div class="admin-modal-field">
                 <label>نام دسته‌بندی</label>
                 <input type="text" name="name" id="edit_category_name" required>
             </div>
 
-            <div class="form-field">
+            <div class="admin-modal-field">
                 <label>دسته والد</label>
                 <select name="parent_id" id="edit_category_parent">
                     <option value="0">— بدون والد (دسته اصلی) —</option>
@@ -594,31 +605,49 @@ ob_start();
                         <?php endif; ?>
                     <?php endforeach; ?>
                 </select>
-                <small style="display:block;margin-top:6px;color:var(--muted);">
-                    توجه: اگر این دسته زیرمجموعه دارد، آن‌ها هم با آن منتقل می‌شوند.
-                </small>
             </div>
 
-            <div class="form-row" style="display:grid;grid-template-columns:1fr 110px;gap:12px;">
-                <div class="form-field">
+            <div class="admin-modal-row">
+                <div class="admin-modal-field">
                     <label>ایموجی</label>
                     <input type="text" name="icon" id="edit_category_icon" placeholder="🧦">
                 </div>
-                <div class="form-field">
+                <div class="admin-modal-field">
                     <label>ترتیب</label>
-                    <input type="number" name="sort_order" id="edit_category_sort" min="0"
-                        style="text-align:center;">
+                    <input type="number" name="sort_order" id="edit_category_sort" min="0">
                 </div>
             </div>
 
-            <div class="form-field">
+            <div class="admin-modal-field">
                 <label>تصویر جدید</label>
-                <input type="file" name="icon_img" accept="image/jpeg,image/png,image/webp">
+                <label class="admin-file">
+                    <input type="file" name="icon_img" accept="image/jpeg,image/png,image/webp"
+                        onchange="updateFileName(this)">
+                    <span class="admin-file-btn">
+                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                            <path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4" />
+                            <polyline points="17 8 12 3 7 8" />
+                            <line x1="12" y1="3" x2="12" y2="15" />
+                        </svg>
+                        انتخاب تصویر
+                    </span>
+                    <span class="admin-file-name" data-placeholder="تصویری انتخاب نشده">
+                        تصویری انتخاب نشده
+                    </span>
+                </label>
+                <small class="admin-modal-hint">اگر عکس جدید انتخاب کنید جایگزین تصویر فعلی می‌شود.</small>
             </div>
 
-            <div style="display:flex;gap:8px;justify-content:flex-end;margin-top:18px;">
+            <div class="admin-modal-actions">
                 <button type="button" class="btn" onclick="closeEditCategory()">انصراف</button>
-                <button type="submit" class="btn btn-orange">ذخیره تغییرات</button>
+                <button type="submit" class="btn btn-orange">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" width="16" height="16">
+                        <path d="M19 21H5a2 2 0 01-2-2V5a2 2 0 012-2h11l5 5v11a2 2 0 01-2 2z" />
+                        <polyline points="17 21 17 13 7 13 7 21" />
+                        <polyline points="7 3 7 8 15 8" />
+                    </svg>
+                    ذخیره تغییرات
+                </button>
             </div>
         </form>
 
@@ -644,6 +673,20 @@ ob_start();
         .addEventListener('click', function(event) {
             if (event.target === this) closeEditCategory();
         });
+
+    function updateFileName(input) {
+        var label = input.closest('.admin-file');
+        var nameEl = label ? label.querySelector('.admin-file-name') : null;
+        if (!nameEl) return;
+
+        if (input.files && input.files.length > 0) {
+            nameEl.textContent = input.files[0].name;
+            nameEl.classList.add('is-selected');
+        } else {
+            nameEl.textContent = nameEl.dataset.placeholder || 'تصویری انتخاب نشده';
+            nameEl.classList.remove('is-selected');
+        }
+    }
 </script>
 
 <?php

@@ -1,4 +1,4 @@
-﻿.env
+.env
 .env.local
 node_modules/
 vendor/
@@ -11,27 +11,12 @@ config/database.php
 .idea/
 .vscode/
 
-public.BEFORE-FIX*/
-public.broken*/
-public.backup*/
-
-public.BEFORE-FIX*/
-public.broken*/
-public.backup*/
-
-public.BEFORE-FIX*/
-public.broken*/
-public.backup*/
-
-public.BEFORE-FIX*/
-public.broken*/
-public.backup*/
-
 # Backups
 _backup_*
 public.BEFORE*
 public.broken*
 *.BEFORE-*
+scripts/_backups/
 
 # Test files
 test-*.php
