@@ -78,8 +78,8 @@ $slotFa = static function (string $range): string {
     return 'از ' . $fa($sh) . ' ' . $tod($sh) . ' تا ' . $fa($eh) . ' ' . $tod($eh);
 };
 
-if (!is_logged_in()) {
-    header('Location: /');
+if (!is_customer_logged_in()) {
+    header('Location: ' . (is_admin_logged_in() ? '/admin' : '/'));
     exit;
 }
 
@@ -100,11 +100,7 @@ $h = static fn($v) => htmlspecialchars(
     'UTF-8'
 );
 
-$userId = (int)(
-    $_SESSION['admin_id']
-    ?? $_SESSION['customer_id']
-    ?? 0
-);
+$userId = (int)($_SESSION['customer_id'] ?? 0);
 
 if ($userId <= 0) {
     header('Location: /');
@@ -424,6 +420,19 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                     continue;
                 }
 
+                if (!(int)$it['is_active']) {
+                    throw new RuntimeException(
+                        'محصول «' . $it['name'] . '» دیگر فعال نیست. لطفاً آن را از سبد حذف کنید.'
+                    );
+                }
+
+                $moq = max(1, (int)$it['base_moq']);
+                if ($qty < $moq) {
+                    throw new RuntimeException(
+                        'حداقل سفارش «' . $it['name'] . '» ' . number_format($moq) . ' عدد است. لطفاً تعداد را در سبد اصلاح کنید.'
+                    );
+                }
+
                 $pricing = PricingService::calculate(
                     $db,
                     (int)$it['product_id'],
@@ -722,19 +731,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             |--------------------------------------------------------------------------
             */
 
-            $orderNumber =
-                'ORD-'
-                . date('ymd')
-                . '-'
-                . str_pad(
-                    (string)random_int(
-                        0,
-                        9999
-                    ),
-                    4,
-                    '0',
-                    STR_PAD_LEFT
-                );
+            $orderNumber = generate_unique_number($db, 'ORD', 'orders', 'order_number');
 
             /*
             |--------------------------------------------------------------------------
@@ -927,7 +924,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 VALUES (?, 'reserve', ?, 'order', ?, ?, ?, ?, ?, ?)
             ");
 
-            $adminUser = $_SESSION['admin_id'] ?? $_SESSION['customer_id'] ?? $userId;
+            $adminUser = $userId;
 
             foreach ($items as $it) {
 
@@ -1064,19 +1061,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             |--------------------------------------------------------------------------
             */
 
-            $invNum =
-                'INV-'
-                . date('ymd')
-                . '-'
-                . str_pad(
-                    (string)random_int(
-                        0,
-                        9999
-                    ),
-                    4,
-                    '0',
-                    STR_PAD_LEFT
-                );
+            $invNum = generate_unique_number($db, 'INV', 'invoices', 'invoice_number');
 
             $db->prepare("
                 INSERT INTO invoices

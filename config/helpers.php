@@ -24,7 +24,7 @@ if (!function_exists('current_user_group')) {
             return 'regular';
         }
 
-        $userId = $_SESSION['admin_id'] ?? $_SESSION['customer_id'] ?? null;
+        $userId = $_SESSION['customer_id'] ?? null;
         if (!$userId) {
             return 'regular';
         }
@@ -526,5 +526,32 @@ if (!function_exists('private_file_url')) {
     function private_file_url(?string $path): string
     {
         return '/file?p=' . rawurlencode(ltrim(str_replace('\\', '/', (string)$path), '/'));
+    }
+}
+
+
+if (!function_exists('generate_unique_number')) {
+    /**
+     * شمارهٔ یکتا مثل ORD-261106-482913 یا INV-261106-007215.
+     * باید داخل همان تراکنشی صدا زده شود که رکورد را درج می‌کند.
+     */
+    function generate_unique_number(PDO $db, string $prefix, string $table, string $column): string
+    {
+        $allowed = ['orders.order_number', 'invoices.invoice_number'];
+        if (!in_array($table . '.' . $column, $allowed, true)) {
+            throw new InvalidArgumentException('Invalid number target');
+        }
+
+        $check = $db->prepare("SELECT 1 FROM {$table} WHERE {$column} = ? LIMIT 1");
+        for ($i = 0; $i < 10; $i++) {
+            $candidate = $prefix . '-' . date('ymd') . '-'
+                . str_pad((string)random_int(0, 999999), 6, '0', STR_PAD_LEFT);
+            $check->execute([$candidate]);
+            if ($check->fetchColumn() === false) {
+                return $candidate;
+            }
+        }
+
+        throw new RuntimeException('ساخت شمارهٔ یکتا ممکن نشد. لطفاً دوباره تلاش کنید.');
     }
 }

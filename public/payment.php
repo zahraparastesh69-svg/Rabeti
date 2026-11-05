@@ -16,8 +16,8 @@ unset($__bp, $__b);
 require_once ROOT_PATH . '/config/database.php';
 require_once ROOT_PATH . '/config/auth.php';
 
-if (!is_logged_in()) {
-    header('Location: /');
+if (!is_customer_logged_in()) {
+    header('Location: ' . (is_admin_logged_in() ? '/admin' : '/'));
     exit;
 }
 
@@ -42,7 +42,7 @@ $moneyFa = static function ($amount, int $decimals = 0): string {
 };
 
 
-$userId = (int)($_SESSION['admin_id'] ?? $_SESSION['customer_id'] ?? 0);
+$userId = (int)($_SESSION['customer_id'] ?? 0);
 $db = db();
 
 $orderNumber = trim((string)($_GET['order'] ?? ''));
@@ -178,17 +178,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                     $invoice = $lockInv->fetch();
 
                     if (!$invoice) {
-                        $invNumber = null;
-                        for ($i = 0; $i < 5; $i++) {
-                            $candidate = 'INV-' . date('ymd') . '-' . str_pad((string)random_int(0, 9999), 4, '0', STR_PAD_LEFT);
-                            $chk = $db->prepare("SELECT id FROM invoices WHERE invoice_number=? LIMIT 1");
-                            $chk->execute([$candidate]);
-                            if (!$chk->fetch()) {
-                                $invNumber = $candidate;
-                                break;
-                            }
-                        }
-                        if ($invNumber === null) throw new RuntimeException('inv_generation_failed');
+                        $invNumber = generate_unique_number($db, 'INV', 'invoices', 'invoice_number');
 
                         $db->prepare("INSERT INTO invoices (invoice_number, order_id, user_id, total, paid_total, status) VALUES (?,?,?,?,0,'unpaid')")
                             ->execute([$invNumber, (int)$lockedOrder['id'], $userId, (int)$lockedOrder['total']]);
