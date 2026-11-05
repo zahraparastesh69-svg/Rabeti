@@ -36,3 +36,6 @@ desktop.ini
 # Private customer data / runtime
 storage/logs/
 database/test-*.json
+
+# local curl cookie jars
+*.jar

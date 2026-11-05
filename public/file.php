@@ -59,9 +59,10 @@ if (!$allowed) {
         if ($co) {
             $granted = array_map('intval', (array)($_SESSION['co_access'] ?? []));
             $ownerId = $co['user_id'] !== null ? (int)$co['user_id'] : null;
-            /* مجوز جلسهٔ مهمان فقط برای سفارشی معتبر است که هنوز به حسابی متصل نشده */
+            /* co_access فقط بعد از تأیید کد پیگیری + موبایل در همین نشست ثبت می‌شود
+               و هنگام ورود/خروج پاک می‌شود؛ همان سیاست صفحهٔ پیگیری. */
             $allowed = ($customerId > 0 && $ownerId === $customerId)
-                || ($ownerId === null && in_array((int)$co['id'], $granted, true));
+                || in_array((int)$co['id'], $granted, true);
         }
     }
 }
