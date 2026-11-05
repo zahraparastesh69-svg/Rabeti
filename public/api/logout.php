@@ -12,8 +12,7 @@ require_once ROOT_PATH . '/config/auth.php';
 
 $wasAdmin = is_admin_logged_in();
 
-$token = (string)($_POST['csrf_token'] ?? $_GET['t'] ?? '');
-if (!hash_equals(csrf_token(), $token)) {
+if (!logout_token_valid()) {
     header('Location: ' . ($wasAdmin ? '/admin' : '/'));
     exit;
 }

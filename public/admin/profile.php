@@ -187,7 +187,7 @@ ob_start();
 
 <!-- خروج امن -->
 <div style="margin-top:20px;text-align:left;">
-    <a href="/admin/logout?t=<?= urlencode(csrf_token()) ?>" class="admin-soft-action" style="background:#fff0f0;color:#c62828;text-decoration:none;padding:8px 18px;border-radius:6px;display:inline-block;">
+    <a href="/admin/logout?t=<?= urlencode(logout_token()) ?>" class="admin-soft-action" style="background:#fff0f0;color:#c62828;text-decoration:none;padding:8px 18px;border-radius:6px;display:inline-block;">
         خروج از سامانه
     </a>
 </div>

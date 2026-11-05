@@ -58,8 +58,10 @@ if (!$allowed) {
         $co = $stmt->fetch();
         if ($co) {
             $granted = array_map('intval', (array)($_SESSION['co_access'] ?? []));
-            $allowed = ($customerId > 0 && $co['user_id'] !== null && (int)$co['user_id'] === $customerId)
-                || in_array((int)$co['id'], $granted, true);
+            $ownerId = $co['user_id'] !== null ? (int)$co['user_id'] : null;
+            /* مجوز جلسهٔ مهمان فقط برای سفارشی معتبر است که هنوز به حسابی متصل نشده */
+            $allowed = ($customerId > 0 && $ownerId === $customerId)
+                || ($ownerId === null && in_array((int)$co['id'], $granted, true));
         }
     }
 }

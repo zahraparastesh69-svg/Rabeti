@@ -497,7 +497,7 @@ $menuGroups = [
 
                 </a>
 
-                <a href="/admin/logout?t=<?= urlencode(csrf_token()) ?>" class="admin-sidebar-footer-link admin-sidebar-logout">
+                <a href="/admin/logout?t=<?= urlencode(logout_token()) ?>" class="admin-sidebar-footer-link admin-sidebar-logout">
 
                     <span class="admin-nav-icon">
                         <?= admin_icon('logout') ?>
