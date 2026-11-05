@@ -111,8 +111,8 @@ if (
     )
 ) {
     session_regenerate_id(true);
-unset($_SESSION['co_access']);
-$_SESSION['csrf_token'] = bin2hex(random_bytes(32));
+    unset($_SESSION['co_access']);
+    $_SESSION['csrf_token'] = bin2hex(random_bytes(32));
 
     rate_limit_clear('login_mobile', $mobile);
 
