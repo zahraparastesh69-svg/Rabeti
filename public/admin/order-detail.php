@@ -111,14 +111,20 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                             (int)$it['id'],
                             $adminId
                         );
+                        $db->prepare("
+                            UPDATE order_items
+                            SET qty_cancelled = qty_cancelled + qty_reserved, qty_reserved = 0
+                            WHERE id = ?
+                        ")->execute([(int)$it['id']]);
                     }
                 }
                 // بازگشتی از cancelled → pending_review → رزرو دوباره (در صورت موجودی کافی)
                 if ($oldStatus === 'cancelled' && $newStatus !== 'cancelled') {
                     $itemsToReserve = $db->prepare("
-                        SELECT id, product_id, qty
-                        FROM order_items
-                        WHERE order_id = ? AND qty_cancelled > 0
+                        SELECT oi.id, oi.product_id, oi.qty_cancelled AS qty, p.name AS product_name
+                        FROM order_items oi
+                        LEFT JOIN products p ON p.id = oi.product_id
+                        WHERE oi.order_id = ? AND oi.qty_cancelled > 0
                     ");
                     $itemsToReserve->execute([$id]);
                     foreach ($itemsToReserve as $it) {
@@ -133,7 +139,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                             );
                             $db->prepare("
                                 UPDATE order_items
-                                SET qty_reserved = ?, qty_cancelled = 0
+                                SET qty_reserved = qty_reserved + ?, qty_cancelled = 0
                                 WHERE id = ?
                             ")->execute([(int)$it['qty'], (int)$it['id']]);
                         } catch (RuntimeException $e) {

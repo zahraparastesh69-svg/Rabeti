@@ -156,10 +156,10 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         WHERE ci.id = ?
           AND c.user_id = ?
           AND c.status = 'active'
-          AND p.is_active = 1
+          AND (p.is_active = 1 OR ? = 'remove')
         LIMIT 1
     ");
-    $stmt->execute([$itemId, $userId]);
+    $stmt->execute([$itemId, $userId, $do]);
     $cartItem = $stmt->fetch(PDO::FETCH_ASSOC);
 
     if (!$cartItem) {
