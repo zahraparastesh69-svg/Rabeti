@@ -16,14 +16,14 @@
    chmod 600 .env
    ```
 
-3. **تنظیم `config/database.php`** (در `.gitignore` است؛ باید دستی ساخته شود)
-   - این فایل به‌صورت یک singleton PDO است؛ نمونهٔ حداقلی در `config/database.example.php` موجود است.
+3. **`config/database.php`** در ریپو هست و اطلاعات اتصال را فقط از `.env` می‌خواند؛ نیازی به ویرایش آن نیست.
 
 4. **بارگذاری migrations**
    ```bash
-   ./scripts/backup.sh                 # پشتیبان
-   ./scripts/migrate.sh --dry-run      # پیش‌نمایش
-   ./scripts/migrate.sh                # اجرا
+   # ابتدا پشتیبان بگیرید
+   mysqldump --single-transaction DB_NAME | gzip > backup_$(date +%Y%m%d_%H%M%S).sql.gz
+   # فایل‌های شماره‌دار را به ترتیب اجرا کنید (روی دیتابیس موجود فقط فایل‌های جدید را)
+   for f in $(ls database/[0-9]*.sql | sort); do mysql DB_NAME < "$f"; done
    ```
 
 5. **وابستگی‌های Composer**
@@ -44,15 +44,14 @@ public/admin/    صفحات پنل مدیریت
 public/api/      API مشتری
 public/          صفحات سایت مشتری
 views/layouts/   قالب‌های مشترک (admin.php، main.php)
-scripts/         اسکریپت‌های پشتیبان، migrate، نگهداری
-tests/           سناریوهای آزمونی
+scripts/         اسکریپت‌های CLI نگهداری (مثل optimize-images.php)
 ```
 
 ## پشتیبان‌گیری
 
 ```bash
-./scripts/backup.sh
-# خروجی: scripts/_backups/sock_b2b_YYYYMMDD_HHMMSS.sql.gz
+mysqldump --single-transaction DB_NAME | gzip > backup_$(date +%Y%m%d_%H%M%S).sql.gz
+# از پوشهٔ public/uploads/ (به‌ویژه receipts و custom-orders) هم جداگانه پشتیبان بگیرید
 ```
 
 ## مراحل اصلاحات پروژه
