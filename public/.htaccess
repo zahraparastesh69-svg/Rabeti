@@ -94,6 +94,7 @@ DirectoryIndex index.php index.html
     RewriteRule ^api/register/?$        api/register.php [L,QSA]
     RewriteRule ^api/cart/?$            api/cart.php [L,QSA]
     RewriteRule ^api/forgot-password/?$ api/forgot-password.php [L,QSA]
+    RewriteRule ^api/product-price/?$   api/product-price.php [L,QSA]
 
     # Admin
     RewriteRule ^admin/login/?$         admin/login.php [L,QSA]

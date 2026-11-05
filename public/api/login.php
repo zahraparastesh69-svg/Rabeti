@@ -115,6 +115,7 @@ if (
     rate_limit_clear('login_mobile', $mobile);
 
     $_SESSION['customer_id'] = (int)$customer['id'];
+    $_SESSION['pw_fp'] = session_password_fingerprint((string)$customer['password_hash']);
 
     $_SESSION['customer_name'] =
         $customer['full_name']

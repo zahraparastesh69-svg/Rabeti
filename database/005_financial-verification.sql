@@ -1,22 +1,7 @@
 
 
-ALTER TABLE payments
-    ADD COLUMN claimed_amount INT UNSIGNED NULL AFTER amount,
-    ADD COLUMN verified_amount INT UNSIGNED NULL AFTER claimed_amount,
-    ADD COLUMN verification_status ENUM(
-        'unverified',
-        'verified',
-        'rejected',
-        'adjusted'
-    ) NOT NULL DEFAULT 'unverified' AFTER verified_amount,
-    ADD COLUMN verification_note VARCHAR(500) NULL AFTER verification_status,
-    ADD COLUMN verified_by INT UNSIGNED NULL AFTER verification_note,
-    ADD COLUMN verified_at DATETIME NULL AFTER verified_by,
-    ADD COLUMN transaction_date DATETIME NULL AFTER verified_at;
-
-UPDATE payments
-SET claimed_amount = amount
-WHERE claimed_amount IS NULL;
+-- جدول payments در این پروژه وجود ندارد (پرداخت‌ها در payment_submissions هستند و claimed_amount
+-- از قبل در آن تعریف شده). ALTER/UPDATE قبلی روی payments حذف شد چون اجرای migration را می‌شکست.
 
 
 
@@ -47,7 +32,7 @@ CREATE TABLE IF NOT EXISTS payment_verification_history (
 
     CONSTRAINT fk_pvh_payment
         FOREIGN KEY (payment_id)
-        REFERENCES payments(id),
+        REFERENCES payment_submissions(id),
 
     CONSTRAINT fk_pvh_invoice
         FOREIGN KEY (invoice_id)
