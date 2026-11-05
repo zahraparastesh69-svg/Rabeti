@@ -97,25 +97,26 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 // لغو → آزادسازی رزرو همهٔ اقلام
                 if ($newStatus === 'cancelled' && $oldStatus !== 'cancelled') {
                     $itemsToRelease = $db->prepare("
-                        SELECT id, product_id, qty, qty_reserved
+                        SELECT id, product_id, qty,
+                               GREATEST(qty_reserved - COALESCE(qty_delivered, 0), 0) AS qty_open
                         FROM order_items
-                        WHERE order_id = ? AND qty_reserved > 0
+                        WHERE order_id = ? AND qty_reserved > COALESCE(qty_delivered, 0)
                     ");
                     $itemsToRelease->execute([$id]);
                     foreach ($itemsToRelease as $it) {
                         OrderService::releaseStock(
                             $db,
                             (int)$it['product_id'],
-                            (int)$it['qty_reserved'],
+                            (int)$it['qty_open'],
                             $id,
                             (int)$it['id'],
                             $adminId
                         );
                         $db->prepare("
                             UPDATE order_items
-                            SET qty_cancelled = qty_cancelled + qty_reserved, qty_reserved = 0
+                            SET qty_cancelled = qty_cancelled + ?, qty_reserved = qty_reserved - ?
                             WHERE id = ?
-                        ")->execute([(int)$it['id']]);
+                        ")->execute([(int)$it['qty_open'], (int)$it['qty_open'], (int)$it['id']]);
                     }
                 }
                 // بازگشتی از cancelled → pending_review → رزرو دوباره (در صورت موجودی کافی)
