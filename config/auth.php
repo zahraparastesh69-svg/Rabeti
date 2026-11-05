@@ -633,6 +633,20 @@ function customer_name(): string
 }
 
 
+/** توکن مخصوص لینک خروج؛ از CSRF مشتق می‌شود تا خود توکن CSRF در URL نیاید. */
+function logout_token(): string
+{
+    return hash_hmac('sha256', 'logout', csrf_token());
+}
+
+function logout_token_valid(): bool
+{
+    if (isset($_POST['csrf_token'])) {
+        return hash_equals(csrf_token(), (string)$_POST['csrf_token']);
+    }
+    return hash_equals(logout_token(), (string)($_GET['t'] ?? ''));
+}
+
 /* ═══════════════════════════════════════════════════════════════
    خروج کامل
 ═══════════════════════════════════════════════════════════════ */

@@ -12,10 +12,10 @@
  *   ۶) مسیرها را در دیتابیس آپدیت می‌کند (اختیاری — پیش‌فرض فعال)
  *
  *  اجرا (در ریشه پروژه):
- *      php optimize-images.php --dry-run        ← فقط گزارش، بدون تغییر
- *      php optimize-images.php                  ← اجرای کامل
- *      php optimize-images.php --no-db          ← بدون آپدیت دیتابیس
- *      php optimize-images.php --max=1000 --quality=80 --sm=400
+ *      php scripts/optimize-images.php --dry-run        ← فقط گزارش، بدون تغییر
+ *      php scripts/optimize-images.php                  ← اجرای کامل
+ *      php scripts/optimize-images.php --no-db          ← بدون آپدیت دیتابیس
+ *      php scripts/optimize-images.php --max=1000 --quality=80 --sm=400
  *
  *  ⚠️  قبل از اجرا: بکاپ کامل uploads/ و دیتابیس بگیرید.
  *  بعد از اجرا: فایل را حذف کنید.
@@ -36,7 +36,9 @@ if (!function_exists('imagewebp')) {
     exit("GD با پشتیبانی WebP موجود نیست. PHP: " . PHP_VERSION . "\n");
 }
 
-$ROOT = __DIR__;
+$ROOT = is_dir(dirname(__DIR__, 2) . '/public_html')
+    ? dirname(__DIR__, 2) . '/public_html'
+    : dirname(__DIR__) . '/public';
 $UPLOADS = $ROOT . '/uploads';
 $BACKUP  = $UPLOADS . '/_originals';
 
@@ -46,11 +48,11 @@ echo "max={$MAX_W}px  small={$SM_W}px  quality={$QUALITY}" . ($DRY_RUN ? "  [DRY
 /* ── اتصال دیتابیس (همان الگوی bootstrap پروژه) ────────────── */
 $hasDb = false;
 if (!$SKIP_DB) {
-    foreach ([__DIR__ . '/config/bootstrap.php'] as $bp) {
+    foreach ([dirname(__DIR__) . '/config/bootstrap.php'] as $bp) {
         if (is_file($bp)) { require_once $bp; break; }
     }
-    if (is_file($ROOT . '/config/database.php')) {
-        require_once $ROOT . '/config/database.php';
+    if (defined('ROOT_PATH') && is_file(ROOT_PATH . '/config/database.php')) {
+        require_once ROOT_PATH . '/config/database.php';
         $hasDb = function_exists('db');
     }
     if (!$hasDb) echo "⚠️  دیتابیس وصل نشد — فقط فایل‌ها پردازش می‌شوند.\n\n";
