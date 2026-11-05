@@ -38,8 +38,10 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 throw new InvalidArgumentException('وضعیت نامعتبر است');
             }
 
+            $db->beginTransaction();
+
             // سفارش فعلی
-            $stmt = $db->prepare("SELECT * FROM orders WHERE id = ? LIMIT 1");
+            $stmt = $db->prepare("SELECT * FROM orders WHERE id = ? LIMIT 1 FOR UPDATE");
             $stmt->execute([$id]);
             $order = $stmt->fetch();
             if (!$order) throw new RuntimeException('سفارش یافت نشد');
@@ -148,6 +150,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
                 $flash = 'وضعیت سفارش از «' . $oldStatus . '» به «' . $newStatus . '» تغییر کرد.';
             }
+
+            $db->commit();
         }
 
         /* ۲) افزودن یادداشت داخلی به سفارش (customer_note فقط خواندنی است؛ یادداشت در audit_logs) */
@@ -163,6 +167,9 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             $flash = 'یادداشت اضافه شد.';
         }
     } catch (Throwable $e) {
+        if ($db->inTransaction()) {
+            $db->rollBack();
+        }
         $flashErr = $e->getMessage();
     }
 }

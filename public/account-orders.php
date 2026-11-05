@@ -16,8 +16,8 @@ unset($__bp, $__b);
 require_once ROOT_PATH . '/config/database.php';
 require_once ROOT_PATH . '/config/auth.php';
 
-if (!is_logged_in()) {
-    header('Location: /');
+if (!is_customer_logged_in()) {
+    header('Location: ' . (is_admin_logged_in() ? '/admin' : '/'));
     exit;
 }
 
@@ -68,7 +68,7 @@ $jalali = static function (?string $mysqlDate, bool $withTime = false): string {
     return $withTime ? $out . ' — ' . date('H:i', $ts) : $out;
 };
 
-$userId = (int)($_SESSION['admin_id'] ?? $_SESSION['customer_id'] ?? 0);
+$userId = (int)($_SESSION['customer_id'] ?? 0);
 $db = db();
 
 $statusLabels = [

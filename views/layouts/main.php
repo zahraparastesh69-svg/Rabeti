@@ -24,7 +24,7 @@ $userName = $isAdmin
 $cartCount = 0;
 if ($isLoggedIn) {
     try {
-        $uid = (int)($_SESSION['admin_id'] ?? $_SESSION['customer_id'] ?? 0);
+        $uid = (int)($_SESSION['customer_id'] ?? 0);
         $stmt = db()->prepare("
             SELECT COALESCE(SUM(ci.qty), 0)
             FROM cart_items ci

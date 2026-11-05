@@ -17,13 +17,14 @@ require_once ROOT_PATH . '/config/auth.php';
 header('Content-Type: application/json; charset=utf-8');
 
 /* سبد فقط برای کاربر وارد‌شده (ادمین یا مشتری) */
-if (!is_logged_in()) {
-    http_response_code(401);
-    echo json_encode(['ok' => false, 'error' => 'برای خرید ابتدا وارد شوید'], JSON_UNESCAPED_UNICODE);
+if (!is_customer_logged_in()) {
+    http_response_code(is_admin_logged_in() ? 403 : 401);
+    $msg = is_admin_logged_in() ? 'حساب مدیر امکان خرید ندارد؛ با حساب مشتری وارد شوید' : 'برای خرید ابتدا وارد شوید';
+    echo json_encode(['ok' => false, 'error' => $msg], JSON_UNESCAPED_UNICODE);
     exit;
 }
 
-$userId = (int)($_SESSION['admin_id'] ?? $_SESSION['customer_id'] ?? 0);
+$userId = (int)($_SESSION['customer_id'] ?? 0);
 $db = db();
 
 /* helper: سبد فعال کاربر را بگیر یا بساز */
@@ -88,13 +89,17 @@ if ($method === 'POST') {
         echo json_encode(['ok' => false, 'error' => 'محصول یافت نشد'], JSON_UNESCAPED_UNICODE);
         exit;
     }
-    if ($p['stock'] < $qty) {
+    $cartId = getOrCreateCart($db, $userId);
+
+    $stmt = $db->prepare("SELECT qty FROM cart_items WHERE cart_id = ? AND product_id = ? LIMIT 1");
+    $stmt->execute([$cartId, $productId]);
+    $inCart = (int)($stmt->fetchColumn() ?: 0);
+
+    if ((int)$p['stock'] < $inCart + $qty) {
         http_response_code(422);
         echo json_encode(['ok' => false, 'error' => 'موجودی کافی نیست — موجودی فعلی: ' . number_format($p['stock']) . ' جفت'], JSON_UNESCAPED_UNICODE);
         exit;
     }
-
-    $cartId = getOrCreateCart($db, $userId);
 
     /* Upsert: اگر قبلاً در سبد است، جمع شود */
     $db->prepare("

@@ -22,14 +22,14 @@ require_once ROOT_PATH . '/config/database.php';
 require_once ROOT_PATH . '/config/auth.php';
 require_once ROOT_PATH . '/app/services/PricingService.php';
 
-if (!is_logged_in()) {
-    header('Location: /');
+if (!is_customer_logged_in()) {
+    header('Location: ' . (is_admin_logged_in() ? '/admin' : '/'));
     exit;
 }
 
 $h = static fn($v) => htmlspecialchars((string)$v, ENT_QUOTES, 'UTF-8');
 
-$userId = (int)($_SESSION['admin_id'] ?? $_SESSION['customer_id'] ?? 0);
+$userId = (int)($_SESSION['customer_id'] ?? 0);
 $db = db();
 $userGroup = current_user_group();
 
