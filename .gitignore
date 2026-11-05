@@ -32,3 +32,7 @@ used-classes.txt
 .DS_Store
 Thumbs.db
 desktop.ini
+
+# Private customer data / runtime
+storage/logs/
+database/test-*.json

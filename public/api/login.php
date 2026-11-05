@@ -111,6 +111,7 @@ if (
     )
 ) {
     session_regenerate_id(true);
+$_SESSION['csrf_token'] = bin2hex(random_bytes(32));
 
     rate_limit_clear('login_mobile', $mobile);
 

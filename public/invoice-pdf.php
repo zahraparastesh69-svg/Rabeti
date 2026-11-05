@@ -62,7 +62,8 @@ try {
     }
 } catch (Throwable $e) {
     http_response_code(500);
-    exit('خطا: ' . htmlspecialchars($e->getMessage(), ENT_QUOTES, 'UTF-8'));
+    error_log('[invoice-pdf] ' . $e->getMessage());
+    exit('خطا در ساخت فاکتور. لطفاً بعداً دوباره تلاش کنید.');
 }
 
 if (!$invoice) {

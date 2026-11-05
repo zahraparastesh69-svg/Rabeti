@@ -145,7 +145,7 @@ if ($isLoggedIn) {
                 <div class="header-account">
                     <?php if ($isAdmin): ?>
                         <a href="/admin" class="header-account-btn">پنل مدیریت</a>
-                        <a href="/admin/logout" class="header-account-logout">خروج</a>
+                        <a href="/admin/logout?t=<?= urlencode(csrf_token()) ?>" class="header-account-logout">خروج</a>
                     <?php elseif ($isCustomer): ?>
                         <?php
                         // ⭐ دریافت اطلاعات گروه مشتری برای نمایش در هدر
@@ -168,7 +168,7 @@ if ($isLoggedIn) {
 
 
                         </div>
-                        <a href="/api/logout" class="header-account-logout">خروج</a>
+                        <a href="/api/logout?t=<?= urlencode(csrf_token()) ?>" class="header-account-logout">خروج</a>
                     <?php else: ?>
                         <button type="button" class="r-btn r-btn-outline auth-trigger" data-auth-open="login">
                             ورود / ثبت‌نام
@@ -391,9 +391,7 @@ if ($isLoggedIn) {
             <?php if ($isLoggedIn): ?>
 
                 <a
-                    href="<?= $isAdmin
-                                ? '/admin/logout'
-                                : '/api/logout' ?>"
+                    href="<?= ($isAdmin ? '/admin/logout' : '/api/logout') . '?t=' . urlencode(csrf_token()) ?>"
                     class="r6-logout-link">
 
                     <span>خروج از حساب</span>

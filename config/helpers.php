@@ -519,3 +519,12 @@ if (!function_exists('jdate_fa')) {
         return fa_digits($out);
     }
 }
+
+
+if (!function_exists('private_file_url')) {
+    /** آدرس سرو امن برای فایل‌های خصوصی (فیش، کارت ملی، رسید سفارش اختصاصی). */
+    function private_file_url(?string $path): string
+    {
+        return '/file?p=' . rawurlencode(ltrim(str_replace('\\', '/', (string)$path), '/'));
+    }
+}
